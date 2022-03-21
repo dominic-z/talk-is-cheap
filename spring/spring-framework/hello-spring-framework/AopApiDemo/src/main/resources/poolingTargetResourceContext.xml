@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        https://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+ http://www.springframework.org/schema/aop https://www.springframework.org/schema/aop/spring-aop.xsd">
+    <bean id="author" class="domain.Author">
+        <property name="id" value="1"/>
+        <property name="name" value="Bob"/>
+    </bean>
+    <bean id="blog" class="domain.Blog">
+        <property name="id" value="4"/>
+        <property name="author" ref="author"/>
+    </bean>
+    <bean id="blogServiceImp" class="service.BlogServiceImp" scope="prototype"/>
+
+    <bean id="poolTargetSource" class="org.springframework.aop.target.CommonsPool2TargetSource">
+        <property name="targetBeanName" value="blogServiceImp"/>
+        <property name="maxSize" value="25"/>
+    </bean>
+
+    <bean name="myAfterReturning" class="advice.MyAfterReturningAdvice"/>
+
+    <bean id="poolingTarget1" class="org.springframework.aop.framework.ProxyFactoryBean">
+        <property name="targetSource" ref="poolTargetSource"/>
+<!--        <property name="proxyInterfaces" value="service.BlogService"/>-->
+<!--        这里可以不用指定就可以完成-->
+        <property name="interceptorNames" value="myAfterReturning"/>
+    </bean>
+
+    <bean id="poolConfigAdvisor" class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+        <property name="targetObject" ref="poolTargetSource"/>
+        <property name="targetMethod" value="getPoolingConfigMixin"/>
+    </bean>
+
+    <bean id="poolingTarget2" class="org.springframework.aop.framework.ProxyFactoryBean">
+        <property name="targetSource" ref="poolTargetSource"/>
+        <property name="proxyInterfaces" value="service.BlogService"/>
+<!--        这里需要手动指定proxyInterfaces，否则只能将poolingTarget2转为PoolingConfig，无法转换为BlogService类-->
+        <property name="interceptorNames" value="poolConfigAdvisor"/>
+    </bean>
+</beans>

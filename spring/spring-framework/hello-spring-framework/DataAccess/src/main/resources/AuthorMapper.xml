@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="dao.AuthorMapper">
+    <select id="getAuthorById" resultType="domain.Author">
+        select * from author where id=#{userId};
+    </select>
+
+    <insert id="insertAuthor" parameterType="domain.Author">
+        insert into author(name) value (#{name});
+    </insert>
+
+    <update id="updateAuthorById">
+        update author set name=#{author.name} where id=#{id}
+    </update>
+</mapper>

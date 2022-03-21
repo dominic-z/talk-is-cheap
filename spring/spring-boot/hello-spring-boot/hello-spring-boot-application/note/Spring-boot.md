@@ -1,0 +1,4 @@
+# spring
+报错：原本我的spring项目是一个无子module的项目，直接运行没问题，但是当我新建了一个子module之后，spring容器启动就会失败
+推测是因为原本只有一个项目，pom里都是dependency，导致新的子项目也引入了一坨spring依赖，spring启动配置可能失败，因为有可能会扫描到其他子模块的配置路径里
+所以SpringApplication应当再一个独立的自module之中，而不能再父项目之中，并且父项目也应该使用dependencyManagement

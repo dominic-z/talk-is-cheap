@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="dao.AuthorMapper">
+    <select id="selectByName" resultType="author">
+    select * from author where name = #{asdf}
+  </select>
+    <select id="selectByAuthorBean" parameterType="author" resultType="author">
+        select * from author where id=#{id} and name=#{name};
+    </select>
+
+    <select id="selectByArgs" resultType="author">
+        select * from author where id=#{aId} and name=#{aName};
+    </select>
+
+    <select id="selectAllAuthorsOrderBy" resultType="author">
+        select * from author order by ${columnName} desc;
+    </select>
+
+    <select id="selectByTableAndId" resultType="author">
+        select * from ${tabelName} where id=#{aId};
+    </select>
+
+    <select id="selectByAuthorName" parameterType="authorName" resultType="author">
+        select * from author
+        where name=#{authorName,jdbcType=VARCHAR,javaType=wiredDomain.AuthorName,typeHandler=typeHandlers.AuthorNameHandler};
+    </select>
+
+    <select id="selectByAuthorNameAndId" resultType="author">
+        select * from author
+        where
+              name=#{authorName,jdbcType=VARCHAR,javaType=wiredDomain.AuthorName,typeHandler=typeHandlers.AuthorNameHandler}
+          and
+              id=#{id};
+    </select>
+</mapper>
