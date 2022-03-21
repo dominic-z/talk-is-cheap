@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true" scanPeriod="60 seconds" debug="false">
+    　　  <!--其他配置省略-->
+
+    <property name="LOG_DIR" value="logback-demo/logs"/>
+
+    <appender name="ROOT" class="ch.qos.logback.core.FileAppender">
+        <!--        默认值的写法-->
+        <file>${LOG_DIR1:-logback-demo/logs}/root.log</file>
+        <append>true</append>
+        <encoder>
+            <!--            <pattern>%-4relative [%thread] %-5level %logger{35} - %msg%n</pattern>-->
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%-5level] %logger{50} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <!--            如果没有写%ex，那么log.error会将错误栈打印在下一行里-->
+            <!--            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%-5level] %logger{50} - %msg %ex%n</pattern>-->
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%-5level] %logger{50} - %msg %n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="FILTER_STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>warn</level>
+        </filter>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%-5level] %logger{50} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>${LOG_DIR}/file.log</file>
+        <append>true</append>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%-5level] %logger{50} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="TIME_BASED_ROLLING_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/rolling-file.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/time-based-rolling-file.%d{yyyy-MM-dd-HH-mm-ss}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+            <!--  该appender的输出日志总大小不超过1000字节-->
+            <totalSizeCap>1000</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%-5level] %logger{50} - %msg%n</pattern>
+        </encoder>
+        　　　
+    </appender>
+
+
+    <appender name="SIZE_BASED_ROLLING_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/size-based-rolling-file.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/size-based-rolling-file.%i.log</fileNamePattern>
+            <minIndex>1</minIndex>
+            <maxIndex>3</maxIndex>
+        </rollingPolicy>
+        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+            <!--            该appender的每个文件不超过1000字节，可以看到结果的每个size-based-rolling-file.1.log大小都差不多1kb这样-->
+            <maxFileSize>1000</maxFileSize>
+        </triggeringPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%-5level] %logger{50} - %msg%n</pattern>
+        </encoder>
+        　　　
+    </appender>
+
+    <appender name="SIZE_AND_TIME_BASED_ROLLING_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/size-and-time-based-rolling-file.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!--  该appender的拆分规则，首先每个文件不能超过maxFileSize大小，总大小不能超过totalSizeCap-->
+            <!--            如果超过了，首先判断时间是否一致，时间一致，则新文件对%i进行递增，时间不一致，则新文件对时间递增，且%i重置为0-->
+            <fileNamePattern>${LOG_DIR}/size-and-time-based-rolling-file.%d{yyyy-MM-dd-HH-mm}.%i.log</fileNamePattern>
+            <!--  该appender的每个日志总大小不超过1000字节-->
+            <maxFileSize>1000</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <!--  该appender的输出日志总大小不超过1000字节-->
+            <totalSizeCap>10000</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%-5level] %logger{50} - %msg%n</pattern>
+        </encoder>
+        　　　
+    </appender>
+
+
+    <logger name="console" level="INFO" additivity="false">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+    <logger name="filter_console" level="INFO" additivity="false">
+        <appender-ref ref="FILTER_STDOUT"/>
+    </logger>
+    <logger name="file" level="INFO" additivity="false">
+        <appender-ref ref="FILE"/>
+    </logger>
+    <logger name="time_based_rolling_file" level="INFO" additivity="false">
+        <appender-ref ref="TIME_BASED_ROLLING_FILE"/>
+    </logger>
+
+    <logger name="size_based_rolling_file" level="INFO" additivity="false">
+        <appender-ref ref="SIZE_BASED_ROLLING_FILE"/>
+    </logger>
+
+    <logger name="size_and_time_based_rolling_file" level="INFO" additivity="false">
+        <appender-ref ref="SIZE_AND_TIME_BASED_ROLLING_FILE"/>
+    </logger>
+
+
+    <root>
+        <appender-ref ref="ROOT"/>
+    </root>
+
+</configuration>

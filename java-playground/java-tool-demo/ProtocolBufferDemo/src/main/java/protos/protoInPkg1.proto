@@ -1,0 +1,9 @@
+syntax = "proto2";
+package pkg1;
+
+option java_outer_classname="S1";
+message Student{
+  required string name=1;
+  required int32 age=2;
+  repeated string book=3;
+}

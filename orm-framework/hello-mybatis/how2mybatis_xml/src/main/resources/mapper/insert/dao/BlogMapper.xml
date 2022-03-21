@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="dao.BlogMapper">
+    <select id="selectById" resultType="blog">
+        select * from blog where id = #{id}
+    </select>
+
+    <insert id="insertABlog" parameterType="blog">
+        insert into blog (content,authorId,authorName)values(#{content},#{authorId},#{authorName});
+    </insert>
+
+    <insert id="insertABlogReturnKey" parameterType="blog" useGeneratedKeys="true"
+            keyProperty="id" keyColumn="id">
+        insert into blog (content,authorId,authorName)values(#{content},#{authorId},#{authorName});
+    </insert>
+
+    <insert id="insertBlogList" parameterType="blog" useGeneratedKeys="true"
+            keyProperty="id" keyColumn="id">
+        insert into blog(content,authorId,authorName)values
+        <foreach item="item" collection="list" separator=",">
+            (#{item.content}, #{item.authorId}, #{item.authorName})
+        </foreach>
+    </insert>
+
+    <insert id="insertBlogArr" parameterType="blog" useGeneratedKeys="true"
+            keyProperty="id" keyColumn="id">
+        insert into blog(content,authorId,authorName)values
+        <foreach item="item" collection="array" separator=",">
+            (#{item.content}, #{item.authorId}, #{item.authorName})
+        </foreach>
+    </insert>
+</mapper>

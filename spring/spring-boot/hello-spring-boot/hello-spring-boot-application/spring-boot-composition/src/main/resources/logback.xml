@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true" scanPeriod="60 seconds" debug="false">
+    　　  <!--其他配置省略-->
+
+    <property name="LOG_DIR" value="spring-boot-composition/logs"/>
+
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%green(%d{yyyy-MM-dd HH:mm:ss.SSS}) %yellow([%thread]) -- %highlight([%-5level]) %cyan(%logger{50}) - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="APP_ROLLING_ROOT_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/app-rolling-root.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!--  该appender的拆分规则，首先每个文件不能超过maxFileSize大小，总大小不能超过totalSizeCap-->
+            <!--  如果超过了，首先判断时间是否一致，时间一致，则新文件对%i进行递增，时间不一致，则新文件对时间递增，且%i重置为0-->
+            <fileNamePattern>${LOG_DIR}/app-rolling-root.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <!--  该appender的每个日志总大小不超过1000字节-->
+            <maxFileSize>1GB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <!--  该appender的输出日志总大小不超过1000字节-->
+            <totalSizeCap>10GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%-5level] %logger{50} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+
+
+    <logger name="app_root" level="INFO">
+        <appender-ref ref="APP_ROLLING_ROOT_FILE"/>
+    </logger>
+
+</configuration>

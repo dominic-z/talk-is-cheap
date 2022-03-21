@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="dao.BlogMapper">
+    <resultMap id="blogMap" type="blog">
+        <id property="id" column="_id"/>
+        <result property="content" column="_content"/>
+        <result property="authorId" column="_authorId"/>
+        <result property="authorName" column="_authorName"/>
+        <result property="authorNameObj" column="_authorName" javaType="wiredDomain.AuthorName" jdbcType="VARCHAR"
+                typeHandler="typeHandlers.AuthorNameHandler"/>
+    </resultMap>
+
+    <select id="selectById" resultMap="blogMap">
+        select id as _id, content as _content, authorId as _authorId, authorName as _authorName
+        from blog
+        where id = #{id};
+    </select>
+
+    <resultMap id="blogMapConstructor" type="blog">
+        <constructor>
+            <idArg column="_id" javaType="_int" name="id"/>
+            <arg column="_content" name="content" javaType="String"/>
+        </constructor>
+        <result property="authorId" column="_authorId"/>
+        <result property="authorName" column="_authorName"/>
+    </resultMap>
+    <select id="selectByIdWithConstructor" resultMap="blogMapConstructor">
+        select id as _id, content as _content, authorId as _authorId, authorName as _authorName
+        from blog
+        where id = #{id};
+    </select>
+
+    <resultMap id="blogMapOnlyConstructor" type="blog">
+        <constructor>
+            <idArg column="_id" javaType="_int" name="id"/>
+            <arg column="_content" name="content" javaType="String"/>
+        </constructor>
+    </resultMap>
+    <select id="selectByIdWithOnlyConstructor" resultMap="blogMapOnlyConstructor">
+        select id as _id, content as _content, authorId as authorId, authorName as authorName
+        from blog
+        where id = #{id};
+    </select>
+
+    <resultMap id="blogMapAssociation" type="blog">
+        <id property="id" column="_id"/>
+        <result property="content" column="_content"/>
+        <association property="authorObj" javaType="author">
+            <id property="id" column="_authorId"/>
+            <result property="name" column="_authorName"/>
+        </association>
+    </resultMap>
+    <select id="selectByIdWithAssociation" resultMap="blogMapAssociation">
+        select id as _id, content as _content, authorId as _authorId, authorName as _authorName
+        from blog
+        where id = #{id};
+    </select>
+
+    <resultMap id="blogMapNestedSelectAssociation" type="blog">
+        <id property="id" column="_id"/>
+        <result property="content" column="_content"/>
+        <association property="authorObj" column="_authorId" javaType="author" select="selectAuthorById"/>
+    </resultMap>
+    <select id="selectAuthorById" resultType="author">
+        select *
+        from author
+        where id = #{id};
+    </select>
+    <select id="selectByIdWithNestedSelectAssociation" resultMap="blogMapNestedSelectAssociation">
+        select id as _id, content as _content, authorId as _authorId
+        from blog
+        where id = #{id};
+    </select>
+
+    <resultMap id="blogMapNestedResultAssociation" type="blog">
+        <id property="id" column="_id"/>
+        <result property="content" column="_content"/>
+        <association property="authorObj" resultMap="authorMap"/>
+    </resultMap>
+    <resultMap id="authorMap" type="author">
+        <id property="id" column="_authorId"/>
+        <result property="name" column="_authorName"/>
+    </resultMap>
+    <select id="selectByIdWithNestedResultsAssociation" resultMap="blogMapNestedResultAssociation">
+        select id as _id, content as _content, authorId as _authorId, authorName as _authorName
+        from blog
+        where id = #{id};
+    </select>
+
+    <resultMap id="blogsMapNestedSelectAssociation" type="blog">
+        <id property="id" column="id"/>
+        <result property="content" column="content"/>
+        <association property="authorObj" column="authorId"
+                     javaType="author" select="selectAuthorById"/>
+    </resultMap>
+    <select id="selectAllBlogsWithNestedSelectAssociation" resultMap="blogsMapNestedSelectAssociation">
+        select *
+        from blog b;
+    </select>
+
+    <resultMap id="blogsMapNestedResultsAssociation" type="blog">
+        <id property="id" column="bid"/>
+        <result property="content" column="content"/>
+        <association property="authorObj" javaType="author">
+            <id property="id" column="aid"/>
+            <result property="name" column="name"/>
+        </association>
+    </resultMap>
+    <select id="selectAllBlogsWithNestedResultsAssociation" resultMap="blogsMapNestedResultsAssociation">
+        select b.id as bid, b.content, a.id as aid, a.name
+        from blog b
+                 join author a on b.authorId = a.id;
+    </select>
+</mapper>

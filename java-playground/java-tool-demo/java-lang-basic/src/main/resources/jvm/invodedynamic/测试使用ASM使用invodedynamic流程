@@ -1,0 +1,44 @@
+原始文件在initial文件夹里
+
+javac Circuit.java
+java Circuit
+然后发现啥也没打印，因为方法里是空的
+
+javac -cp ~/.m2/repository/org/ow2/asm/asm-all/6.0_BETA/asm-all-6.0_BETA.jar:. ASMHelper.java
+java -cp ~/.m2/repository/org/ow2/asm/asm-all/6.0_BETA/asm-all-6.0_BETA.jar:. ASMHelper
+修改字节码文件
+
+java Circuit
+发现打印出了Horse.race()
+
+然后javap -c Circuit可以看到
+  public static void startRace(java.lang.Object);
+    Code:
+       0: aload_0
+       1: invokedynamic #65,  0             // InvokeDynamic #0:race:(Ljava/lang/Object;)V
+       6: return
+
+
+此时呢，将Circle.java 的// startRace(new Deer());注释放开，重新执行上述流程，发现报错了。类别不匹配，因为Circle的boostStrap方法只使用了Horse.class
+
+这时候将ASMHelper.java的BOOTSTRAP_CLASS_NAME改为MonomorphicInlineCache.class.getName().replace('.', '/')
+重新执行上述流程，发现Deer.race()执行了。并且打印出了invoke change等字样
+
+此时看javap -c Circuit
+  public static void startRace(java.lang.Object);
+    Code:
+       0: aload_0
+       1: invokedynamic #74,  0             // InvokeDynamic #1:race:(Ljava/lang/Object;)V
+       6: return
+就是将#68改成了#74
+
+
+解释
+这一坨代码是干啥的呢？是想在Circle的startRace里实现一件事，就是无论obj是个什么类型的对象，都能像动态语言那样调用他的race方法，实现方式无非就是继承、反射，这个例子里使用的是更底层的方法，invokedynamic
+注意invokedynamic的执行流程是，在第一次执行 invokedynamic 指令时，Java 虚拟机会调用该指令所对应的启动方法（BootStrap Method），来生成一个调用点，最后调用该调用点所链接的方法句柄
+所以ASMHelper.java的功能就是，将circle的invokedynamic的生成调用点的方法，修改为BOOTSTRAP_CLASS_NAME类的BOOTSTRAP_METHOD_NAME方法
+
+所以，当BOOTSTRAP_CLASS_NAME为circle的时候，invokedynamic使用的是circle.java的boostStrap方法，这个方法生成的调用点只是Horse.class方法的调用点
+而当BOOTSTRAP_CLASS_NAME修改为MonomorphicInlineCache的时候，invokedynamic使用的boostStrap方法会生成的是invoke方法的调用点，而invoke方法内部会根据入参的类型，动态地搜索不同类里的race方法句柄，从而进行不同类的race方法执行。
+注意此时使用了bindTo方法因为invoke方法的方法句柄类型是(MonomorphicInlineCache.class,object)void（可以通过句柄.type查看），使用bindTO可以将将invoke方法句柄的第一个参数屏蔽掉，所以这个boostStrap方法返回的句柄类型就变成了(object,void)
+这是因为race的句柄类型，也就是(object,void)void（通过AMSHelper指定的）

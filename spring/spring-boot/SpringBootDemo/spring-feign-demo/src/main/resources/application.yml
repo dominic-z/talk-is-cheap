@@ -1,0 +1,16 @@
+header-test: test
+# 默认超时时间是连接10s+read60s
+#feign:
+#  client:
+#    config:
+#      LocalServerClient:
+#        connect-timeout: 5000
+#        read-timeout: 5000
+
+
+feign:
+  httpclient:
+    disableSslValidation: true
+#    enabled: false
+#  okhttp:
+#    enabled: true

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+    <properties resource="jdbc.properties">
+    </properties>
+
+<!--    <settings>-->
+<!--        <setting name="logImpl" value="STDOUT_LOGGING"/>-->
+<!--    </settings>-->
+    
+    <typeAliases>
+        <package name="domain"/>
+        <package name="wiredDomain"/>
+    </typeAliases>
+
+    <typeHandlers>
+        <typeHandler handler="typeHandlers.AuthorNameHandler"/>
+<!--        <typeHandler handler="typeHandlers.AuthorNameHandler" jdbcType="VARCHAR" javaType="wiredDomain.AuthorName"/>-->
+<!--        <package name="typeHandlers"/>-->
+        <typeHandler handler="org.apache.ibatis.type.EnumOrdinalTypeHandler"
+                     javaType="domain.SexDetail"/>
+    </typeHandlers>
+
+    <environments default="development">
+        <environment id="development">
+            <transactionManager type="JDBC"/>
+            <dataSource type="POOLED">
+                <property name="driver" value="${driver}"/>
+                <property name="url" value="${url}"/>
+                <property name="username" value="${username}"/>
+                <property name="password" value="${password}"/>
+            </dataSource>
+        </environment>
+    </environments>
+    <mappers>
+        <mapper resource="xml/typeAliases/dao/AuthorMapper.xml"/>
+        <mapper resource="xml/typeAliases/dao/BlogMapper.xml"/>
+    </mappers>
+</configuration>

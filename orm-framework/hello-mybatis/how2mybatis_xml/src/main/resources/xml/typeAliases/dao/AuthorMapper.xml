@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="dao.AuthorMapper">
+    <select id="selectById" resultType="author">
+    select * from author where id = #{id}
+  </select>
+
+    <select id="selectAuthorNameById" resultType="authorName">
+        select name from author where id=#{id};
+    </select>
+
+    <select id="selectByAuthorNameObj" resultType="author">
+        select * from author where name=#{authorNameObj};
+    </select>
+
+    <select id="selectAuthorSexById" resultType="sex">
+        select sex from author where id=#{id};
+    </select>
+
+    <select id="selectAuthorSexByIdWithIndex" resultType="sexDetail">
+        select sexType from author where id=#{id};
+    </select>
+</mapper>

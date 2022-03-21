@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true" scanPeriod="60 seconds" debug="false">
+
+    <turboFilter class="org.example.spring.starter.log.logback.ErrorTurboFilter"/>
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%green(%d{yyyy-MM-dd HH:mm:ss.SSS}) %yellow([%thread]) -- %highlight([%-5level]) %cyan(%logger{50}) STDOUT - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="ROLLING_ROOT_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${log.dir}/rolling-root.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!--  该appender的拆分规则，首先每个文件不能超过maxFileSize大小，总大小不能超过totalSizeCap-->
+            <!--  如果超过了，首先判断时间是否一致，时间一致，则新文件对%i进行递增，时间不一致，则新文件对时间递增，且%i重置为0-->
+            <fileNamePattern>${log.dir}/rolling-root.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <!--  该appender的每个日志总大小不超过1000字节-->
+            <maxFileSize>1GB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <!--  该appender的输出日志总大小不超过1000字节-->
+            <totalSizeCap>10GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%-5level] %logger{50} ROOT - %msg%n</pattern>
+        </encoder>
+        　　　
+    </appender>
+
+    <appender name="ROLLING_ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>error</level>
+        </filter>
+        <file>${log.dir:-./logs}/rolling-error.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!--  该appender的拆分规则，首先每个文件不能超过maxFileSize大小，总大小不能超过totalSizeCap-->
+            <!--  如果超过了，首先判断时间是否一致，时间一致，则新文件对%i进行递增，时间不一致，则新文件对时间递增，且%i重置为0-->
+            <fileNamePattern>${log.dir:-./logs}/rolling-error.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <!--  该appender的每个日志总大小不超过1000字节-->
+            <maxFileSize>1GB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <!--  该appender的输出日志总大小不超过1000字节-->
+            <totalSizeCap>10GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%-5level] %logger{50} %class{50} error - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="DRUID_SQL" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${log.dir}/druid-sql.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!--  该appender的拆分规则，首先每个文件不能超过maxFileSize大小，总大小不能超过totalSizeCap-->
+            <!--  如果超过了，首先判断时间是否一致，时间一致，则新文件对%i进行递增，时间不一致，则新文件对时间递增，且%i重置为0-->
+            <fileNamePattern>${log.dir:-./logs}/druid-sql.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <!--  该appender的每个日志总大小不超过1000字节-->
+            <maxFileSize>1GB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <!--  该appender的输出日志总大小不超过1000字节-->
+            <totalSizeCap>10GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%-5level] %logger{50} DRUID_SQL - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+
+    <appender name="MYBATIS" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${log.dir}/mybatis.log</file>
+        <!--        需要在内部filter，不能在logger上通过设置level来控制mybatis的日志级别，经测试mybatis并不会遵照logger的level配置-->
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <!--            默认配置的写法-->
+            <level>${hello.starter.log.mybatis.level:-DEBUG}</level>
+        </filter>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!--  该appender的拆分规则，首先每个文件不能超过maxFileSize大小，总大小不能超过totalSizeCap-->
+            <!--  如果超过了，首先判断时间是否一致，时间一致，则新文件对%i进行递增，时间不一致，则新文件对时间递增，且%i重置为0-->
+            <fileNamePattern>${log.dir}/mybatis.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <!--  该appender的每个日志总大小不超过1000字节-->
+            <maxFileSize>1GB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <!--  该appender的输出日志总大小不超过1000字节-->
+            <totalSizeCap>10GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%-5level] %logger{50} MYBATIS - %msg%n</pattern>
+        </encoder>
+        　　　
+    </appender>
+
+    <appender name="SERVER" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${log.dir}/server.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!--  该appender的拆分规则，首先每个文件不能超过maxFileSize大小，总大小不能超过totalSizeCap-->
+            <!--  如果超过了，首先判断时间是否一致，时间一致，则新文件对%i进行递增，时间不一致，则新文件对时间递增，且%i重置为0-->
+            <fileNamePattern>${log.dir:-./logs}/server.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <!--  该appender的每个日志总大小不超过1000字节-->
+            <maxFileSize>1GB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <!--  该appender的输出日志总大小不超过1000字节-->
+            <totalSizeCap>10GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%-5level] %logger{50} SERVER - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+
+    <appender name="CLIENT" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${log.dir}/client.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!--  该appender的拆分规则，首先每个文件不能超过maxFileSize大小，总大小不能超过totalSizeCap-->
+            <!--  如果超过了，首先判断时间是否一致，时间一致，则新文件对%i进行递增，时间不一致，则新文件对时间递增，且%i重置为0-->
+            <fileNamePattern>${log.dir:-./logs}/client.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <!--  该appender的每个日志总大小不超过1000字节-->
+            <maxFileSize>1GB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <!--  该appender的输出日志总大小不超过1000字节-->
+            <totalSizeCap>10GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%-5level] %logger{50} CLIENT - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+
+    <!--    配合mybatis的logPrefix使用-->
+    <!--    还是这种方式清晰明确-->
+    <logger name="mybatis" level="DEBUG" additivity="false">
+        <appender-ref ref="MYBATIS"/>
+        <appender-ref ref="STDOUT"/>
+    </logger>
+
+
+    <logger name="console" level="INFO" additivity="false">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+
+    <logger name="druid_sql" level="INFO" additivity="false">
+        <appender-ref ref="DRUID_SQL"/>
+    </logger>
+
+    <logger name="error" level="ERROR" additivity="false">
+        <appender-ref ref="ROLLING_ERROR_FILE"/>
+    </logger>
+
+    <logger name="server" level="INFO" additivity="false">
+        <appender-ref ref="SERVER"/>
+    </logger>
+
+    <logger name="client" level="INFO" additivity="false">
+        <appender-ref ref="CLIENT"/>
+    </logger>
+
+
+    <root level="INFO">
+        <appender-ref ref="ROLLING_ROOT_FILE"/>
+        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="ROLLING_ERROR_FILE"/>
+    </root>
+
+</configuration>

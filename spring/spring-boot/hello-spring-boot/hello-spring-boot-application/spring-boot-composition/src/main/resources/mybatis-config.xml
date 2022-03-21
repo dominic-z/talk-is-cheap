@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+
+    <settings>
+        <setting name="useColumnLabel" value="true"/>
+        <setting name="mapUnderscoreToCamelCase" value="true"/>
+<!--        配合logger使用-->
+        <setting name="logPrefix" value="mybatis."/>
+    </settings>
+
+    <typeAliases>
+        <package name="com.example.springboot.hellospringboot.domain.pojo"/>
+    </typeAliases>
+
+    <!--    如果通过下面这种配置来生成mapper是不会生效的，无论是package还是resource，不知道为啥，老老实实用mapperscan注解吧-->
+    <!--    <mappers>-->
+    <!--        <mapper resource="mappers/mbg/CustomerMapper.xml"/>-->
+    <!--        <mapper resource="mappers/mbg/ItemMapper.xml"/>-->
+    <!--    </mappers>-->
+
+    <!--    mybatis的配置前后顺序不能颠倒-->
+    <!--    <plugins>-->
+    <!--          mybatis-pageHelper 如果使用的是starter 则不需要配置这里，直接在yml修改配置就好了 详见https://github.com/pagehelper/pagehelper-spring-boot-->
+    <!--        <plugin interceptor="com.github.pagehelper.PageInterceptor"/>-->
+    <!--    </plugins>-->
+</configuration>

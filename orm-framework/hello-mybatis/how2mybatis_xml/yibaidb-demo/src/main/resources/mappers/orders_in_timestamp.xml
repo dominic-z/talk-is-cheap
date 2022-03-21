@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="orders_in_timestamp">
+    <select id="rangeSelectByOrderDate" resultType="OrderInTimestamp">
+        select * from orders_in_timestamp where <![CDATA[ orderDate >= #{startDate,jdbcType=TIMESTAMP} and orderDate < #{endDate,jdbcType=TIMESTAMP} ]]>
+    </select>
+</mapper>
