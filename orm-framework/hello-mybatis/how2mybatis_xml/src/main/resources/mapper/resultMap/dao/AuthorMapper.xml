@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="dao.AuthorMapper">
+
+    <resultMap id="authorMapCollection" type="author">
+        <id property="id" column="aid"/>
+        <result property="name" column="name"/>
+        <result property="age" column="age"/>
+        <result property="sexType" column="sexType"/>
+        <result property="sex" column="sex"/>
+        <collection property="blogList" ofType="blog" javaType="ArrayList">
+            <id property="id" column="bid"/>
+            <result property="content" column="content"/>
+            <result property="authorId" column="authorId"/>
+            <result property="authorName" column="authorName"/>
+        </collection>
+    </resultMap>
+    <select id="selectByIdWithCollection" resultMap="authorMapCollection">
+        select a.id         as aid,
+               a.name       as name,
+               a.age        as age,
+               a.sexType    as sexType,
+               a.sex        as sex,
+               b.id         as bid,
+               b.content    as content,
+               b.authorId   as authorId,
+               b.authorName as authorName
+        from author a
+                 join blog b on a.id = b.authorId and a.id = #{id};
+    </select>
+
+    <select id="selectBlogsByAuthorId" resultType="blog">
+        select *
+        from blog
+        where authorId = #{id};
+    </select>
+    <resultMap id="authorMapNestedSelectCollection" type="author">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="age" column="age"/>
+        <result property="sexType" column="sexType"/>
+        <result property="sex" column="sex"/>
+        <collection property="blogList" ofType="blog"
+                    javaType="ArrayList" select="selectBlogsByAuthorId" column="id"/>
+    </resultMap>
+    <select id="selectByIdWithNestedSelectColleciton" resultMap="authorMapNestedSelectCollection">
+        select *
+        from author
+        where id = #{id};
+    </select>
+
+    <select id="selectBlogsByWiredId" resultType="blog">
+        select *
+        from blog
+        where authorId &lt;= #{id};
+    </select>
+    <resultMap id="authorsMapNestedSelectCollection" type="author">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="age" column="age"/>
+        <result property="sexType" column="sexType"/>
+        <result property="sex" column="sex"/>
+        <collection property="blogList" ofType="blog"
+                    javaType="ArrayList" select="selectBlogsByWiredId" column="id"/>
+    </resultMap>
+    <select id="selectAuthorsByIdWithNestedSelectColleciton" resultMap="authorsMapNestedSelectCollection">
+        select *
+        from author;
+    </select>
+
+    <resultMap id="authorMapDiscriminator" type="author" autoMapping="false">
+        <id property="id" column="id"/>
+        <discriminator javaType="_int" column="sexType">
+            <case value="0" resultMap="onlyName"/>
+            <case value="1" resultMap="onlyAgeMap"/>
+        </discriminator>
+    </resultMap>
+    <resultMap id="onlyName" type="author" autoMapping="false">
+        <result column="name" property="name"/>
+    </resultMap>
+    <resultMap id="onlyAgeMap" type="author" autoMapping="false">
+        <result column="age" property="age"/>
+    </resultMap>
+    <select id="selectByIdWithDiscriminator" resultMap="authorMapDiscriminator">
+        select id, name, age, sexType
+        from author
+        where id = #{id};
+    </select>
+
+
+    <resultMap id="authorMapExtends" type="author" extends="authorMapDiscriminator" autoMapping="false">
+        <result column="age" property="age"/>
+    </resultMap>
+    <select id="selectByIdWithDiscriminatorExtended" resultMap="authorMapExtends">
+        select id, name, age, sexType
+        from author
+        where id = #{id};
+    </select>
+
+</mapper>

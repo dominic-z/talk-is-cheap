@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        https://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+ http://www.springframework.org/schema/aop https://www.springframework.org/schema/aop/spring-aop.xsd">
+    <context:annotation-config/>
+    <bean id="author" class="domain.Author">
+        <property name="id" value="1"/>
+        <property name="name" value="Bob"/>
+    </bean>
+
+    <bean id="blog" class="domain.Blog">
+        <property name="id" value="4"/>
+        <property name="author" ref="author"/>
+    </bean>
+
+    <bean id="blogServiceImp" class="service.BlogServiceImp"/>
+
+    <bean id="myAdvisor" class="advice.MyAdvisor">
+        <property name="advice">
+            <bean class="advice.MyBeforeAdvice"/>
+        </property>
+        <property name="pointcut">
+            <bean class="advice.MyPointCut"/>
+        </property>
+    </bean>
+    <bean name="myAfterReturning" class="advice.MyAfterReturningAdvice"/>
+    <bean id="debugInterceptor" class="org.springframework.aop.interceptor.DebugInterceptor"/>
+    <bean id="blogServiceProxy" class="org.springframework.aop.framework.ProxyFactoryBean">
+        <property name="proxyInterfaces" value="service.BlogService"/>
+        <property name="targetName" value="blogServiceImp"/>
+        <property name="interceptorNames">
+            <list>
+                <value>myAdvisor</value>
+                <value>debugInterceptor</value>
+                <value>myAfterReturning</value>
+            </list>
+        </property>
+    </bean>
+
+    <bean id="authorService" class="service.AuthorService"/>
+    <bean id="authorServiceProxy" class="org.springframework.aop.framework.ProxyFactoryBean">
+        <property name="proxyTargetClass" value="true"/>
+        <property name="targetName" value="authorService"/>
+        <property name="interceptorNames">
+            <list>
+                <value>myAfterReturning</value>
+            </list>
+        </property>
+    </bean>
+</beans>

@@ -1,0 +1,2 @@
+org.springframework.boot.env.EnvironmentPostProcessor=org.example.spring.starter.client.env.ClientEnvPostProcessor
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=org.example.spring.starter.client.auto.config.ClientAutoConfiguration

@@ -1,0 +1,3 @@
+org.springframework.context.ApplicationListener=org.example.spring.starter.log.listener.LogbackConfigListener
+org.springframework.boot.SpringApplicationRunListener=org.example.spring.starter.log.listener.LogPropsAppRunListener
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=org.example.spring.starter.log.auto.config.LogStarterAutoConfiguration

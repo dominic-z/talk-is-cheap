@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="dao.BlogMapper">
+
+    <select id="selectBlogsByWhere" resultType="blog">
+        select * from blog
+        <where>
+            <if test="content != null">
+                content=#{content}
+            </if>
+            <if test="author != null and author.name != null">
+                and authorName=#{author.name}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectBlogsByTrimWhere" resultType="blog">
+        select * from blog
+        <trim prefix="where" prefixOverrides="AND |OR ">
+            <if test="content != null">
+                content=#{content}
+            </if>
+            <if test="author != null and author.name != null">
+                and authorName=#{author.name};# and的大小写不敏感
+            </if>
+        </trim>
+    </select>
+
+    <update id="updateBlogBySet">
+        update blog
+        <set>
+            <if test="content!=null">
+                content=#{content},
+            </if>
+            <if test="authorId!=null">
+                authorId=#{authorId},
+            </if>
+            <if test="authorName!=null">
+                authorName=#{authorName},
+            </if>
+        </set>
+        where id=#{id};
+    </update>
+
+    <update id="updateBlogByTrimSet">
+        update blog
+        <trim prefix="set" suffixOverrides=",">
+            <if test="content!=null">
+                content=#{content},
+            </if>
+            <if test="authorId!=null">
+                authorId=#{authorId},
+            </if>
+            <if test="authorName!=null">
+                authorName=#{authorName},
+            </if>
+        </trim>
+        where id=#{id};
+    </update>
+</mapper>

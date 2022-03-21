@@ -1,0 +1,59 @@
+javac LambdaInvoke.java
+javap -c LambdaInvoke
+
+结果如下
+Compiled from "LambdaInvoke.java"
+public class jvm.invokedynamic.LambdaInvoke {
+  public jvm.invokedynamic.LambdaInvoke();
+    Code:
+       0: aload_0
+       1: invokespecial #1                  // Method java/lang/Object."<init>":()V
+       4: return
+
+  public static void main(java.lang.String[]);
+    Code:
+       0: iconst_2
+       1: istore_1
+       2: iconst_3
+       3: newarray       int
+       5: dup
+       6: iconst_0
+       7: iconst_1
+       8: iastore
+       9: dup
+      10: iconst_1
+      11: iconst_2
+      12: iastore
+      13: dup
+      14: iconst_2
+      15: iconst_3
+      16: iastore
+      17: invokestatic  #2                  // InterfaceMethod java/util/stream/IntStream.of:([I)Ljava/util/stream/IntStream;
+      20: invokedynamic #3,  0              // InvokeDynamic #0:applyAsInt:()Ljava/util/function/IntUnaryOperator;
+      25: invokeinterface #4,  2            // InterfaceMethod java/util/stream/IntStream.map:(Ljava/util/function/IntUnaryOperator;)Ljava/util/stream/IntStream;
+      30: iload_1
+      31: invokedynamic #5,  0              // InvokeDynamic #1:applyAsInt:(I)Ljava/util/function/IntUnaryOperator;
+      36: invokeinterface #4,  2            // InterfaceMethod java/util/stream/IntStream.map:(Ljava/util/function/IntUnaryOperator;)Ljava/util/stream/IntStream;
+      41: pop
+      42: return
+}
+
+可以看到有两个invokedynamic，分别对应了两个map
+按照课程所说，java通过invokedynamic实现的lambda表达式，具体流程如下。
+第一次执行 invokedynamic 指令时，它所对应的启动方法会通过 ASM 来生成一个适配器类。这个适配器类实现了对应的函数式接口，在我们的例子中，也就是 IntUnaryOperator。
+启动方法的返回值是一个 ConstantCallSite，其链接对象为一个返回适配器类实例的方法句柄。
+也就是说这个invokedynamic调用返回的是一个IntUnaryOperator的实例（也就是这个适配器）
+从而接下来的map方法可以用这个实例来进行操作
+
+
+另外，如果某个lambda表达式
+
+
+javac LambdaInvoke.java
+java -Djdk.internal.lambda.dumpProxyClasses=./ LambdaInvoke
+可以看到新生成了两个Lambda类
+javap -c -private LambdaInvoke\$\$Lambda\$1
+javap -c -private LambdaInvoke\$\$Lambda\$2.class
+
+这俩lambda类就是Operator，Lambda1未依赖外部变量，因此其对应的invokedynamic直接生成IntUnaryOperator这个对象；
+而Lambda2依赖了外部变量，因此其对应的invokedynamic是通过get$Lambda(int);静态方法生成IntUnaryOperator的，为的是设置变量；
