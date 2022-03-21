@@ -1,0 +1,14 @@
+spring:
+  jdbc:
+    datasource:
+      druid:
+        yiibai:
+          driver-class-name: com.mysql.jdbc.Driver
+          url: jdbc:mysql://9.135.91.214:3306/yiibaidb
+          username: root
+          password: admin
+        dmp:
+          driver-class-name: com.mysql.jdbc.Driver
+          url: jdbc:mysql://9.135.91.214:3306/dmp
+          username: root
+          password: admin

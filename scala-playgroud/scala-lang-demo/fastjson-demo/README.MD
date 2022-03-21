@@ -1,0 +1,2 @@
+# 注意
+domain类还是写java的吧，因为scala的getter和setter不太一样

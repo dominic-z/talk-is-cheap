@@ -1,0 +1,2 @@
+# mybatis
+使用xml里配置mapper package失效，在config里使用mapperScan注解，或者使用MapperScannerConfigurer就能成功；
