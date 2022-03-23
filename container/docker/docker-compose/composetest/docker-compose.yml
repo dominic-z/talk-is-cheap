@@ -1,0 +1,18 @@
+version: "3.9"
+services:
+  web:
+    build: .
+    ports:
+      - "8000:5000"
+    volumes:
+      - ./data:/container_data
+    networks:
+      - composetestnetwork
+  redis:
+    image: "redis:alpine"
+    networks:
+      - composetestnetwork
+
+networks:
+  composetestnetwork:
+    driver: bridge
