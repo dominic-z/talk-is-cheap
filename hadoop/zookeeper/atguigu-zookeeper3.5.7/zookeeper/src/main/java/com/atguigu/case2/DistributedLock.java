@@ -1,5 +1,6 @@
 package com.atguigu.case2;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.zookeeper.*;
 import org.apache.zookeeper.data.Stat;
 
@@ -8,9 +9,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
+@Slf4j
 public class DistributedLock {
 
-    private final String connectString = "hadoop102:2181,hadoop103:2181,hadoop104:2181";
+    private String connectString = "localhost:2181,localhost:2182,localhost:2183";
     private final int sessionTimeout = 2000;
     private final ZooKeeper zk;
 
@@ -27,12 +29,13 @@ public class DistributedLock {
             @Override
             public void process(WatchedEvent watchedEvent) {
                 // connectLatch  如果连接上zk  可以释放
-                if (watchedEvent.getState() == Event.KeeperState.SyncConnected){
+                log.info("watchEvent: {}", watchedEvent);
+                if (watchedEvent.getState() == Event.KeeperState.SyncConnected) {
                     connectLatch.countDown();
                 }
 
                 // waitLatch  需要释放
-                if (watchedEvent.getType()== Event.EventType.NodeDeleted && watchedEvent.getPath().equals(waitPath)){
+                if (watchedEvent.getType() == Event.EventType.NodeDeleted && watchedEvent.getPath().equals(waitPath)) {
                     waitLatch.countDown();
                 }
             }
@@ -43,6 +46,7 @@ public class DistributedLock {
 
         // 判断根节点/locks是否存在
         Stat stat = zk.exists("/locks", false);
+        log.info("stat {}", stat);
 
         if (stat == null) {
             // 创建一下根节点
@@ -54,7 +58,9 @@ public class DistributedLock {
     public void zklock() {
         // 创建对应的临时带序号节点
         try {
-            currentMode = zk.create("/locks/" + "seq-", null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
+            currentMode = zk.create("/locks/" + "seq-", null, ZooDefs.Ids.OPEN_ACL_UNSAFE,
+                    CreateMode.EPHEMERAL_SEQUENTIAL);
+            log.info("currentMode: {}", currentMode);
 
             // wait一小会, 让结果更清晰一些
             Thread.sleep(10);
@@ -83,9 +89,11 @@ public class DistributedLock {
                 } else {
                     // 需要监听  他前一个节点变化
                     waitPath = "/locks/" + children.get(index - 1);
-                    zk.getData(waitPath,true,new Stat());
+                    final Stat stat = new Stat();
+                    zk.getData(waitPath, true, stat);
+                    log.info("stat: {}", stat);
 
-                    // 等待监听
+                    // 等待监听，waitLatch是等待getData的监听器调用结束
                     waitLatch.await();
 
                     return;
@@ -93,9 +101,7 @@ public class DistributedLock {
             }
 
 
-        } catch (KeeperException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
+        } catch (KeeperException | InterruptedException e) {
             e.printStackTrace();
         }
 
@@ -107,10 +113,8 @@ public class DistributedLock {
 
         // 删除节点
         try {
-            zk.delete(this.currentMode,-1);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (KeeperException e) {
+            zk.delete(this.currentMode, -1);
+        } catch (InterruptedException | KeeperException e) {
             e.printStackTrace();
         }
 
