@@ -1,5 +1,6 @@
 package com.atguigu.case1;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -9,9 +10,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 public class DistributeClient {
 
-    private String connectString = "hadoop102:2181,hadoop103:2181,hadoop104:2181";
+    private String connectString = "localhost:2181,localhost:2182,localhost:2183";
     private int sessionTimeout = 2000;
     private ZooKeeper zk;
 
@@ -40,25 +42,25 @@ public class DistributeClient {
 
         for (String child : children) {
 
+            // watch的功能 The watch will be triggered by a successful operation that sets data on the node, or deletes the node.
             byte[] data = zk.getData("/servers/" + child, false, null);
 
             servers.add(new String(data));
         }
 
         // 打印
-        System.out.println(servers);
+        log.info("find servers {}", servers);
     }
 
     private void getConnect() throws IOException {
+        // 连接上的瞬间会触发一次watcher
         zk = new ZooKeeper(connectString, sessionTimeout, new Watcher() {
             @Override
             public void process(WatchedEvent watchedEvent) {
 
                 try {
                     getServerList();
-                } catch (KeeperException e) {
-                    e.printStackTrace();
-                } catch (InterruptedException e) {
+                } catch (KeeperException | InterruptedException e) {
                     e.printStackTrace();
                 }
             }
