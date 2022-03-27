@@ -45,6 +45,12 @@ apt-get install inetutils-ping
 ping etcd-server
 ```
 
+补充，查看网络的方法
+```shell
+docker network ls
+docker network inspect etcd-network
+```
+
 # 常用命令
 
 ## 键操作
@@ -76,7 +82,9 @@ etcdctl put foo1 "bar_new"
 etcdctl put foo1 "bar_new1"
 
 # 可以查看Revision
+
 etcdctl get foo1 --write-out="fields"
+etcdctl get foo1 -w fields
 
 etcdctl get --rev=25 foo1
 etcdctl get --rev=24 foo1
