@@ -51,7 +51,6 @@ spring:
 #        health-check-path: /web/health/health
 #        health-check-interval: 10s
 #        health-check-critical-timeout: 7200s
-
 ## 使用spring loadbalancer，弃用ribbon  不写这个会报错 还会用ribbon
 ribbon:
   nacos:
