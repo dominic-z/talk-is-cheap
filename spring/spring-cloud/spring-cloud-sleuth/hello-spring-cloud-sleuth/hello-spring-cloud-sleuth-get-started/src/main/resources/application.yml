@@ -1,0 +1,16 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: sleuth
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848
+      loadbalancer:
+        ribbon:
+          enabled: false
+ribbon:
+  nacos:
+    enabled: false
+
