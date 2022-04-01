@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>hello-maven-shade-plugin-depend-shaded-jar</artifactId>
+        <groupId>org.talk.is.cheap.maven.plugin.shade</groupId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>hello-maven-shade-plugin-depend-uber-jar</artifactId>
+
+    <properties>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+    </properties>
+
+    <dependencies>
+
+        <!--        可以看到，如果shaded-fat-jar没有指定shadedClassifierName的话-->
+        <dependency>
+            <groupId>org.talk.is.cheap.maven.plugin.shade</groupId>
+            <artifactId>hello-maven-shade-plugin-uber-jar</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
+</project>
