@@ -14,6 +14,7 @@
 
     <dependencies>
 
+
         <dependency>
             <groupId>org.example</groupId>
             <artifactId>hello-spring-boot-starter-log-config</artifactId>
@@ -24,6 +25,32 @@
             <groupId>org.example</groupId>
             <artifactId>hello-spring-boot-starter-feign-client</artifactId>
             <version>0.0.1-SNAPSHOT</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.cloud</groupId>
+                    <artifactId>spring-cloud-loadbalancer</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-loadbalancer</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.github.ben-manes.caffeine</groupId>
+                    <artifactId>caffeine</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+<!--        这个是用于触发loadbalancer的CaffeineLoadBalancerCacheManagerConfiguration的conditionOnClass自动配置，-->
+<!--        必须得是版本2的，因为版本3的是jdk11编译的，无法被加载器加载，所以spring认为conditionOnClass不满足条件-->
+        <!-- https://mvnrepository.com/artifact/com.github.ben-manes.caffeine/caffeine -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+            <version>2.9.3</version>
         </dependency>
 
         <dependency>
@@ -59,11 +86,11 @@
             <artifactId>spring-cloud-starter-openfeign</artifactId>
         </dependency>
 
-<!--        基于consul的服务发现功能-->
-<!--        <dependency>-->
-<!--            <groupId>org.springframework.cloud</groupId>-->
-<!--            <artifactId>spring-cloud-starter-consul-discovery</artifactId>-->
-<!--        </dependency>-->
+        <!--        基于consul的服务发现功能-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.springframework.cloud</groupId>-->
+        <!--            <artifactId>spring-cloud-starter-consul-discovery</artifactId>-->
+        <!--        </dependency>-->
 
         <!--SpringCloud ailibaba nacos -->
         <dependency>
