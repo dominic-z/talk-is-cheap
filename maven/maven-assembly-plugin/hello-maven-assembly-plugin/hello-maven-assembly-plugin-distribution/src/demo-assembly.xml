@@ -1,0 +1,44 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.1.0 http://maven.apache.org/xsd/assembly-2.1.0.xsd">
+    <id>demo-assembly-id</id>
+    <formats>
+        <format>jar</format>
+        <format>tar.gz</format>
+    </formats>
+
+    <!--    true的话，最终输出的包里，所有文件都会放在一个finalName文件里-->
+    <!--    <includeBaseDirectory>true</includeBaseDirectory>-->
+    <includeBaseDirectory>false</includeBaseDirectory>
+    <fileSets>
+        <fileSet>
+            <directory>src/bin</directory>
+            <outputDirectory>/newbin</outputDirectory>
+            <filtered>true</filtered>
+        </fileSet>
+    </fileSets>
+
+    <files>
+        <file>
+            <source>src/data/score.txt</source>
+            <outputDirectory>/newdata</outputDirectory>
+            <destName>score.txt.bak</destName>
+        </file>
+    </files>
+
+    <dependencySets>
+        <dependencySet>
+            <outputDirectory>/lib</outputDirectory>
+            <!--            各种依赖jar是否要展开-->
+            <!--            <unpack>true</unpack>-->
+            <!--            本工程的包是否要打进去-->
+            <!--            <useProjectArtifact>false</useProjectArtifact>-->
+            <!--            指的是，将pom的依赖里，runtime（及以上）scope的依赖打包进来-->
+            <!--            举个例子，如果scope为compile，那么如果依赖了mysql-jdbc，且该jdbc的scope为runtime，那么这个包不会被打进来-->
+            <scope>runtime</scope>
+        </dependencySet>
+
+    </dependencySets>
+
+
+</assembly>
