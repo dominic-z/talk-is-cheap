@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>hello-maven-shade-plugin</artifactId>
+        <groupId>org.talk.is.cheap.maven.plugin.shade</groupId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>hello-maven-shade-plugin-uber-jar</artifactId>
+
+    <properties>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.22</version>
+        </dependency>
+
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-core</artifactId>
+            <version>1.2.11</version>
+        </dependency>
+
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.13.2</version>
+        </dependency>
+    </dependencies>
+
+
+    <build>
+
+
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.3.0</version>
+                <configuration>
+                    <!--                    把lombok的代码打到本uber-jar里，但是要排除logback的jar-->
+                    <artifactSet>
+                        <includes>
+                            <include>org.projectlombok:lombok</include>
+                        </includes>
+                        <excludes>
+                            <exclude>ch.qos.logback:logback-core</exclude>
+                        </excludes>
+                    </artifactSet>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+<!--                        <configuration>-->
+<!--                            <shadedArtifactAttached>true</shadedArtifactAttached>-->
+<!--                            <shadedClassifierName>dom-shaded</shadedClassifierName>-->
+<!--                        </configuration>-->
+                    </execution>
+                </executions>
+            </plugin>
+
+
+<!--                        <plugin>-->
+<!--                            <groupId>org.apache.maven.plugins</groupId>-->
+<!--                            <artifactId>maven-shade-plugin</artifactId>-->
+<!--                            <version>3.3.0</version>-->
+<!--                            <configuration>-->
+<!--                                <filters>-->
+<!--                                    <filter>-->
+<!--                                        <artifact>junit:junit</artifact>-->
+<!--                                        <includes>-->
+<!--                                            <include>junit/framework/**</include>-->
+<!--                                            <include>org/junit/**</include>-->
+<!--                                        </includes>-->
+<!--                                        <excludes>-->
+<!--                                            <exclude>org/junit/experimental/**</exclude>-->
+<!--            &lt;!&ndash;                                <exclude>org/junit/runners/**</exclude>&ndash;&gt;-->
+<!--                                        </excludes>-->
+<!--                                    </filter>-->
+<!--                                    <filter>-->
+<!--                                        <artifact>*:*</artifact>-->
+<!--                                        <excludes>-->
+<!--                                            <exclude>META-INF/*.SF</exclude>-->
+<!--                                            <exclude>META-INF/*.DSA</exclude>-->
+<!--                                            <exclude>META-INF/*.RSA</exclude>-->
+<!--                                        </excludes>-->
+<!--                                    </filter>-->
+<!--                                </filters>-->
+<!--                            </configuration>-->
+<!--                            <executions>-->
+<!--                                <execution>-->
+<!--                                    <phase>package</phase>-->
+<!--                                    <goals>-->
+<!--                                        <goal>shade</goal>-->
+<!--                                    </goals>-->
+<!--&lt;!&ndash;                                    <configuration>&ndash;&gt;-->
+<!--&lt;!&ndash;                                        <shadedArtifactAttached>true</shadedArtifactAttached>&ndash;&gt;-->
+<!--&lt;!&ndash;                                        <shadedClassifierName>dom-shaded</shadedClassifierName>&ndash;&gt;-->
+<!--&lt;!&ndash;                                    </configuration>&ndash;&gt;-->
+<!--                                </execution>-->
+<!--                            </executions>-->
+<!--                        </plugin>-->
+
+
+        </plugins>
+    </build>
+</project>
