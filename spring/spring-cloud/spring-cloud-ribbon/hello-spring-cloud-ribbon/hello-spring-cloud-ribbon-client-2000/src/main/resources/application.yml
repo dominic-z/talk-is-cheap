@@ -1,0 +1,19 @@
+
+server:
+  port: 2000
+
+
+
+eureka:
+  instance:
+    metadataMap:
+#      这个表明本服务作为eureka的客户端的zone是什么
+      zone: zone1002
+  client:
+#    这里的配置，只是表明，本服务作为eureka的客户端，要注册到哪个eureka服务端
+    register-with-eureka: false
+    serviceUrl:
+      defaultServer: http://localhost:8761/eureka/
+spring:
+  application:
+    name: client

@@ -1,0 +1,16 @@
+
+server:
+  port: 1000
+
+
+
+eureka:
+  instance:
+    metadataMap:
+      zone: zone1000
+  client:
+    serviceUrl:
+      defaultServer: http://localhost:8761/eureka/
+spring:
+  application:
+    name: server
