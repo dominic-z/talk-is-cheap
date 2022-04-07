@@ -23,6 +23,7 @@ public class Server {
      * 2. 启动客户端
      * 3. 客户端发送"client1"
      * 4. 客户端发送"aa\nbb"
+     *
      * @throws IOException
      */
     @Test
@@ -107,7 +108,7 @@ public class Server {
             if (source.get(i) == '\n') {
                 int length = i + 1 - source.position();
                 // 把这条完整消息存入新的 ByteBuffer
-                ByteBuffer target = ByteBuffer.allocate(length+1);
+                ByteBuffer target = ByteBuffer.allocate(length + 1);
                 // 从 source 读，向 target 写
                 for (int j = 0; j < length; j++) {
                     target.put(source.get());
@@ -241,12 +242,12 @@ public class Server {
             for (SocketChannel channel : channels) {
                 // 5. 接受客户端发送的数据
                 log.debug("before read ... channel: {}", channel);
-                while (channel.read(buffer) != -1) {
-//                channel.read(buffer);
-                    buffer.flip();
-                    ByteBufferUtil.debugRead(buffer);
-                    buffer.clear();
-                }
+//                while (channel.read(buffer) != -1) {
+                channel.read(buffer);
+                buffer.flip();
+                ByteBufferUtil.debugRead(buffer);
+                buffer.clear();
+//                }
                 log.debug("after read ... channel: {}", channel);
             }
         }
