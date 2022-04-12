@@ -37,7 +37,7 @@
                              targetProject="${JAVA_PATH}"/>
 
         <table tableName="${tableName}" domainObjectName="${domainUpperCamelName}"
-               mapperName="${mapperUpperCamelName}">
+               mapperName="${mapperUpperCamelName}" modelType="flat">
         </table>
 
     </context>
