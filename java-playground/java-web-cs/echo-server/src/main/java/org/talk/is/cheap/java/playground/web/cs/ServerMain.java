@@ -1,6 +1,7 @@
 package org.talk.is.cheap.java.playground.web.cs;
 
 import org.talk.is.cheap.java.playground.web.cs.server.BlockingEchoServer;
+import org.talk.is.cheap.java.playground.web.cs.server.SelectorEchoServer;
 
 /**
  * @author dominiczhu
@@ -13,8 +14,11 @@ public class ServerMain {
     private static final int PORT = 8080;
 
     public static void main(String[] args) throws Exception {
-        final BlockingEchoServer blockingEchoServer = new BlockingEchoServer(PORT);
-        blockingEchoServer.start();
+//        final BlockingEchoServer blockingEchoServer = new BlockingEchoServer(PORT);
+//        blockingEchoServer.start();
+
+        final SelectorEchoServer selectorEchoServer = new SelectorEchoServer(PORT, 16, 4);
+        selectorEchoServer.start();
 
 
     }
