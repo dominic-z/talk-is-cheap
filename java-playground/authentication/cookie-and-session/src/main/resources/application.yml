@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: cookie-and-session
+  thymeleaf:
+    prefix: classpath:/templates/ # 访问template下的html文件需要配置模板，映射，路径指向
+    suffix: .html
+    cache: false # 开发时关闭缓存,不然没法看到实时页面
+
+server:
+  port: 8099
+
+secret:
+  key:
+    jwt: 4eBxhthkVF4gdOuF6vNyyuisWeQFnc7lbX2NszbsawM=
