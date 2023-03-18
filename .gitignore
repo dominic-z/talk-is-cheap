@@ -39,3 +39,6 @@ build/
 **/.DS_Store
 
 /**/gitignore
+
+### node_modules ###
+/**/node_modules
