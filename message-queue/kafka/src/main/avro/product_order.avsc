@@ -1,0 +1,10 @@
+{
+  "namespace": "onehour.kafka.example.avro",
+  "type": "record",
+  "name": "ProductOrder",
+  "fields": [
+    {"name": "order_id", "type": "long"},
+    {"name": "product_id", "type": "long"},
+    {"name": "user_id", "type": "long"}
+  ]
+}
