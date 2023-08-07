@@ -18,9 +18,9 @@ public class CodeGeneratorConfig {
     // 项目在硬盘上的基础路径
     public static final String PROJECT_PATH = System.getProperty("user.dir");
     // java文件路径
-    public static String JAVA_PATH = "hello-mybatis-generator/target/out/src/main/java";
+    public static String JAVA_PATH = "target/out/src/main/java";
     // 资源文件路径
-    public static String RESOURCES_PATH = "hello-mybatis-generator/target/out/src/main/resources";
+    public static String RESOURCES_PATH = "target/out/src/main/resources";
     public static String SQL_MAPPER_XML_ROOT_PATH = RESOURCES_PATH + "/mappers";
 
     // 包的父目录

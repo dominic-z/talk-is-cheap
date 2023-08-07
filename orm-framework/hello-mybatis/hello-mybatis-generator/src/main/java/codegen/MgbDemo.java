@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ *
+ * 测试mgb的demo
  * @author dominiczhu
  * @version 1.0
  * @title MgbDemo
