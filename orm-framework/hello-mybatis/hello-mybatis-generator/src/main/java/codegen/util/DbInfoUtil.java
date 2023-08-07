@@ -54,7 +54,7 @@ public class DbInfoUtil {
 
                 if (tableName.equals(table)) {
                     ResultSet rs = conn.getMetaData()
-                            .getColumns(database, "%", tableName, "%");
+                            .getColumns(database, "%", tableName, "%"); // % 通配符
 
                     while (rs.next()) {
                         ColumnInfo columnInfo = new ColumnInfo();
