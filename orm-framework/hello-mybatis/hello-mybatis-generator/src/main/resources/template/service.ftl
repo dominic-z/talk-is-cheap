@@ -13,8 +13,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Date;
 
 /**
+* 定制化的service层，用于弥补mbg生成的mapper过于灵活导致可能出现的业务漏洞，例如越过deleted字段查询、更新updateTime等
 * @author ${author}
 * @date ${date}
 */
@@ -34,7 +36,7 @@ public class ${serviceUpperCamelName}{
         if (record == null) {
             return 0;
         }
-        return ${mapperLowerCamelName}.insert(record);
+        return ${mapperLowerCamelName}.insertSelective(record);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -46,19 +48,11 @@ public class ${serviceUpperCamelName}{
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public int deleteByPrimaryKey(${primaryKeyShortName} key) {
-        if (key == null) {
+    public int deleteByExample(${exampleUpperCamelName} example) {
+        if (example == null) {
             return 0;
         }
-        return ${mapperLowerCamelName}.deleteByPrimaryKey(key);
-    }
-
-    @Transactional(rollbackFor = Exception.class)
-    public int updateByPrimaryKey(${domainUpperCamelName} record) {
-        if (record == null) {
-            return 0;
-        }
-        return ${mapperLowerCamelName}.updateByPrimaryKey(record);
+        return ${mapperLowerCamelName}.deleteByExample(example);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -66,17 +60,9 @@ public class ${serviceUpperCamelName}{
         if (record == null || example == null) {
             return 0;
         }
+        record.setUpdateTime(new Date());
         return ${mapperLowerCamelName}.updateByExampleSelective(record, example);
     }
-
-    @Transactional(rollbackFor = Exception.class)
-    public int updateByExample(${domainUpperCamelName} record, ${exampleUpperCamelName} example) {
-        if (record == null || example == null) {
-            return 0;
-        }
-        return ${mapperLowerCamelName}.updateByExample(record, example);
-    }
-
 
     public long countByExample(${exampleUpperCamelName} example) {
         if (example == null) {
@@ -91,13 +77,6 @@ public class ${serviceUpperCamelName}{
             return new ArrayList<>();
         }
         return ${mapperLowerCamelName}.selectByExample(example);
-    }
-
-    public ${domainUpperCamelName} selectByPrimaryKey(${primaryKeyShortName} key) {
-        if (key == null) {
-            return null;
-        }
-        return ${mapperLowerCamelName}.selectByPrimaryKey(key);
     }
 
     // 基于${daoLowerCamelName}
