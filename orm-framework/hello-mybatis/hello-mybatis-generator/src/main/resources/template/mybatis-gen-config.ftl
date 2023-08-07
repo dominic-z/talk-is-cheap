@@ -9,7 +9,7 @@
         <plugin type="org.mybatis.generator.plugins.EqualsHashCodePlugin"/>
         <plugin type="org.mybatis.generator.plugins.RowBoundsPlugin"/>
         <plugin type="codegen.generator.mbg.plugin.MysqlLimitPlugin"/>
-        <plugin type="codegen.generator.mbg.plugin.bussinesssql.CloseSelectivePlugin"/>
+        <plugin type="codegen.generator.mbg.plugin.bussinesssql.CloseSomeFuncPlugin"/>
         <plugin type="codegen.generator.mbg.plugin.CommentPlugin"/>
         <plugin type="codegen.generator.mbg.plugin.bussinesssql.GenerateAnotherSqlMapForCustomPlugin"/>
         <plugin type="codegen.generator.mbg.plugin.bussinesssql.InsertBatchSqlPlugin"/>

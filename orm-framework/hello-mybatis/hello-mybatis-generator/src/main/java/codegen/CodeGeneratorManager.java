@@ -89,22 +89,22 @@ public class CodeGeneratorManager {
                 continue;
             }
 
-            if (!columnInfo.isPrimaryKey()) {
-                tableInfo.getInsertColumnsList().add(columnInfo.getColumnName());
-                tableInfo.getInsertPropList().add("#{" + columnInfo.getPropertyName() + "}");
-
-                tableInfo.getUpdateColumnInfoList().add(columnInfo);
-            }
-
-            if (columnInfo.getColumnName().contains("_")) {
-                tableInfo.getColumnAndPropList().add(columnInfo.getColumnName() + " " + columnInfo.getPropertyName());
-            } else {
-                tableInfo.getColumnAndPropList().add(columnInfo.getColumnName());
-            }
-
-            if (!TableInfo.IGNORE_COLUMN_FOR_DOMAIN.contains(columnInfo.getPropertyName())) {
-                tableInfo.getDomainColumnInfoList().add(columnInfo);
-            }
+//            if (!columnInfo.isPrimaryKey()) {
+//                tableInfo.getInsertColumnsList().add(columnInfo.getColumnName());
+//                tableInfo.getInsertPropList().add("#{" + columnInfo.getPropertyName() + "}");
+//
+//                tableInfo.getUpdateColumnInfoList().add(columnInfo);
+//            }
+//
+//            if (columnInfo.getColumnName().contains("_")) {
+//                tableInfo.getColumnAndPropList().add(columnInfo.getColumnName() + " " + columnInfo.getPropertyName());
+//            } else {
+//                tableInfo.getColumnAndPropList().add(columnInfo.getColumnName());
+//            }
+//
+//            if (!TableInfo.IGNORE_COLUMN_FOR_DOMAIN.contains(columnInfo.getPropertyName())) {
+//                tableInfo.getDomainColumnInfoList().add(columnInfo);
+//            }
 
         }
 
