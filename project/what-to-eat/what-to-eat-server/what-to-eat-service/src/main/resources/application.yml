@@ -3,6 +3,10 @@ server:
 logging:
   level:
     root: INFO
+# 用来存图片静态数据的，如果是windows就改成D://xxx//xx
+file:
+  img-path: file:/home/dominiczhu/Coding
+
 spring:
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
@@ -10,3 +14,17 @@ spring:
     url: jdbc:mysql://localhost:3306/what_to_eat?useSSL=false
     username: root
     password: root
+  # 图片我当静态资源存储在项目里了，如下配置可以直接将静态文件直接返回，不用经过controller
+  mvc:
+    # URL响应地址（Springboot默认为/**)
+    static-path-pattern: /static/**
+  web:
+    resources:
+      # 静态文件地址，保留官方内容后，进行追加
+      static-locations: file:/home/dominiczhu/Coding/img,classpath:/static,classpath:/public,classpath:/resources,classpath:/META-INF/resources
+  #  文件最大1M
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 1MB
+      max-request-size: 1MB
