@@ -1,5 +1,6 @@
 package org.talk.is.cheap.project.what.to.eat.service;
 
+import lombok.val;
 import org.talk.is.cheap.project.what.to.eat.dao.mbg.BusinessMapper;
 import org.talk.is.cheap.project.what.to.eat.dao.customized.BusinessDao;
 import org.talk.is.cheap.project.what.to.eat.domain.pojo.Business;
@@ -8,6 +9,8 @@ import org.talk.is.cheap.project.what.to.eat.domain.query.example.BusinessExampl
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
+import org.talk.is.cheap.project.what.to.eat.exceptions.VerificationException;
+import org.talk.is.cheap.project.what.to.eat.util.VerifyUtil;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -15,12 +18,13 @@ import java.util.List;
 import java.util.Date;
 
 /**
-* 定制化的service层，用于弥补mbg生成的mapper过于灵活导致可能出现的业务漏洞，例如越过deleted字段查询、更新updateTime等
-* @author dominiczhu
-* @date 2023/08/07
-*/
+ * 定制化的service层，用于弥补mbg生成的mapper过于灵活导致可能出现的业务漏洞，例如越过deleted字段查询、更新updateTime等
+ *
+ * @author dominiczhu
+ * @date 2023/08/07
+ */
 @Service
-public class BusinessService{
+public class BusinessService {
 
     @Autowired
     private BusinessDao businessDao;
@@ -80,4 +84,28 @@ public class BusinessService{
 
     // 基于businessDao
 
+
+    // 基于自动生成的Mapper和Dao手动编写
+
+    public Business selectByPrimaryKey(Long id) throws VerificationException {
+        VerifyUtil.notNull(id, "business id is null");
+        val businessExample = new BusinessExample();
+        businessExample.createCriteria().andIdEqualTo(id).andStatusEqualTo(0);
+        val businesses = selectByExample(businessExample);
+        if (businesses.size() == 0) {
+            return null;
+        } else {
+            return businesses.get(0);
+        }
+    }
+
+
+    public int updateByPrimaryKey(Long id, Business business) throws VerificationException {
+        VerifyUtil.notNull(id, "business id is null");
+        VerifyUtil.notNull(business, "business is null");
+
+        val businessExample = new BusinessExample();
+        businessExample.createCriteria().andIdEqualTo(id).andStatusEqualTo(0);
+        return updateByExampleSelective(business, businessExample);
+    }
 }

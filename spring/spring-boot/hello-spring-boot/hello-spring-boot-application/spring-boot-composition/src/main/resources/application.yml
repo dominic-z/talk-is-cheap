@@ -51,6 +51,24 @@ spring:
 #        health-check-path: /web/health/health
 #        health-check-interval: 10s
 #        health-check-critical-timeout: 7200s
+  #
+  # 图片我当静态资源存储在项目里了，如下配置可以直接将静态文件直接返回，不用经过controller
+  mvc:
+    # URL响应地址（Springboot默认为/**) 也就是说任何url为ip/static/xxx的链接，都会被认为是静态资源
+    static-path-pattern: /static/**
+  web:
+    resources:
+      # 按上述规则被认为是静态资源的url请求之后，会在下方的地址内，逐个寻找对应的文件
+      # 比如ip:port/static/a.jpg，就会先寻找classpath:/static/a.jpg，以此类推
+      # classpath简单说就是编译出的target/classes文件夹，
+      # 而file:git_ignore指当前项目的根目录
+      static-locations: classpath:/static,classpath:/public,classpath:/resources,classpath:/META-INF/resources,file:imgs
+  #  使用Springboot上传文件，controller负责接收文件，并且设置文件最大1M
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 1MB
+      max-request-size: 1MB
 ## 使用spring loadbalancer，弃用ribbon  不写这个会报错 还会用ribbon
 ribbon:
   nacos:
