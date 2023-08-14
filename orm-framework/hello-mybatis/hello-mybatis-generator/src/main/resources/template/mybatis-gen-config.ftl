@@ -38,6 +38,8 @@
 
         <table tableName="${tableName}" domainObjectName="${domainUpperCamelName}"
                mapperName="${mapperUpperCamelName}" modelType="flat">
+               <!-- insert语句需要回填id，目前我的主键都是id，没出现过复合主键 -->
+               <generatedKey column="id" sqlStatement="MySql" identity="true"/>
         </table>
 
     </context>
