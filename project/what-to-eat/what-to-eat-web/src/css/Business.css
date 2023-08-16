@@ -1,0 +1,27 @@
+.business {
+    display:flex;
+    justify-content: space-between;
+}
+
+.avatar{
+    width: 30%;
+    margin:10px;
+    
+}
+
+.avatar img{
+    width: 100%;
+}
+
+.businessInfo{
+    width: 60%;
+    padding:5px;
+}
+
+.businessInfo .name{
+    font-size: 1.5em;
+}
+
+.businessInfo .description{
+    font-size: 1em;
+}
