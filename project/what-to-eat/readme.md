@@ -19,9 +19,19 @@
 
 ```shell
 npx create-react-app what-to-eat-web --template typescript
+cnpm install antd
+cnpm install dayjs
 ```
 
 
+
+### 坑
+
+#### cannot read properties of null (reading context)
+
+
+
+删除node_modules和package.lock，然后重新npm install 就可以了，感觉cnpm有点问题
 
 
 
