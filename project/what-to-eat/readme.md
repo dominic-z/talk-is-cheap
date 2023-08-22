@@ -21,9 +21,11 @@
 npx create-react-app what-to-eat-web --template typescript
 cnpm install antd
 cnpm install dayjs
+npm install axios
+npm install @ant-design/icons --save
 ```
 
-
+如果是`git clone`下来的新项目，记得在`web`里删除`package.lock`，然后重新`npm install`安装依赖
 
 ### 坑
 
@@ -31,7 +33,7 @@ cnpm install dayjs
 
 
 
-删除node_modules和package.lock，然后重新npm install 就可以了，感觉cnpm有点问题
+删除`node_modules`和`package.lock`，然后重新`npm install `就可以了，感觉`cnpm`有点问题
 
 
 

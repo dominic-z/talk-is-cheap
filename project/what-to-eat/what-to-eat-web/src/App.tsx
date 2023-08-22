@@ -1,7 +1,7 @@
 import React from 'react';
 import logo from './logo.svg';
 import './App.css';
-import Canvas from './component/Canvas';
+import WhatToEat from './component/WhatToEat';
 
 function App() {
   // return (
@@ -22,9 +22,9 @@ function App() {
   //     </header>
   //   </div>
   // );
-
+  
   return (
-    <Canvas></Canvas>
+    <WhatToEat></WhatToEat>
   )
 }
 
