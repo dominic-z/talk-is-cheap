@@ -1,0 +1,12 @@
+.businessForm{
+    /* background: white; */
+    /* width: 50%;
+    height: 50%; */
+}
+
+
+.businessFormContainer{
+    width: 50%;
+    display: flex;
+    justify-content: center;
+}
