@@ -8,7 +8,7 @@
         <setting name="useColumnLabel" value="true"/>
         <setting name="mapUnderscoreToCamelCase" value="true"/>
         <!--        配合logger使用-->
-<!--        <setting name="logPrefix" value="mybatis."/>-->
+        <setting name="logPrefix" value="mybatis."/>
     </settings>
 
     <typeAliases>
