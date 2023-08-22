@@ -8,23 +8,24 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.talk.is.cheap.project.what.to.eat.constants.ErrorCode;
-import org.talk.is.cheap.project.what.to.eat.domain.message.CreateBusinessReq;
-import org.talk.is.cheap.project.what.to.eat.domain.message.CreateBusinessResp;
-import org.talk.is.cheap.project.what.to.eat.domain.message.UploadBusinessAvatarResp;
+import org.talk.is.cheap.project.what.to.eat.domain.message.*;
 import org.talk.is.cheap.project.what.to.eat.domain.pojo.Business;
+import org.talk.is.cheap.project.what.to.eat.domain.query.example.BusinessExample;
+import org.talk.is.cheap.project.what.to.eat.domain.bo.BusinessBO;
 import org.talk.is.cheap.project.what.to.eat.exceptions.VerificationException;
 import org.talk.is.cheap.project.what.to.eat.service.BusinessService;
+import org.talk.is.cheap.project.what.to.eat.util.ResultUtil;
 import org.talk.is.cheap.project.what.to.eat.util.VerifyUtil;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.UUID;
 
 @RestController
 @Slf4j
-//@RequestMapping(path = "/")
+@RequestMapping(path = "/api")
+@CrossOrigin("http://localhost:3000/")
 public class BusinessController {
 
     @Autowired
@@ -32,7 +33,7 @@ public class BusinessController {
     @Value("${file.img-path}")
     private String imgPath;
 
-    @RequestMapping(path = "/api/business", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(path = "/business", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public CreateBusinessResp createBusiness(@RequestBody CreateBusinessReq req) {
         val createBusinessResp = new CreateBusinessResp();
@@ -40,7 +41,11 @@ public class BusinessController {
         try {
             val data = req.getData();
             VerifyUtil.notNull(data.getName(), "business is null");
-            val business = new Business().withName(data.getName()).withAvatarPath("null");
+//            VerifyUtil.notNull(data.getDescription(), "business description is null");
+            val business = new Business()
+                    .withName(data.getName())
+                    .withDescription(data.getDescription())
+                    .withAvatarPath("null");
             val id = businessService.create(business);
             log.info("{}", business);
             val respBody = new CreateBusinessResp.BusinessRespBody();
@@ -57,7 +62,7 @@ public class BusinessController {
     }
 
 
-    @RequestMapping(path = "/api/businessAvatar", method = RequestMethod.POST)
+    @RequestMapping(path = "/businessAvatar", method = RequestMethod.POST)
     @ResponseBody
     public UploadBusinessAvatarResp uploadBusinessAvatar(MultipartFile file, @RequestParam("businessId") Long businessId) {
         val resp = new UploadBusinessAvatarResp();
@@ -83,14 +88,58 @@ public class BusinessController {
         return resp;
     }
 
+    @RequestMapping(path = "/business", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public GetBusinessListResp getBusinessList(@RequestParam("page") int page,@RequestParam("pageSize") int pageSize) {
+        GetBusinessListResp resp = new GetBusinessListResp();
+        try {
+            VerifyUtil.gt(page, 0, "page should be greater than -1");
+            VerifyUtil.gt(pageSize, 0, "pageSize should be greater than 0");
+
+            val respBodyData = new GetBusinessListResp.GetBusinessListRespBody();
+            val businessExample = new BusinessExample();
+            businessExample.createCriteria().andStatusEqualTo(0);
+            val total = businessService.countByExample(businessExample);
+            respBodyData.setTotal(total);
+            respBodyData.setPage(page);
+            respBodyData.setPageSize(pageSize);
+
+            businessExample.clear();
+            businessExample.createCriteria().andStatusEqualTo(0);
+            businessExample.setOffset((page - 1) * pageSize);
+            businessExample.setLimit(pageSize);
+            val businessList = businessService.selectByExample(businessExample);
+
+            val businessBOList = businessList.stream().map((b) -> {
+                val businessVO = new BusinessBO();
+                businessVO.setId(b.getId());
+                businessVO.setName(b.getName());
+                businessVO.setDescription(b.getDescription());
+                return businessVO;
+            }).toList();
+
+            respBodyData.setBusinessBOs(businessBOList);
+
+            resp.setCode(0);
+            resp.setData(respBodyData);
+            return ResultUtil.success(resp);
+        } catch (VerificationException e) {
+            log.error("verificationException: ", e);
+            return ResultUtil.fail(resp, ErrorCode.ILLEGAL_PARAMETER_ERROR, "Verification error");
+        } catch (Exception e) {
+            log.error("Uncaught Error: ", e);
+            return ResultUtil.fail(resp, ErrorCode.ERROR, "uncaught error");
+        }
+    }
+
     private Path saveAvatarImg(MultipartFile file, Long businessId) throws VerificationException, IOException {
         VerifyUtil.notNull(file, "avatar file is null");
         VerifyUtil.notNull(file.getOriginalFilename(), "avatar file is null");
         val split = file.getOriginalFilename().split("\\.");
         VerifyUtil.gt(split.length, 0, ErrorCode.ILLEGAL_FILE_TYPE_ERROR, "file has no suffix");
         val suffix = split[1];
-        log.info("{}",imgPath);
-        val imgDirPath = Paths.get("%s/%d".formatted(imgPath,businessId));
+        log.info("{}", imgPath);
+        val imgDirPath = Paths.get("%s/%d".formatted(imgPath, businessId));
         imgDirPath.toFile().mkdirs();
         val imgPath = imgDirPath.resolve("%d_%s.%s".formatted(businessId, UUID.randomUUID(), suffix));
         file.transferTo(imgPath);
