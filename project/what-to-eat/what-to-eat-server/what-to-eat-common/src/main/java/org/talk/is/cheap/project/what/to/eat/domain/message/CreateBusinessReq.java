@@ -7,7 +7,7 @@ public class CreateBusinessReq extends GenericRequest<CreateBusinessReq.Business
     @Data
     public static class BusinessReqBody{
         private String name;
-
         private String description;
+
     }
 }
