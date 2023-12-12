@@ -5,13 +5,14 @@ import lombok.val;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.scheduling.support.CronExpression;
 import org.talk.is.cheap.project.what.to.eat.dao.mbg.BusinessMapper;
 import org.talk.is.cheap.project.what.to.eat.domain.pojo.Business;
 import org.talk.is.cheap.project.what.to.eat.domain.query.example.BusinessExample;
 
 @SpringBootTest(classes = Application.class)
 @Slf4j
-public class DaoTest {
+public class SpringTest {
 
     @Autowired
     private BusinessMapper businessMapper;
@@ -22,5 +23,11 @@ public class DaoTest {
         val businessExample = new BusinessExample();
         businessExample.createCriteria().andIdEqualTo(1L);
         log.info("{}", businessMapper.selectByExample(businessExample));
+    }
+
+
+    @Test
+    public void testCron(){
+        log.info("{}",CronExpression.isValidExpression("0 0 0 L * ?"));
     }
 }
