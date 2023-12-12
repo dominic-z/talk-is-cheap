@@ -6,7 +6,9 @@
 
 
 .businessFormContainer{
-    width: 50%;
-    display: flex;
-    justify-content: center;
+    width: 500px;
+    min-width: 300px;
+    /* 本来是像做成居中的，但是发现使用弹性盒子的话，card body会变得特别窄 */
+    /* display: flex; */
+    /* justify-content: center; */
 }

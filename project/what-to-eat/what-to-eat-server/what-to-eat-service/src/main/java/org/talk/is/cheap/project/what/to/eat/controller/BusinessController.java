@@ -2,6 +2,8 @@ package org.talk.is.cheap.project.what.to.eat.controller;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.apache.ibatis.annotations.Param;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -20,12 +22,15 @@ import org.talk.is.cheap.project.what.to.eat.util.VerifyUtil;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Date;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @Slf4j
 @RequestMapping(path = "/api")
-@CrossOrigin("http://localhost:3000/")
+@CrossOrigin("http://localhost:3003/")
 public class BusinessController {
 
     @Autowired
@@ -41,6 +46,7 @@ public class BusinessController {
         try {
             val data = req.getData();
             VerifyUtil.notNull(data.getName(), "business is null");
+            log.info("{} name length {}", data.getName(), data.getName().length());
 //            VerifyUtil.notNull(data.getDescription(), "business description is null");
             val business = new Business()
                     .withName(data.getName())
@@ -68,9 +74,9 @@ public class BusinessController {
         val resp = new UploadBusinessAvatarResp();
         try {
             VerifyUtil.notNull(businessId, "business id is null");
-            val business = businessService.selectByPrimaryKey(businessId);
-            VerifyUtil.notNull(business, ErrorCode.DATA_NOT_FOUND_ERROR, "business with id equal to %d doesn't exists".formatted(businessId));
-
+            val businessList = businessService.selectByPrimaryKeys(List.of(businessId));
+            VerifyUtil.isTrue(businessList != null && businessList.size() > 0, ErrorCode.DATA_NOT_FOUND_ERROR, "business with id equal to %d doesn't exists".formatted(businessId));
+            val business = businessList.get(0);
             final Path imgPath = saveAvatarImg(file, businessId);
 
             business.setAvatarPath(imgPath.toString());
@@ -88,9 +94,9 @@ public class BusinessController {
         return resp;
     }
 
-    @RequestMapping(path = "/business", produces = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(path = "/business", produces = MediaType.APPLICATION_JSON_VALUE, method = RequestMethod.GET)
     @ResponseBody
-    public GetBusinessListResp getBusinessList(@RequestParam("page") int page,@RequestParam("pageSize") int pageSize) {
+    public GetBusinessListResp getBusinessList(@RequestParam("page") int page, @RequestParam("pageSize") int pageSize) {
         GetBusinessListResp resp = new GetBusinessListResp();
         try {
             VerifyUtil.gt(page, 0, "page should be greater than -1");
@@ -144,6 +150,51 @@ public class BusinessController {
         val imgPath = imgDirPath.resolve("%d_%s.%s".formatted(businessId, UUID.randomUUID(), suffix));
         file.transferTo(imgPath);
         return imgPath;
+    }
+
+
+    @RequestMapping(value = "/business", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public DeleteBusinessResp deleteBusiness(@Param("id") Long id) {
+        val resp = new DeleteBusinessResp();
+        try {
+            VerifyUtil.notNull(id, "id shouldn't be null");
+            val businessList = businessService.selectByPrimaryKeys(List.of(id));
+            VerifyUtil.notNull(businessList, ErrorCode.DATA_NOT_FOUND_ERROR, "can't find business by %d".formatted(id));
+            VerifyUtil.isTrue(businessList.size() == 0, ErrorCode.DATA_NOT_FOUND_ERROR, "can't find business by %d".formatted(id));
+            val business = businessList.get(0);
+            business.setName("%s_%d".formatted(business.getName(), new Date().getTime()));
+            business.setStatus(1);
+            businessService.updateByPrimaryKey(id, business);
+
+            return ResultUtil.success(resp);
+        } catch (VerificationException e) {
+            return ResultUtil.fail(resp, e.getErrorCode(), e.getMessage());
+        } catch (Exception e) {
+            return ResultUtil.fail(resp, ErrorCode.ERROR, e.getMessage());
+        }
+    }
+
+
+    @RequestMapping(value = "/business", method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public UpdateBusinessResp updateBusiness(@RequestBody UpdateBusinessReq req) {
+        val resp = new UpdateBusinessResp();
+        try {
+            val businessBOMap = req.getData().getBusinessBOList().stream().collect(Collectors.toMap(BusinessBO::getId, b -> b));
+            val modifyBusinessList = businessService
+                    .selectByPrimaryKeys(businessBOMap.keySet().stream().toList())
+                    .stream()
+                    .peek(b -> BeanUtils.copyProperties(businessBOMap.get(b.getId()), b)).toList();
+
+            val updateCount = businessService.updateBusiness(modifyBusinessList);
+            VerifyUtil.eq(updateCount, req.getData().getBusinessBOList().size(), "部分更新失败");
+            return ResultUtil.success(resp);
+        } catch (VerificationException e) {
+            return ResultUtil.fail(resp, e.getErrorCode(), e.getMessage());
+        } catch (Exception e) {
+            return ResultUtil.fail(resp, ErrorCode.ERROR, e.getMessage());
+        }
     }
 
 }

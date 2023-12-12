@@ -13,4 +13,7 @@ public class ErrorCode {
     public static final int DATA_NOT_FOUND_ERROR = 8002;
     // 文件类型不支持异常
     public static final int ILLEGAL_FILE_TYPE_ERROR = 8002;
+
+    // 文件类型不支持异常
+    public static final int LARGE_PAGE_SIZE_ERROR = 8003;
 }

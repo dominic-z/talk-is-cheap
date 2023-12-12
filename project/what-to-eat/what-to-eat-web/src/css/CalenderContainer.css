@@ -1,7 +1,9 @@
 
 .calenderContainer{
-    padding-left: 20px;
-    width: 65%;
+    padding: 10px;
+    width: 60%;
+    overflow-y: scroll;
+    background-color: rgb(171, 198, 223);
 }
 
 .events {

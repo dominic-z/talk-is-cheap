@@ -1,0 +1,77 @@
+/* 容器样式 */
+.box {
+    width: 300px;
+    height: 300px;
+    background-color: blue;
+    text-align: center;
+    line-height: 300px;
+    color: #fff;
+    font-size: 50px;
+}
+
+/* 动画样式 */
+.fade-enter,
+.fade-appear {
+    opacity: 0;
+    transform: scale(0.8);
+}
+
+/* 未实验 */
+/* active就有动画效果，因此一开始添加.fade-enter和.fade-enter-active的时候就会有动画效果 */
+/* 当然如果.fade-enter和.fade-enter-active做成都是opacity：0，那么动画只会在最后的时候添加-done的时候出现 */
+.fade-enter-active,
+.fade-appear-active {
+    opacity: 1;
+    transform: scale(1);
+    transition: opacity 500ms, transform 500ms;
+}
+
+/* 以下是执行完动画后，元素的默认样式，所以可以省略 */
+
+.fade-enter-done,
+.fade-appear-done,
+.fade-exit {
+    opacity: 1;
+    transform: scale(1);
+    transition: opacity 300ms, transform 300ms;
+}
+
+.fade-exit-active {
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all 300ms
+}
+/* 如果退出的时候会unmount，那么不需要-exit-done，因为反正都unmount了 */
+.fade-exit-done {
+    opacity: 0;
+}
+
+.card-exit-done,
+.card-enter,
+.card-appear {
+    opacity: 0;
+    transform: scale(.8);
+}
+
+.card-enter-active,
+.card-appear-active {
+    opacity: 0;
+    transform: scale(1);
+    transition: opacity 300ms, transform 300ms;
+}
+
+.card-enter-done {
+    opacity: 1;
+    transform: scale(1);
+    transition: opacity 300ms, transform 300ms;
+}
+
+.card-exit {
+    opacity: 1;
+}
+
+.card-exit-active {
+    opacity: 0;
+    transform: scale(.8);
+    transition: opacity 300ms, transform 300ms;
+}
