@@ -23,6 +23,9 @@ cnpm install antd
 cnpm install dayjs
 npm install axios
 npm install @ant-design/icons --save
+npm install --save @types/react-transition-group
+npm install react-transition-group --save
+npm install eventemitter3
 ```
 
 如果是`git clone`下来的新项目，记得在`web`里删除`package.lock`，然后重新`npm install`安装依赖

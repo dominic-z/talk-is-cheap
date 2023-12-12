@@ -1,34 +1,34 @@
 
+
+.businessListContainer{
+    width: 20%;
+    min-width: 300px;
+    max-width: 350px;
+    /* 用于button定位 */
+    position: relative;
+    background-color: rgb(171, 198, 223);
+}
 .businessList{
-    width: 30%;
+    /* width: 30%; */
     overflow-y: scroll;
-    /* position: relative; */
-}
-/* 达成目标，能够让鼠标挪动到button附近的时候，button就能亮起来 所以创建了一个外框 */
-.addBusinessButtonBox{
-    /* 为了让这个box称为行内块，如果只是block的话，这个block会直接占据一行*/
-    display: inline-block; 
-    position: sticky;
-    left: 85%;
-    /* 通过padding将这个盒子在button的基础上撑大10个px */
-    padding: 10px;
-    bottom: 10%;
-
+    /* 将列表拉高，使得滚动条边长 */
+    height: 100%;
 }
 
-.addBusinessButtonBox:hover .addBusinessButton{
+.addBusinessButton:hover{
     transition: 1000ms;
     opacity: 1;
 }
 
-
-
 .addBusinessButton{
     opacity: 0.2;
-    position: inherit;
-    /* left: 85%;
-    bottom: 10%; */
+    /* antd的css本身是fixed定位的 */
+    position: absolute;
+    left: 70%;
+    bottom: 5%;
     /* hover离开的时候也可以有动画 */
     transition: 1000ms; 
+    z-index: 5;
+
 
 }

@@ -30,3 +30,11 @@ spring:
       enabled: true
       max-file-size: 1MB
       max-request-size: 1MB
+  jackson:
+#    用于指定请求中的日期格式
+    timeZone: GMT+08:00
+    date-format: yyyy-MM-dd HH:mm:ss
+
+
+database:
+  page-size-upper-boundary: 500

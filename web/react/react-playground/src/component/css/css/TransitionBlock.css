@@ -1,0 +1,34 @@
+
+/* transition在这个.box类上，指的是从其他类转换到这个box类的时候的过渡效果 */
+/* 比如说原来某个组件的类是.click-box，当他的class变为box，这个过渡效果就会被应用 */
+/* 部分属性无法适用，例如从display:none -> display:block，就不会有过渡效果，因为这个也确实没法过渡，一般都是用opacity*/
+.box {
+    border-style: solid;
+    border-width: 1px;
+    display: block;
+    width: 100px;
+    height: 100px;
+    background-color: #0000ff;
+    transition:
+        width 2s,
+        height 2s,
+        background-color 2s,
+        rotate 2s;
+}
+
+/* .box的transition仍然生效，可能是继承？？并且从.box:hover->.box也会有动效 */
+.box:hover {
+    background-color: #ffcccc;
+    width: 200px;
+    height: 200px;
+    rotate: 180deg;
+}
+
+/* 将.clicked-box的transition注释掉之后，从.box:hover->.clicked-box就不会有动效了 */
+.clicked-box {
+    background-color: #801818;
+    width: 300px;
+    height: 300px;
+    rotate: 1800deg;
+    /* transition: all 1000ms; */
+}
