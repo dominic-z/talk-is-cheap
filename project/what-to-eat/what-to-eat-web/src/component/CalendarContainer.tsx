@@ -13,6 +13,7 @@ import { ConfigProvider } from 'antd/lib';
 
 export default function CalenderContainer() {
 
+    
     const dateCellRender = (value: Dayjs) => {
         const listData = getListData(value);
         return (
@@ -25,7 +26,6 @@ export default function CalenderContainer() {
             </ul>
         );
     };
-
     const cellRender = (current: Dayjs, info: CellRenderInfo<Dayjs>) => {
         if (info.type === 'date') return dateCellRender(current);
         // if (info.type === 'month') return monthCellRender(current);
@@ -36,7 +36,11 @@ export default function CalenderContainer() {
     return (
         
         <div className='calenderContainer'>
-            <Calendar cellRender={cellRender} />
+            <Calendar cellRender={cellRender} fullscreen={true} 
+            onPanelChange={(e:any)=>{console.log(e)}}
+            onSelect={(e:any)=>{console.log(e)}}
+            onChange={(e:any)=>{console.log(e)}}
+            />
         </div>
 
 

@@ -87,19 +87,18 @@ public class BusinessService {
 
     // 基于自动生成的Mapper和Dao手动编写
 
-    public Business selectByPrimaryKey(Long id) throws VerificationException {
-        VerifyUtil.notNull(id, "business id is null");
+    public List<Business> selectByPrimaryKeys(List<Long> ids) throws VerificationException {
+        VerifyUtil.notNull(ids, "business ids is null");
+        VerifyUtil.gt(ids.size(), 0, "business ids is empty");
         val businessExample = new BusinessExample();
-        businessExample.createCriteria().andIdEqualTo(id).andStatusEqualTo(0);
-        val businesses = selectByExample(businessExample);
-        if (businesses.size() == 0) {
-            return null;
-        } else {
-            return businesses.get(0);
-        }
+        businessExample.setOrderByClause(Business.ID);
+        businessExample.createCriteria().andIdIn(ids).andStatusEqualTo(0);
+
+        return selectByExample(businessExample);
+
     }
 
-
+    @Transactional(rollbackFor = Exception.class)
     public int updateByPrimaryKey(Long id, Business business) throws VerificationException {
         VerifyUtil.notNull(id, "business id is null");
         VerifyUtil.notNull(business, "business is null");
@@ -107,5 +106,14 @@ public class BusinessService {
         val businessExample = new BusinessExample();
         businessExample.createCriteria().andIdEqualTo(id).andStatusEqualTo(0);
         return updateByExampleSelective(business, businessExample);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public int updateBusiness(List<Business> businessList) throws VerificationException {
+        int count = 0;
+        for (Business b : businessList) {
+            count += updateByPrimaryKey(b.getId(), b);
+        }
+        return count;
     }
 }
