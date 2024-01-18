@@ -1,0 +1,25 @@
+## jdbc
+datasource:
+  driver: com.mysql.cj.jdbc.Driver
+  url: jdbc:mysql://localhost:3306/java_web
+  username: root
+  password: root
+
+## gen table
+# ????????????????
+tables:
+  - id: 1
+    name: menu
+#    需要对某些列特殊配置的可以在这里配置
+    columns:
+      - id: 1
+        name: status
+        enumeratedValues: 0,1
+
+  - id: 2
+    name: role
+
+  ## code-package
+basePackage: codegen.test
+
+
