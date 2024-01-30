@@ -61,7 +61,7 @@ public class StringUtil {
      * @param tableName
      * @return camel style object name with first charater lower case
      */
-    public static String tableNameConvertLowerCamel(String tableName) {
+    public static String underScoreToLowerCamel(String tableName) {
         return CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, tableName.toLowerCase());
     }
 
@@ -72,7 +72,7 @@ public class StringUtil {
      * @param tableName
      * @return camel style object name
      */
-    public static String tableNameConvertUpperCamel(String tableName) {
+    public static String underScoreToUpperCamel(String tableName) {
         return CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, tableName.toLowerCase());
     }
 
