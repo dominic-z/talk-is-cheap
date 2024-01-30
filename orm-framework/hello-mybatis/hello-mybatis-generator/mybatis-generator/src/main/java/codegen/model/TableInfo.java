@@ -3,11 +3,7 @@ package codegen.model;
 import codegen.util.StringUtil;
 import lombok.Data;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * @author dominiczhu
@@ -58,7 +54,7 @@ public class TableInfo {
 
     private List<String> columnAndPropList;
 
-    private List<ColumnInfo> columnInfoList;
+    private Map<String,ColumnInfo> columnInfoMap;
 
     private List<ColumnInfo> updateColumnInfoList;
 
@@ -69,8 +65,8 @@ public class TableInfo {
 
     public TableInfo(String tableName) {
         this.tableName = tableName;
-        this.domainUpperCamelName = StringUtil.tableNameConvertUpperCamel(tableName);
-        this.domainLowerCamelName = StringUtil.tableNameConvertLowerCamel(tableName);
+        this.domainUpperCamelName = StringUtil.underScoreToUpperCamel(tableName);
+        this.domainLowerCamelName = StringUtil.underScoreToLowerCamel(tableName);
 
         this.mbgExampleUpperCamelName = domainUpperCamelName + "Example";
         this.mbgExampleLowerCamelName = domainLowerCamelName + "Example";
@@ -87,7 +83,7 @@ public class TableInfo {
         this.insertColumnsList = new ArrayList<>();
         this.insertPropList = new ArrayList<>();
         this.columnAndPropList = new ArrayList<>();
-        this.columnInfoList = new ArrayList<>();
+        this.columnInfoMap = new HashMap<>();
         this.updateColumnInfoList = new ArrayList<>();
         this.domainColumnInfoList = new ArrayList<>();
     }

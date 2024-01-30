@@ -80,5 +80,8 @@ public class RoleService{
     }
 
     // 基于roleDao
+    public List<Role> selectById(List<Integer> ids) {
 
+        return roleDao.selectByIds(ids);
+    }
 }
