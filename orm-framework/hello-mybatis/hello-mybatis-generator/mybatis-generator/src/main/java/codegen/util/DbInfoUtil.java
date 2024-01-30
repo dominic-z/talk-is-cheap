@@ -2,17 +2,13 @@ package codegen.util;
 
 
 import codegen.model.ColumnInfo;
+import codegen.model.enums.JavaType;
+import com.mysql.cj.MysqlType;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
-import java.sql.Connection;
-import java.sql.DatabaseMetaData;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Properties;
+import java.sql.*;
+import java.util.*;
 
 /**
  * 获取数据库元信息
@@ -31,9 +27,10 @@ public class DbInfoUtil {
      * @param database
      * @return
      */
-    public static List<ColumnInfo> getTableInfo(String driver, String url, String user, String pwd, String table,
-                                                String database) throws Exception {
-        List<ColumnInfo> result = new ArrayList<>();
+    public static Map<String, ColumnInfo> getTableInfo(String driver, String url, String user, String pwd, String table,
+                                                       String database) throws Exception {
+//        List<ColumnInfo> result = new ArrayList<>();
+        Map<String, ColumnInfo> result = new HashMap<>();
 
         Connection conn = null;
         DatabaseMetaData dbmd = null;
@@ -63,25 +60,29 @@ public class DbInfoUtil {
                         String colName = rs.getString("COLUMN_NAME");
                         columnInfo.setColumnName(colName);
 
-                        String columnType = rs.getString("TYPE_NAME");
+                        MysqlType columnType = MysqlType.valueOf(rs.getString("TYPE_NAME"));
+
                         columnInfo.setColumnType(columnType);
 
-                        String propertyName = StringUtil.tableNameConvertLowerCamel(colName);
+                        String propertyName = StringUtil.underScoreToLowerCamel(colName);
                         columnInfo.setPropertyName(propertyName);
 
 
-                        String propertyType = DBTypeToJavaType(columnType);
+                        JavaType propertyType = mysqlTypeToJavaType(columnType);
+                        if (propertyType == null) {
+                            log.error("表{}列{}类型转换异常，无法转换的类型{}", table, colName, columnType);
+                        }
                         columnInfo.setPropertyType(propertyType);
 
                         if (colName.equalsIgnoreCase(primaryKeyColumnName)) {
                             columnInfo.setPrimaryKey(true);
                         }
 
-                        result.add(columnInfo);
+                        result.put(colName, columnInfo);
                     }
                 }
             }
-            log.info(table + " 读取表元数据结束");
+
         } catch (Exception e) {
 
             log.info("{} 读取表数据失败", table, e);
@@ -102,6 +103,38 @@ public class DbInfoUtil {
     private static String changeColumnName(String colName) {
 
         return colName;
+    }
+
+
+    private static JavaType mysqlTypeToJavaType(MysqlType mysqlType) {
+
+        switch (mysqlType) {
+            case VARCHAR:
+            case CHAR:
+                return JavaType.StringType;
+            case DECIMAL:
+                return JavaType.BigDecimalType;
+            case BIT:
+            case INT:
+            case INT_UNSIGNED:
+            case SMALLINT:
+            case TINYINT:
+                return JavaType.IntegerType;
+            case BIGINT:
+                return JavaType.LongType;
+            case DATETIME:
+            case TIMESTAMP:
+            case DATE:
+                return JavaType.DateType;
+            case BLOB:
+                return JavaType.ByteArrayType;
+            case FLOAT:
+                return JavaType.FloatType;
+            case DOUBLE:
+                return JavaType.DoubleType;
+            default:
+                return null;
+        }
     }
 
     private static String DBTypeToJavaType(String dbType) {

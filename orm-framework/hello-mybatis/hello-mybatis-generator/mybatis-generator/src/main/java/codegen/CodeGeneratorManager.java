@@ -7,7 +7,6 @@ import codegen.generator.mbg.MbgCodeGenerator;
 import codegen.model.ColumnInfo;
 import codegen.model.TableInfo;
 import codegen.util.DbInfoUtil;
-import codegen.util.StringUtil;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.io.FileUtils;
@@ -15,7 +14,7 @@ import org.apache.commons.io.FileUtils;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -31,12 +30,17 @@ public class CodeGeneratorManager {
 //    }
 
 
+    private static TableInfo tableInfo;
+
+    public static TableInfo getCurrentTableInfo(){
+        return tableInfo;
+    }
+
     /**
      * 生成代码
      */
     public void genCode() throws Exception {
         val codeGeneratorConfig = CodeGeneratorConfig.getInstance();
-
 
 
         //删除目录
@@ -76,13 +80,16 @@ public class CodeGeneratorManager {
         val datasource = codeGeneratorConfig.getDatasource();
         String[] splits = datasource.getUrl().split("/");
         String database = splits[splits.length - 1].split("\\?")[0];
-        List<ColumnInfo> columnInfoList = DbInfoUtil.getTableInfo(datasource.getDriver(),
+        Map<String,ColumnInfo> columnInfoList = DbInfoUtil.getTableInfo(datasource.getDriver(),
                 datasource.getUrl(),
                 datasource.getUsername(),
                 datasource.getPassword(), table.getName(), database);
 
-        tableInfo.setColumnInfoList(columnInfoList);
+        tableInfo.setColumnInfoMap(columnInfoList);
 
+        CodeGeneratorManager.tableInfo = tableInfo;
+        log.info(table + " 读取表元数据结束");
+        log.debug("table: {},{}", table, tableInfo);
 //        for (ColumnInfo columnInfo : columnInfoList) {
 //            if (TableInfo.IGNORE_COLUMN_FOR_ALL.contains(columnInfo.getColumnName())) {
 //                continue;
@@ -157,7 +164,6 @@ public class CodeGeneratorManager {
         }
         return prop;
     }
-
 
 
 }

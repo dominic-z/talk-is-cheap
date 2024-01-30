@@ -6,15 +6,23 @@ datasource:
   password: root
 
 ## gen table
-# ????????????????
+# 表名、列名都需要以下划线格式
 tables:
   - id: 1
     name: menu
 #    需要对某些列特殊配置的可以在这里配置
     columns:
       - id: 1
-        name: status
-        enumeratedValues: 0,1
+        name: pid
+        enumeratedConstants:
+          - id: 1
+            literal: LOCAL
+            value: 0
+            description: 本地
+          - id: 2
+            literal: RUNNING
+            value: 103
+            description: 运行中
 
   - id: 2
     name: role
