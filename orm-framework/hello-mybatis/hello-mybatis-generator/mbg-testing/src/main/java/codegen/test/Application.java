@@ -10,6 +10,8 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+import java.util.Arrays;
+
 @SpringBootApplication
 @Slf4j
 public class Application implements CommandLineRunner {
@@ -29,5 +31,6 @@ public class Application implements CommandLineRunner {
 
         roleExample.createCriteria().andIdEqualTo(10);
         log.info("{}", roleService.selectByExample(roleExample));
+        log.info("{}", roleService.selectById(Arrays.asList(10, 11)));
     }
 }

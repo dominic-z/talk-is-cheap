@@ -46,16 +46,16 @@ monitorinterval为log4j 2.x新特点自动重载配置。指定自动重新配�
     <!--然后定义logger，只有定义了logger并引入的appender，appender才会生效 -->
     <loggers>
 <!--        下面控制的是名字为custom.log的logger-->
-        <Logger name="custom.log" level="trace" additivity="false">
-            <AppenderRef ref="customConsole"/>
-        </Logger>
+<!--        <Logger name="custom.log" level="trace" additivity="false">-->
+<!--            <AppenderRef ref="customConsole"/>-->
+<!--        </Logger>-->
 
 <!--        下面控制的是root的logger-->
-        <root level="INFO">
-            <appender-ref ref="RollingFile"/>
+        <root level="DEBUG">
+<!--            <appender-ref ref="RollingFile"/>-->
             <appender-ref ref="Console"/>
-            <appender-ref ref="ERROR"/>
-            <appender-ref ref="log"/>
+<!--            <appender-ref ref="ERROR"/>-->
+<!--            <appender-ref ref="log"/>-->
         </root>
 
 <!--        loggers里面可以有root这种logger，也可以有简单的logger，可以理解为root是其余logger的父节点，所有的日志内容都会先流入到root里在流到各种子logger里，然后通过Appender

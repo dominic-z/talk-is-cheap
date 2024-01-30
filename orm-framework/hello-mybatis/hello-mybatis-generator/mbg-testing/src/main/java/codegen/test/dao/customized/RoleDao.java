@@ -35,4 +35,11 @@ public class RoleDao {
     @Autowired
     private SqlSessionTemplate sqlSessionTemplate;
 
+
+    public List<Role> selectByIds(List<Integer> ids){
+        Map<String,Object> params = new HashMap<>();
+        params.put("ids",ids);
+        return sqlSessionTemplate.selectList(TABLE+".select_by_ids",params);
+    }
+
 }

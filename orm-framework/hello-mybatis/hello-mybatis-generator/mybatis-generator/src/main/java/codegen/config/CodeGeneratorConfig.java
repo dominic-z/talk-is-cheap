@@ -3,12 +3,15 @@ package codegen.config;
 import codegen.util.StringUtil;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 配置信息变量
@@ -57,7 +60,7 @@ public class CodeGeneratorConfig {
     // 模板注释中 @author
     public static String AUTHOR = "";
     // 模板注释中 @date
-    public static final String DATE=new SimpleDateFormat("yyyy/MM/dd").format(new Date());
+    public static final String DATE = new SimpleDateFormat("yyyy/MM/dd").format(new Date());
 
 
     @Data
@@ -76,12 +79,15 @@ public class CodeGeneratorConfig {
         public static class ColumnConfig {
             private int id;
             private String name;
-            private String enumeratedValues;
+            private List<EnumeratedConstant> enumeratedConstants;
 
-            public String[] getRawEnumeratedValues() {
-                return enumeratedValues.split(",");
+            @Data
+            public static class EnumeratedConstant {
+                private int id;
+                private String literal;
+                private String value;
+                private String description;
             }
-
         }
 
         private int id;
@@ -99,6 +105,8 @@ public class CodeGeneratorConfig {
 
     private Datasource datasource;
     private List<TableConfig> tables;
+
+    private Map<String, TableConfig> tableConfigMap;
     private String basePackage;
 
 
@@ -115,6 +123,14 @@ public class CodeGeneratorConfig {
                 if (instance.getTables() == null) {
                     throw new IllegalArgumentException("config error: table is null or empty");
                 }
+
+                val datasource1 = instance.getDatasource();
+                if (datasource1 == null || datasource1.getUrl() == null || datasource1.getUsername() == null || datasource1.getPassword() == null || datasource1.getDriver() == null) {
+                    throw new IllegalArgumentException("config error: datasource config is null or empty");
+                }
+
+                instance.tableConfigMap = instance.getTables().stream().collect(Collectors.toMap(TableConfig::getName
+                        , t -> t));
             }
         }
 
@@ -134,31 +150,31 @@ public class CodeGeneratorConfig {
         return config;
     }
 
-    public String getModelPackage(){
-        return basePackage+".domain.pojo";
+    public String getModelPackage() {
+        return basePackage + ".domain.pojo";
     }
 
-    public String getMbgExamplePackage(){
+    public String getMbgExamplePackage() {
         return basePackage + ".domain.query.example";
     }
 
-    public String getMBGMapperPackage(){
-        return basePackage+".dao.mbg";
+    public String getMBGMapperPackage() {
+        return basePackage + ".dao.mbg";
     }
 
-    public String getCustomizedDaoPackage(){
-        return basePackage+".dao.customized";
+    public String getCustomizedDaoPackage() {
+        return basePackage + ".dao.customized";
     }
 
-    public String getServicePackage(){
-        return basePackage+".service";
+    public String getServicePackage() {
+        return basePackage + ".service";
     }
 
-    public String getCustomizedDaoPackagePath(){
+    public String getCustomizedDaoPackagePath() {
         return StringUtil.packageConvertPath(getCustomizedDaoPackage());
     }
 
-    public String getServicePackagePath(){
+    public String getServicePackagePath() {
         return StringUtil.packageConvertPath(getServicePackage());
     }
 }
