@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.sql.JDBCType;
 import java.util.Map;
 
 @Slf4j
@@ -50,7 +51,9 @@ public class UnitTest {
     @Test
     public void testReadConfig() {
 //        CodeGeneratorConfig.setConfigPath("src/main/resources/config.yml");
-        log.info("{}", CodeGeneratorConfig.getInstance());
+//        log.info("{}", CodeGeneratorConfig.getInstance());
+
+        log.info("{}",JDBCType.valueOf("INTEGER"));
     }
 
 }

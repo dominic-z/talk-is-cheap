@@ -11,6 +11,7 @@
         <plugin type="codegen.generator.mbg.plugin.MysqlLimitPlugin"/>
         <plugin type="codegen.generator.mbg.plugin.CommentPlugin"/>
         <plugin type="codegen.generator.mbg.plugin.AddColumnNameToModelPlugin"/>
+        <plugin type="codegen.generator.mbg.plugin.AddEnumToModelPlugin"/>
         <plugin type="codegen.generator.mbg.plugin.bussinesssql.CloseSomeFuncPlugin"/>
         <plugin type="codegen.generator.mbg.plugin.bussinesssql.GenerateAnotherSqlMapForCustomPlugin"/>
         <plugin type="codegen.generator.mbg.plugin.bussinesssql.InsertBatchSqlPlugin"/>
