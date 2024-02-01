@@ -53,7 +53,20 @@ public class UnitTest {
 //        CodeGeneratorConfig.setConfigPath("src/main/resources/config.yml");
 //        log.info("{}", CodeGeneratorConfig.getInstance());
 
-        log.info("{}",JDBCType.valueOf("INTEGER"));
+        log.info("{}", JDBCType.valueOf("INTEGER"));
+    }
+
+    @Test
+    public void test() {
+        val a= Integer.valueOf(10);
+        val b = new Integer(10);
+
+        log.info("{}",a==b);
+        log.info("{}",a.equals(b));
+
+        val c="ad";
+        val d="ad";
+        log.info("{}",c.equals(d));
     }
 
 }
