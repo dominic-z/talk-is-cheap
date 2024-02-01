@@ -22,24 +22,24 @@ monitorinterval为log4j 2.x新特点自动重载配置。指定自动重新配�
                     pattern="[custom] %d{HH:mm:ss.SSS} %highlight{[%-5level]}{FATAL=red, ERROR=red, WARN=yellow, INFO=cyan, DEBUG=cyan,TRACE=blue} %class{1} %style{%M}{blue} - %msg%xEx%n"/>
         </Console>
 
-        <!--文件会打印出所有信息，这个log每次运行程序会自动清空，由append属性决定，这个也挺有用的，适合临时测试用 -->
-        <!--append为TRUE表示消息增加到指定文件中，false表示消息覆盖指定的文件内容，默认值是true -->
-        <File name="log" fileName="Log4jDemo/log4j2.log" append="false">
-            <PatternLayout pattern="%d{HH:mm:ss.SSS} %-5level %class{36} %L %M - %msg%xEx%n"/>
-        </File>
+<!--        &lt;!&ndash;文件会打印出所有信息，这个log每次运行程序会自动清空，由append属性决定，这个也挺有用的，适合临时测试用 &ndash;&gt;-->
+<!--        &lt;!&ndash;append为TRUE表示消息增加到指定文件中，false表示消息覆盖指定的文件内容，默认值是true &ndash;&gt;-->
+<!--        <File name="log" fileName="Log4jDemo/log4j2.log" append="false">-->
+<!--            <PatternLayout pattern="%d{HH:mm:ss.SSS} %-5level %class{36} %L %M - %msg%xEx%n"/>-->
+<!--        </File>-->
 
-        <!--添加过滤器ThresholdFilter,可以有选择的输出某个级别以上的类别  onMatch="ACCEPT" onMismatch="DENY"意思是匹配就接受,否则直接拒绝  -->
-        <File name="ERROR" fileName="Log4jDemo/error.log">
-            <ThresholdFilter level="error" onMatch="ACCEPT" onMismatch="DENY"/>
-            <PatternLayout pattern="%d{yyyy.MM.dd 'at' HH:mm:ss z} %-5level %class{36} %L %M - %msg%xEx%n"/>
-        </File>
+<!--        &lt;!&ndash;添加过滤器ThresholdFilter,可以有选择的输出某个级别以上的类别  onMatch="ACCEPT" onMismatch="DENY"意思是匹配就接受,否则直接拒绝  &ndash;&gt;-->
+<!--        <File name="ERROR" fileName="Log4jDemo/error.log">-->
+<!--            <ThresholdFilter level="error" onMatch="ACCEPT" onMismatch="DENY"/>-->
+<!--            <PatternLayout pattern="%d{yyyy.MM.dd 'at' HH:mm:ss z} %-5level %class{36} %L %M - %msg%xEx%n"/>-->
+<!--        </File>-->
 
-        <!--这个会打印出所有的信息，每次大小超过size，则这size大小的日志会自动存入按年份-月份建立的文件夹下面并进行压缩，作为存档 -->
-        <RollingFile name="RollingFile" fileName="Log4jDemo/web.log"
-                     filePattern="logs/$${date:yyyy-MM}/web-%d{MM-dd-yyyy}-%i.log.gz">
-            <PatternLayout pattern="%d{yyyy-MM-dd 'at' HH:mm:ss z} [%-5level] [%class{36}] %L %M - %msg%xEx%n"/>
-            <SizeBasedTriggeringPolicy size="2MB"/>
-        </RollingFile>
+<!--        &lt;!&ndash;这个会打印出所有的信息，每次大小超过size，则这size大小的日志会自动存入按年份-月份建立的文件夹下面并进行压缩，作为存档 &ndash;&gt;-->
+<!--        <RollingFile name="RollingFile" fileName="Log4jDemo/web.log"-->
+<!--                     filePattern="logs/$${date:yyyy-MM}/web-%d{MM-dd-yyyy}-%i.log.gz">-->
+<!--            <PatternLayout pattern="%d{yyyy-MM-dd 'at' HH:mm:ss z} [%-5level] [%class{36}] %L %M - %msg%xEx%n"/>-->
+<!--            <SizeBasedTriggeringPolicy size="2MB"/>-->
+<!--        </RollingFile>-->
     </appenders>
 
 
