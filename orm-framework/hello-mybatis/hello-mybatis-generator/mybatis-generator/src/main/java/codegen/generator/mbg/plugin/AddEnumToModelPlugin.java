@@ -71,52 +71,78 @@ public class AddEnumToModelPlugin extends PluginAdapter {
             }
 
 //            new InnerEnumRenderer()
-
-            val innerEnum = new InnerEnum(StringUtil.underScoreToUpperCamel(columnName) + "Enum");
-            innerEnum.setVisibility(JavaVisibility.PUBLIC);
-            innerEnum.setStatic(true);
-            addFieldToEnum(columnInfo, innerEnum);
-
-
-            boolean generateEnumSuccess = true;
-            for (CodeGeneratorConfig.TableConfig.ColumnConfig.EnumeratedConstant enumeratedConstant :
-                    columnConfig.getEnumeratedConstants()) {
-                if (!isLegalEnumLiteral(enumeratedConstant.getLiteral())) {
-                    log.error("列{}生成枚举类错误，{} 不是合法的枚举字面量", columnName, enumeratedConstant.getLiteral());
-                    generateEnumSuccess = false;
-                    break;
-                }
-
-                String valueInJavaCode = getValueInJavaCode(columnInfo, enumeratedConstant.getValue());
-
-                if (valueInJavaCode == null) {
-                    log.error("列{}生成枚举类错误，类型{} 无法转换为value对应的Java代码中表征的值，仅支持数字、String", columnName,
-                            columnInfo.getPropertyType());
-                    generateEnumSuccess = false;
-                    break;
-                }
-
-//                构造字面量，格式为A(value,"描述")
-                innerEnum.addEnumConstant(String.format("%s(%s,\"%s\")", enumeratedConstant.getLiteral(),
-                        valueInJavaCode, enumeratedConstant.getDescription()));
-            }
-
-            //                创建构造函数
-            final Method constructor = getConstructor(columnInfo, innerEnum);
-            innerEnum.addMethod(constructor);
-//                创建getter
-            val valueGetter = makeGetter("getValue", columnInfo.getPropertyType().getTypeName(), "value");
-            val descriptionGetter = makeGetter("getDescription", columnInfo.getPropertyType().getTypeName(),
-                    "description");
-            innerEnum.addMethod(valueGetter);
-            innerEnum.addMethod(descriptionGetter);
-
-
-            if (generateEnumSuccess) {
-                topLevelClass.addInnerEnum(innerEnum);
-            }
+            addEnum(topLevelClass, columnConfig, columnInfo);
         }
         return super.modelBaseRecordClassGenerated(topLevelClass, introspectedTable);
+    }
+
+    /**
+     * 为model类新增码值字段的枚举类
+     *
+     * @param topLevelClass
+     * @param columnConfig
+     * @param columnInfo
+     */
+    private void addEnum(TopLevelClass topLevelClass, CodeGeneratorConfig.TableConfig.ColumnConfig columnConfig,
+                         ColumnInfo columnInfo) {
+        val columnName = columnConfig.getName();
+
+        String enumName = StringUtil.underScoreToUpperCamel(columnName) + "Enum";
+        val innerEnum = new InnerEnum(enumName);
+        innerEnum.setVisibility(JavaVisibility.PUBLIC);
+        innerEnum.setStatic(true);
+        addFieldToEnum(columnInfo, innerEnum);
+
+
+        boolean generateEnumSuccess = true;
+        for (CodeGeneratorConfig.TableConfig.ColumnConfig.EnumeratedConstant enumeratedConstant :
+                columnConfig.getEnumeratedConstants()) {
+            if (!isLegalEnumLiteral(enumeratedConstant.getLiteral())) {
+                log.error("列{}生成枚举类错误，{} 不是合法的枚举字面量", columnName, enumeratedConstant.getLiteral());
+                generateEnumSuccess = false;
+                break;
+            }
+
+            String valueInJavaCode = getValueInJavaCode(columnInfo, enumeratedConstant.getValue());
+
+            if (valueInJavaCode == null) {
+                log.error("列{}生成枚举类错误，类型{} 无法转换为value对应的Java代码中表征的值，仅支持数字、String", columnName,
+                        columnInfo.getPropertyType());
+                generateEnumSuccess = false;
+                break;
+            }
+
+//                构造字面量，格式为A(value,"描述")
+            innerEnum.addEnumConstant(String.format("%s(%s,\"%s\")", enumeratedConstant.getLiteral(),
+                    valueInJavaCode, enumeratedConstant.getDescription()));
+        }
+
+        //                创建构造函数
+        final Method constructor = getConstructor(columnInfo, innerEnum);
+        innerEnum.addMethod(constructor);
+//                创建getter
+        val valueGetter = makeGetter("getValue", columnInfo.getPropertyType().getTypeName(), "value");
+        val descriptionGetter = makeGetter("getDescription", "String", "description");
+        innerEnum.addMethod(valueGetter);
+        innerEnum.addMethod(descriptionGetter);
+
+
+        final Method getByValueMethod = getGetByValueMethod(columnInfo, enumName);
+        innerEnum.addMethod(getByValueMethod);
+
+
+        if (generateEnumSuccess) {
+            topLevelClass.addInnerEnum(innerEnum);
+        }
+    }
+
+    static enum Demo {
+        A, B;
+
+        String getValue() {
+            return null;
+        }
+
     }
 
     /**
@@ -146,6 +172,7 @@ public class AddEnumToModelPlugin extends PluginAdapter {
      */
     private static Method getConstructor(ColumnInfo columnInfo, InnerEnum innerEnum) {
         val constructor = new Method(innerEnum.getType().getShortNameWithoutTypeArguments());
+        constructor.setConstructor(true);
         constructor.setVisibility(JavaVisibility.PRIVATE);
         val valueParam = new Parameter(new FullyQualifiedJavaType(columnInfo.getPropertyType().getTypeName()),
                 "value");
@@ -183,7 +210,7 @@ public class AddEnumToModelPlugin extends PluginAdapter {
         val getter = new Method(methodName);
         getter.setVisibility(JavaVisibility.PUBLIC);
         getter.setReturnType(new FullyQualifiedJavaType(returnType));
-        getter.addBodyLine("return this." + getterTarget);
+        getter.addBodyLine(String.format("return this.%s;", getterTarget));
         return getter;
     }
 
@@ -208,5 +235,38 @@ public class AddEnumToModelPlugin extends PluginAdapter {
             }
         }
         return true;
+    }
+
+    /**
+     * 创建下列方法
+     * for (Demo e : Demo.values()) {
+     * if (e.getValue().equals(value)) {
+     * return e;
+     * }
+     * <p>
+     * }
+     *
+     * @param columnInfo
+     * @param enumName
+     * @return
+     */
+    private static Method getGetByValueMethod(ColumnInfo columnInfo, String enumName) {
+        val getByValueMethod = new Method("getByValue");
+        getByValueMethod.setVisibility(JavaVisibility.PUBLIC);
+        getByValueMethod.setStatic(true);
+        getByValueMethod.addParameter(new Parameter(new FullyQualifiedJavaType(columnInfo.getPropertyType().getTypeName()),
+                "value"));
+        getByValueMethod.setReturnType(new FullyQualifiedJavaType(enumName));
+
+        getByValueMethod.addBodyLine("if (value == null) {");
+        getByValueMethod.addBodyLine("return null;");
+        getByValueMethod.addBodyLine("}");
+        getByValueMethod.addBodyLine(String.format("for (%s e : %s.values()) {", enumName, enumName));
+        getByValueMethod.addBodyLine("if (e.getValue().equals(value)) {");
+        getByValueMethod.addBodyLine("return e;");
+        getByValueMethod.addBodyLine("}");
+        getByValueMethod.addBodyLine("}");
+        getByValueMethod.addBodyLine("return null;");
+        return getByValueMethod;
     }
 }
