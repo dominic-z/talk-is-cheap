@@ -7,6 +7,7 @@ import TransitionBlock from './component/css/TransitionBlock';
 import EventAPublisher from './component/events/EventAPublisher';
 import EventAHandler from './component/events/EventAHandler';
 import EEIndex from './component/eventemitter3/EEIndex';
+import Parent from './component/lifecycle/parent';
 
 function App() {
 
@@ -20,7 +21,8 @@ function App() {
     // <EventAHandler></EventAHandler>
     // </>
 
-    <EEIndex></EEIndex>
+    // <EEIndex></EEIndex>
+    <Parent />
   )
   // return (
   //   <div className="App">
