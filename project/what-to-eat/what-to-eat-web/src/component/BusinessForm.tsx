@@ -26,7 +26,7 @@ export type BusinessFormFieldType = {
 
 export default function BusinessForm(props: Props) {
     const [form] = Form.useForm()
-    console.log(props)
+    // console.log(props)
 
     const onFinish = (values: BusinessFormFieldType) => {
 
@@ -35,14 +35,14 @@ export default function BusinessForm(props: Props) {
 
     };
 
-    const onFinishFailed = (errorInfo: any) => {
-        console.log('Failed:', errorInfo);
-    };
+
 
     const [showLoading, setShowLoading] = useState<boolean>(false)
 
-
-
+    const onFinishFailed = (errorInfo: any) => {
+        setShowLoading(false)
+        console.log('Failed:', errorInfo);
+    };
     return (
         <Card className='businessFormContainer' onClick={e => e.stopPropagation()}>
             <Form
@@ -51,8 +51,16 @@ export default function BusinessForm(props: Props) {
                 labelCol={{ span: 4 }}
                 wrapperCol={{ span: 18 }}
                 initialValues={{ remember: true }}
-                onFinish={props.onFinish}
-                onFinishFailed={props.onFinishFailed}
+                onFinish={async (inputField) => {
+                    // props.onFinish是请求后台，在js中是异步执行的，那么就要等待props.onFinish执行完毕之后，再去去掉进度条图标
+                    await props.onFinish(inputField);
+                    setShowLoading(false)
+                }}
+                onFinishFailed={(error) => {
+                    // 提交失败的时候就会调用该函数，例如必填项没有填写导致校验不通过。
+                    props.onFinishFailed(error);
+                    setShowLoading(false);
+                }}
                 autoComplete="off"
                 form={form}
             >
@@ -78,8 +86,8 @@ export default function BusinessForm(props: Props) {
 
                 <Form.Item wrapperCol={{ offset: 8, span: 16 }}>
 
-                    <ConfigProvider autoInsertSpaceInButton={false}>
-                        <Button type="primary" htmlType="submit" onClick={e => setShowLoading(true)}
+                    <ConfigProvider button={{ autoInsertSpace: true }}>
+                        <Button type="primary" htmlType="submit" onClick={e => { setShowLoading(true) }}
                             style={{ width: '70px', }}
                         >
                             {props.defaultSubmitValue ? props.defaultSubmitValue : "创建"}
