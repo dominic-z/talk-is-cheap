@@ -1,5 +1,5 @@
 import { PlusOutlined } from '@ant-design/icons';
-import { FloatButton } from 'antd';
+import { FloatButton, List } from 'antd';
 import React, { useEffect, useRef, useState } from 'react';
 import AxiosUtil from '../config/AxiosUtil';
 import '../css/BusinessList.css'
@@ -15,60 +15,29 @@ import { BusinessFormFieldType } from "./BusinessForm"
 import CreateBusinessReq from '../domain/message/CreateBusinessReq';
 import CreateBusinessResp from '../domain/message/CreateBusinessResp';
 
+import { Button, Divider, notification, Space } from 'antd';
+
 interface Props {
 
 }
 // const url = "/business"
+
+type NotificationPlacement = 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight'
+
+
+// todo：还没搞分页
 export default function BusinessList(props: Props) {
 
-    const [businessBOs, setBusinessBOs] = useState<BusinessBO[]>([]);
-    // 利用useRef产生的副作用来在不同渲染之间保存值以便用于重新刷新后重新请求数据。
-
-    useEffect(
-        () => {
-            let ignore = false;
-            function getBusinessList(page: number = 1, pageSize: number = 10) {
-
-                if (page <= 0 || pageSize <= 0) {
-                    console.log('illegal page ', page, ' or pageSize ', pageSize);
-                }
-                AxiosUtil.get<GetBusinessListResp>(BUSINESS_URL,
-                    {
-                        params: {
-                            page: (page > 0) ? page : 1,
-                            pageSize: (pageSize > 0) ? pageSize : 10
-                        }
-                    }
-                )
-                    .then(resp => {
-                        if (!ignore) {
-                            console.log(resp.data.data)
-                            setBusinessBOs(resp.data.data.businessBOs)
-                        }
-                    }).catch(e => {
-                        console.log(e);
-                    })
-            }
-
-            EE.on(REFRESH_BUSINESS_LIST_EVENT, getBusinessList);
-            EE.emit(REFRESH_BUSINESS_LIST_EVENT, 1, 10);
-
-            return () => { ignore = true };
-        }, [])
-
-
-    const businessComponents = businessBOs.map(
-        b => {
-            return <Business key={b.id}
-                businessId={b.id}
-                name={b.name} description={b.description} imgUrl={""}></Business>
-        }
-    )
-
-
+    let [api, contextHolder] = notification.useNotification({ stack: { threshold: 3 } });
     const [showMask, setShowMask] = useState<boolean>(false)
-
-
+    const openNotification = (placement: NotificationPlacement, errorMsg: string) => {
+        api.error({
+            message: '创建小店错误',
+            description: errorMsg,
+            placement: placement,
+            duration: 2
+        })
+    }
 
     function onFinish(values: BusinessFormFieldType) {
         console.log('Success:', values);
@@ -79,14 +48,33 @@ export default function BusinessList(props: Props) {
             }
         }
 
-        AxiosUtil.post<CreateBusinessResp>("/business", req)
-            .then(resp => {
-                console.log(resp)
-                EE.emit(REFRESH_BUSINESS_LIST_EVENT)
-            })
+        // 模拟：比如说请求1秒后报错。
+        return new Promise((resolve) => {
+            setTimeout(resolve, 1000)
+        }).then(
+            () => AxiosUtil.post<CreateBusinessResp>("/business", req)
+        ).then(resp => {
+            console.log(resp)
+            // 关闭遮罩
+            setShowMask(false)
+            EE.emit(REFRESH_BUSINESS_LIST_EVENT)
+        })
             .catch(e => {
-                console.error(e)
+                console.log("error", e)
+                openNotification('bottomLeft', e.toString())
             })
+
+        // return AxiosUtil.post<CreateBusinessResp>("/business", req)
+        //     .then(resp => {
+        //         console.log(resp)
+        //         // 关闭遮罩
+        //         setShowMask(false)
+        //         EE.emit(REFRESH_BUSINESS_LIST_EVENT)
+        //     })
+        //     .catch(e => {
+        //         console.log("error", e)
+        //         openNotification('bottomLeft', e.toString())
+        //     })
     }
 
     const onFinishFailed = (errorInfo: any) => {
@@ -94,20 +82,99 @@ export default function BusinessList(props: Props) {
     };
 
 
-    const businessForm = (
+    const businessForm = <>
+        {contextHolder}
         <BusinessForm
             onFinish={onFinish}
             onCancel={() => setShowMask(false)}
             onFinishFailed={onFinishFailed}></BusinessForm>
-    )
+    </>
+
+
     const mask = (
         <MaskContainer showMask={showMask} content={businessForm}></MaskContainer>
     )
+    
 
-    const businessList = (
+    const [page,setPage] = useState(1)
+    const [pageSize,setPageSize] = useState(3)
+    const [total,setTotal] = useState(3)
+    const [businessBOs, setBusinessBOs] = useState<BusinessBO[]>([]);
+
+    useEffect(
+        () => {
+            let ignore = false;
+            function getBusinessList(page: number = 1, pageSize: number = 3) {
+
+                if (page <= 0 || pageSize <= 0) {
+                    console.log('illegal page ', page, ' or pageSize ', pageSize);
+                }
+                AxiosUtil.get<GetBusinessListResp>(BUSINESS_URL,
+                    {
+                        params: {
+                            page: (page > 0) ? page : 1,
+                            pageSize: (pageSize > 0) ? pageSize : 3
+                        }
+                    }
+                )
+                    .then(resp => {
+                        if (!ignore) {
+                            let body = resp.data
+                            console.log(body.data)
+                            setBusinessBOs(body.data.businessBOs)
+                            setTotal(body.data.total)
+                        }
+                    }).catch(e => {
+                        console.log(e);
+                    })
+            }
+
+            // 创建一个REFRESH_BUSINESS_LIST_EVENT事件的监听回调，这样在其他功能中如果需要更新列表，
+            // 就可以直接通过发送事件来完成
+            EE.on(REFRESH_BUSINESS_LIST_EVENT, getBusinessList);
+            EE.emit(REFRESH_BUSINESS_LIST_EVENT, page, pageSize);
+
+            return () => { ignore = true };
+        }, [page,pageSize])
+
+    // const businessComponents = businessBOs.map(
+    //     b => {
+    //         return <Business key={b.id}
+    //             businessId={b.id}
+    //             name={b.name} description={b.description} imgUrl={""}></Business>
+    //     }
+    // )
+
+    const businessList = <List itemLayout='vertical' dataSource={businessBOs}
+        split={false}
+        renderItem={(bo) =>
+            <List.Item key={bo.id} style={{padding:0}}>
+                <Business key={bo.id}
+                    businessId={bo.id}
+                    name={bo.name} description={bo.description} imgUrl={""}></Business>
+            </List.Item>
+        }
+
+        pagination={{
+            onChange: (page, pageSize) => {
+                setPage(page)
+                setPageSize(pageSize)
+            },
+            current:page,
+            pageSize: pageSize,
+            total: total,
+            align: 'center',
+            simple: true,
+            size:'small',
+            showSizeChanger: true,
+            pageSizeOptions: [3, 10, 20]
+        }}
+    ></List>
+
+    const businessListContainer = (
         <div className='businessListContainer'>
             <div className='businessList'>
-                {businessComponents}
+                {businessList}
             </div>
 
             <FloatButton
@@ -125,7 +192,7 @@ export default function BusinessList(props: Props) {
     return (
         <>
             {mask}
-            {businessList}
+            {businessListContainer}
         </>
     )
 

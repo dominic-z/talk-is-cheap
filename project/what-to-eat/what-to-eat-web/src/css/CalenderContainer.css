@@ -4,6 +4,12 @@
     width: 60%;
     overflow-y: scroll;
     background-color: rgb(171, 198, 223);
+    border:  solid rgb(137, 173, 207);
+    border-width: 0px 4px;
+}
+
+.calenderContainer::-webkit-scrollbar{
+  display: none; 
 }
 
 .events {
@@ -15,6 +21,7 @@
     width: 100%;
     overflow: hidden;
     font-size: 12px;
+    
     /* white-space: nowrap; */
     /* text-overflow: ellipsis; */
   }
