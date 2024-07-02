@@ -28,7 +28,8 @@ export default function UseEffectDemo1() {
             }
         })
 
-        // 未注销的情况下，显示的值就是最后一次点击的数。
+        // useEffect的返回函数是一个cleanup函数，每次Effect重新执行前，都会调用一次这个函数
+        // 也因为这个cleanup函数的存在，导致每次显示的值就是最后一次点击的数。
         // 把下面这行注释掉，你就可以看到显示的值就一直是最后返回的，而不是最后一次点击的数
         return () => {
             console.log(`cleanup:${page}`)
