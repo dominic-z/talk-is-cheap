@@ -1,31 +1,33 @@
 /* 出现的初始状态，退出时的终止状态，也就是display设置为none */
-:root{       
-    --transition-period: 500ms;  
-} 
+:root {
+    --transition-period: 500ms;
+}
 
 .mask-common {
     display: flex;
     justify-content: center;
     align-items: center;
-    position: fixed;
     z-index: 10;
     background-color: rgba(0, 0, 0, .6);
     width: 100%;
     height: 100%;
-    /* mask遮罩可能会在各种地方被触发，
-    如果不指定top:0，那么top的默认值可能会参照邻居节点，回去读moliza的定位，
-    比如absolute定位，虽然他脱离了正常文档流，但是其默认位置的基准就是“假定未脱离默认文档流”时的位置，因此top:可能不为0的。
+    position: fixed;
+    /* 首先，这个遮罩是全局遮罩，是将页面所有部分都遮住的遮罩。
+    要想达到这个目的，就要把mask从普通的文档流中抽出来，那么自然而然就想到了absolute或者fixed定位。
+    进一步考虑到这个mask可能放在任何地方里面，自然而然就应该用fixed定位
+    同时，absolute后者fixed定位如果不指定top/left的话，默认是auto的，虽然他脱离了正常文档流，但是其默认位置的基准就是“假定未脱离默认文档流”时的位置，因此top:可能不为0的。
      */
     top: 0;
+    left: 0;
 }
 
-.mask-enter{
+.mask-enter {
     opacity: 0;
-    
+
 }
 
 /* 随后展示遮罩，动画过渡的类，这里在active里就添加了过渡，因此一开始就会有动画效果*/
-.mask-enter-active{
+.mask-enter-active {
     opacity: 1;
     transition: var(--transition-period);
 }
@@ -35,9 +37,11 @@
 .mask-exit {
     opacity: 1;
 }
+
 .mask-exit-active {
     opacity: 0;
     transition: var(--transition-period);
 
 }
+
 /* 不需要-exit-done，因为反正都unmount了 */

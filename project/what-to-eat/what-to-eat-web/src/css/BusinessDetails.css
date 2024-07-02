@@ -1,0 +1,7 @@
+.BusinessDetails {
+    background-color: rgb(171, 198, 223);
+    width: 20%;
+    overflow-y: scroll;
+    /* 将列表拉高，使得滚动条边长 */
+    height: 100%;
+}

@@ -4,7 +4,8 @@
     width: 20%;
     min-width: 300px;
     max-width: 350px;
-    /* 用于button定位 */
+    height: 100%;
+    /* 用于作为button的包含元素用于button的定位 */
     position: relative;
     background-color: rgb(171, 198, 223);
 }
