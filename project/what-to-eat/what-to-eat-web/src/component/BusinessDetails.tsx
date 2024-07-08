@@ -36,11 +36,11 @@ export default function BusinessDetails(props: Props) {
         dataSource={data}
         renderItem={(item, idx) => {
 
-            return <List.Item key={item.title} style={{ padding: 0, margin: "5px 2px" }}>
-                <Card styles={{ body: { display: 'flex' } }}>
+            return <List.Item key={item.title} style={{ padding: 0, margin: "10px 5px" }}>
+                <Card styles={{ body: { display: 'flex',padding:'20px 10px'} }}>
                     {/* 调整Card的body部分的样式，官网文档有写 */}
-                    <Card.Meta title={item.title} description={item.content}></Card.Meta>
-                    <Image width={100} src={imgUrl}  style={{borderRadius:'10px'}}/>
+                    <Card.Meta title={item.title} description={item.content} style={{flex:2}}></Card.Meta>
+                    <Image width={100} src={imgUrl}  style={{borderRadius:'10px',flex:1}}/>
                 </Card>
             </List.Item>
             // return <List.Item key={item.title} extra={<img width={100} alt="logo" src={imgUrl} />}>
