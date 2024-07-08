@@ -1,9 +1,9 @@
 
 
 .businessListContainer{
-    width: 20%;
+    width: 15%;
     min-width: 300px;
-    max-width: 350px;
+    /* max-width: 350px; */
     height: 100%;
     /* 用于作为button的包含元素用于button的定位 */
     position: relative;

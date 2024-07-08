@@ -1,5 +1,5 @@
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
-import { Avatar, Badge, Card, Popconfirm, Popover } from 'antd';
+import { Avatar, Badge, Card, Image, Popconfirm, Popover } from 'antd';
 import React, { useState } from 'react';
 import AxiosUtil from '../config/AxiosUtil';
 import EE, { REFRESH_BUSINESS_LIST_EVENT } from '../config/EE';
@@ -24,11 +24,12 @@ export default function Business(params: Params) {
     const defaultName = "这是小猫店";
     const defaultDescription = "小猫店天天做活动，然后到处拉大便，拉得满屏幕都是";
 
+    // const m = <Image
     const avater = (
         <Badge count={1}>
             <Avatar shape='square'
                 size={100}
-                src={params.imgUrl ? params.imgUrl : defaultImgUrl}></Avatar>
+                src={<Image src={params.imgUrl ? params.imgUrl : defaultImgUrl}/>}></Avatar>
         </Badge>
     )
 
