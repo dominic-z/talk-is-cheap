@@ -1,5 +1,8 @@
 # 创建指令
 
+node版本v16.19.0
+npm版本8.19.3
+
 ```shell
 npx create-react-app react-playground --template typescript
 npm install antd

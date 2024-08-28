@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="/favicon.ico">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vite App</title>
+</head>
+
+<body>
+
+  <!-- <div id="app"></div> -->
+
+  <!-- DOM 中的根组件模板 -->
+  <div id="counter"><button @click="count++">{{ count }}</button> </div>
+  <hr>
+
+  <!-- 通过cdn使用vue 开始-->
+  <!-- 就是通过cdn读取vue，然后构建页面，需要将其他的app根节点注释掉 -->
+  <!-- <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <div id="app">{{ message }}</div>
+    <script>
+      const { createApp, ref } = Vue
+      createApp({
+        setup() {
+          const message = ref('Hello vue!')
+          return {
+            message
+          }
+        }
+      }).mount('#app')
+    </script> -->
+
+
+  <div id="myApp"></div>
+  <script type="module" src="/src/main.js"></script>
+
+</body>
+
+</html>
