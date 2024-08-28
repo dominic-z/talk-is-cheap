@@ -13,6 +13,7 @@ import KeyDemo2 from './component/key/KeyDemo2';
 import KeyDemo3 from './component/key/KeyDemo3';
 import UseEffectDemo1 from './component/useXXX/UseEffectDemo1';
 import FormDemo1 from './component/antdDemo/FormDemo1';
+import List from './component/basic/List';
 
 function App() {
 
@@ -33,7 +34,8 @@ function App() {
     // <KeyDemo3 />
     // <UseEffectDemo1 />
 
-    <FormDemo1 />
+    // <FormDemo1 />
+    <List></List>
   )
   // return (
   //   <div className="App">
