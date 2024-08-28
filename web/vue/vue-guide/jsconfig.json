@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "exclude": ["node_modules", "dist"],
+  // 自动引入Vue组件和普通Js模块
+  "include": [
+    "./src/**/*"
+  ],
+}
