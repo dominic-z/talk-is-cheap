@@ -35,6 +35,8 @@ import { namedViewRouter } from './router/basic/named-view/NamedViewRouter'
 import NamedViewApp from './router/basic/named-view/NamedViewApp.vue'
 import RedirectAliasApp from './router/basic/redirect-alias/RedirectAliasApp.vue'
 import { RedirectAliasRouter } from './router/basic/redirect-alias/RedirectAliasRouter'
+import PassingPropsApp from './router/basic/passing-props/PassingPropsApp.vue'
+import passingPropsRouter from './router/basic/passing-props/PassingPropsRouter'
 // createApp(App).mount('#app')
 
 // DOM 中的根组件模板
@@ -78,3 +80,4 @@ createApp({
 // createApp(NavigationApp).use(navigationRouter).mount("#myApp")
 // createApp(NamedViewApp).use(namedViewRouter).mount("#myApp")
 createApp(RedirectAliasApp).use(RedirectAliasRouter).mount("#myApp")
+// createApp(PassingPropsApp).use(passingPropsRouter).mount("#myApp")
