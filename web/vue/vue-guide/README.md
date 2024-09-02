@@ -203,6 +203,38 @@ router.push({
 
 
 
+### 路由组件传参
+
+```vue
+<template>
+<!-- 直接访问/user/1 -->
+
+    <RouterView />
+</template>
+```
+
+
+
+写router的时候不小心把
+
+```js
+const passingPropsRouter = createRouter({
+  history: createWebHistory(),
+  routes,
+})
+```
+
+写成了
+
+```js
+const passingPropsRouter = createRouter({
+  history: createMemoryHistory(),
+  routes,
+})
+```
+
+问题：然后发现直接访问/user/1不好使了，必须要写`<RouterLink>`来做跳转，不知道为啥
+
 # Example
 
 https://cn.vuejs.org/examples/#hello-world
