@@ -2,6 +2,7 @@
 import { useRouter } from 'vue-router';
 
 const router = useRouter()
+const route = useRoute()
 function click1(e) {
     // console.log(e.target.value)
     router.push('/user/click1')
@@ -51,7 +52,7 @@ function backward() {
     <div>
 
         <input type="button" @click="backward" value="backward">
-        <input type="button" @click="backward" value="forward">
+        <input type="button" @click="forward" value="forward">
     </div>
     <RouterView></RouterView>
 </template>

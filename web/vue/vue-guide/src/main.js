@@ -37,6 +37,14 @@ import RedirectAliasApp from './router/basic/redirect-alias/RedirectAliasApp.vue
 import { RedirectAliasRouter } from './router/basic/redirect-alias/RedirectAliasRouter'
 import PassingPropsApp from './router/basic/passing-props/PassingPropsApp.vue'
 import passingPropsRouter from './router/basic/passing-props/PassingPropsRouter'
+import ActiveLinkApp from './router/basic/active-links/ActiveLinkApp.vue'
+import { activeLinkRouter } from './router/basic/active-links/ActiveLinkRouter'
+import HistoryModeApp from './router/basic/history-mode/HistoryModeApp.vue'
+import { historyModeRouter } from './router/basic/history-mode/HistoryRouter'
+import NavigationGuardsApp from './router/advanced/navigation-guards/NavigationGuardsApp.vue'
+import { navigationGuardsRouter } from './router/advanced/navigation-guards/NavigationGuardsRouter'
+import MetaApp from './router/advanced/meta/MetaApp.vue'
+import { metaRouter } from './router/advanced/meta/MetaRouter'
 // createApp(App).mount('#app')
 
 // DOM 中的根组件模板
@@ -79,5 +87,14 @@ createApp({
 // createApp(NestedRoutesApp).use(nestedRouter).mount("#myApp")
 // createApp(NavigationApp).use(navigationRouter).mount("#myApp")
 // createApp(NamedViewApp).use(namedViewRouter).mount("#myApp")
-createApp(RedirectAliasApp).use(RedirectAliasRouter).mount("#myApp")
+// createApp(RedirectAliasApp).use(RedirectAliasRouter).mount("#myApp")
 // createApp(PassingPropsApp).use(passingPropsRouter).mount("#myApp")
+// createApp(ActiveLinkApp).use(activeLinkRouter).mount("#myApp")
+// createApp(HistoryModeApp).use(historyModeRouter).mount("#myApp")
+
+// const app = createApp(NavigationGuardsApp)
+// app.provide('global', 'hello injections')
+// app.use(navigationGuardsRouter).mount("#myApp")
+
+
+createApp(MetaApp).use(metaRouter).mount('#myApp')
