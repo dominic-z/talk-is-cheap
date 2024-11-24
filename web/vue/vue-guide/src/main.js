@@ -45,6 +45,19 @@ import NavigationGuardsApp from './router/advanced/navigation-guards/NavigationG
 import { navigationGuardsRouter } from './router/advanced/navigation-guards/NavigationGuardsRouter'
 import MetaApp from './router/advanced/meta/MetaApp.vue'
 import { metaRouter } from './router/advanced/meta/MetaRouter'
+import DataFetchingApp from './router/advanced/data-fetching/DataFetchingApp.vue'
+import { dataFetchingRouter } from './router/advanced/data-fetching/DataFetchingRouter'
+import { routerViewSlotRouter } from './router/advanced/router-view-slot/RouterViewSlotRouter'
+import RouterViewSlotApp from './router/advanced/router-view-slot/RouterViewSlotApp.vue'
+import RouterTransitionApp from './router/advanced/router-transitions/RouterTransitionApp.vue'
+import { routerTransitionRouter } from './router/advanced/router-transitions/RouterTransitionRouter'
+import TransitionDemo from './components/built-in/TransitionDemo.vue'
+import { scrollBehaviorRouter } from './router/advanced/scroll-behavior/ScrollBehaviorRouter'
+import ScrollBehaviorApp from './router/advanced/scroll-behavior/ScrollBehaviorApp.vue'
+import { lazyLoadingRouter } from './router/advanced/lazy-loading/LazyLoadingRouter'
+import LazyLoadingApp from './router/advanced/lazy-loading/LazyLoadingApp.vue'
+import AppLinkApp from './router/advanced/extending-router-link/AppLinkApp.vue'
+import { appLinkRouter } from './router/advanced/extending-router-link/AppLinkRouter'
 // createApp(App).mount('#app')
 
 // DOM 中的根组件模板
@@ -80,6 +93,7 @@ createApp({
 // createApp(Provider).mount("#myApp")
 
 // createApp(Composable).mount("#myApp")
+// createApp(TransitionDemo).mount("#myApp")
 
 // createApp(RouterApp).use(router).mount("#myApp")
 // createApp(DynamicMatchingApp).use(dmRouter).mount("#myApp")
@@ -97,4 +111,9 @@ createApp({
 // app.use(navigationGuardsRouter).mount("#myApp")
 
 
-createApp(MetaApp).use(metaRouter).mount('#myApp')
+// createApp(MetaApp).use(metaRouter).mount('#myApp')
+// createApp(DataFetchingApp).use(dataFetchingRouter).mount('#myApp')
+// createApp(RouterTransitionApp).use(routerTransitionRouter).mount('#myApp')
+// createApp(ScrollBehaviorApp).use(scrollBehaviorRouter).mount('#myApp')
+// createApp(LazyLoadingApp).use(lazyLoadingRouter).mount('#myApp')
+createApp(AppLinkApp).use(appLinkRouter).mount('#myApp')

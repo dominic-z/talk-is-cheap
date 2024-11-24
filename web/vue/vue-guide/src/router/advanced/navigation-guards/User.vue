@@ -9,6 +9,7 @@ watch(() => route.params.id,
     }
 )
 
+// 组合式api不能使用beforeRouterEnter，但可以用这种方法https://blog.csdn.net/qq_17335549/article/details/127942181
 onBeforeRouteUpdate(async (to, from) => {
     //仅当 id 更改时才获取用户，例如仅 query 或 hash 值已更改
     if (to.params.id !== from.params.id) {
