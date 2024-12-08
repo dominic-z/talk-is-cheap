@@ -1,0 +1,4 @@
+FROM mybusy:onbuild
+
+# 下面这个CMD会替代mybusy:onbuild的CMD
+CMD ["sh","-c","echo hello && sh"]

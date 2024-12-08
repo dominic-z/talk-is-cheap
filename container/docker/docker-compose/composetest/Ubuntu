@@ -1,0 +1,9 @@
+FROM ubuntu
+WORKDIR /code
+
+COPY ./data/repeat.sh ./
+
+RUN chmod +x ./repeat.sh
+
+# 你运行docker run -d ubuntu 之后容器会直接结束，这是因为ubuntu这个镜像没有主进程，如果你不给他安排点工作，他就会认为自己没有工作，容器直接停掉，所以我写了个repeat函数在哪挂着。
+CMD ["sh", "repeat.sh"]
