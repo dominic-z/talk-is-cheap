@@ -1,0 +1,6 @@
+FROM busybox
+
+VOLUME /data
+
+
+CMD ["sh","-c","sh"]
