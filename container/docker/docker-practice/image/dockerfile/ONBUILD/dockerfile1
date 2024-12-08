@@ -1,0 +1,11 @@
+FROM busybox
+
+RUN mkdir /app
+
+WORKDIR /app
+
+ONBUILD COPY ./hello_onbuild /app/
+
+ONBUILD RUN echo "hello_world" > hello_world
+
+CMD ["sh","-c","sh"]

@@ -1,18 +1,44 @@
 version: "3.9"
 services:
   web:
+  # 指定上下文，然后用当前路径的Dockerfile来build一个镜像
     build: .
+    # 主机8000端口映射到5000
     ports:
       - "8000:5000"
+      # 挂载，将./data目录挂载到这个容器的/container_data目录
     volumes:
       - ./data:/container_data
+      # 指定这个容器处于composetestnetwork网络之下，从而实现能够通过host名称来链接到redis容器
+      # 当然也可以用link但是不推荐
     networks:
       - composetestnetwork
+      # 给容器起个名
+    container_name: flask_web
+      # web容器依赖于redis容器，启动时需要redis容器先启动，关闭时需要redis先关闭
+    depends_on:
+      - redis
   redis:
-    image: "redis:alpine"
+  # 从redis:alpine构建容器
+    image: "redis:latest"
+    # 同上
     networks:
       - composetestnetwork
-
+  ubu_runner:
+    build: 
+      dockerfile: Ubuntu
+    environment:
+      - big_hak=big_hak
+    # 当然也支持以数据卷的形式进行挂载，就像在dockerfile里那样
+    volumes:
+     - some_volume:/data/for_volumes
+    networks:
+      - composetestnetwork
+    
 networks:
   composetestnetwork:
     driver: bridge
+
+# 定义数据卷
+volumes:
+  some_volume:
