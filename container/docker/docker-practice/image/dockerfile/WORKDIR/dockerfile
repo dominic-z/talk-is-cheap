@@ -1,0 +1,7 @@
+FROM busybox
+
+WORKDIR /data/
+
+RUN echo "hello world" > hello_world
+
+CMD sh
