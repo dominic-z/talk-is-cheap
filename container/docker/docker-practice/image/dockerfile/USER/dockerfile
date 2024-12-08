@@ -1,0 +1,14 @@
+FROM ubuntu
+
+WORKDIR /data/
+
+RUN echo "hello root" | cat > hello_root \
+    && groupadd -r redis && useradd -r -g redis redis \
+    && mkdir /home/redis && chown redis:redis /home/redis \
+    && usermod --home /home/redis redis
+
+USER redis
+
+RUN echo "hello redis" | cat > $HOME/hello_redis
+
+CMD ["sh","-c","bash"]
