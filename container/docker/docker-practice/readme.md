@@ -372,3 +372,10 @@ docker run -d -P \
     nginx:alpine
 
 ```
+# 网络
+[【docker知识】从容器中如何访问到宿主机](https://blog.csdn.net/gongdiwudu/article/details/128888497)
+
+Linux 上的 Docker 引擎用户也可以通过 docker run 的 --add-host 标志启用主机的默认名称 host.docker.internal。使用此标志启动容器以公开主机字符串： 
+```shell
+docker run -d --add-host host.docker.internal:host-gateway my-container:latest
+```
