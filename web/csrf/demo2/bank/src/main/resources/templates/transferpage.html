@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf8">
+  <title>转账演示</title>
+</head>
+<body>
+<form action="/transfer" method="post">
+  <input type="hidden" value="黑客1号" name="account">
+  <input type="hidden" value="10000" name="money">
+  <input type="hidden" th:value="${_csrf.token}" th:name="${_csrf.parameterName}">
+
+  <input type="submit" value="如果访问过银行网站，点击我，触发CSRF，自动转账">
+</form>
+</body>
+</html>
+

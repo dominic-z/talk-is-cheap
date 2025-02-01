@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>第三方网站</title>
+    <script>
+
+    </script>
+</head>
+
+<body>
+    <div>
+        哈哈，小样儿，哪有赚大钱的方法，还是踏实努力工作吧！
+        <!-- form 表单的提交会伴随着跳转到action中指定 的url 链接，为了阻止这一行为，可以通过设置一个隐藏的iframe 页面，并将form 的target 属性指向这个iframe，当前页面iframe则不会刷新页面 -->
+        <form action="http://127.0.0.1:3200/pay" method="POST" class="form" onsubmit="post" target="targetIfr"
+            style="display: None;"
+            >
+            <input type="text" name="userName" value="xiaoming">
+            <input type="text" name="money" value="100">
+        </form>
+
+        <!-- 
+        <form action="http://localhost:3200/pay" method="POST" class="form" target="targetIfr" style="display: none">
+            <input type="text" name="userName" value="xiaoming">
+            <input type="text" name="money" value="100">
+        </form> -->
+        <iframe name="targetIfr" style="display:none"></iframe>
+    </div>
+</body>
+<script>
+    function post(event) {
+        // event.preventDefault(); // 阻止表单的默认提交行为
+
+        // console.log(event.target);
+        // console.log(event.target.action);
+        // var formData = new FormData(event.target);
+        // event.target.action
+        // console.log(formData)
+        fetch('http://127.0.0.1:3200/pay', {
+            method: "POST",
+            headers: {
+                // "Authorization": "Bearer token" // 设置请求头字段
+                'Access-Control-Allow-Credentials': 'true',
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin':'http://127.0.0.1:3100'
+            },
+            credentials: 'include',// 带cookie
+            body: '{"money":"100"}'
+            // body: formData
+        })
+            .then(function (response) {
+                return response.text();
+            })
+            .then(function (data) {
+                console.log(data);
+            });
+    }
+    // 直接调用方法提交
+    // post()
+
+    // 跳转过来之后默认提交表格，直接以表格的方式提交
+    document.querySelector('.form').submit();
+</script>
+
+</html>

