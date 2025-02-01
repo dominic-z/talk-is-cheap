@@ -2,21 +2,35 @@
 
 
 [CSRF漏洞原理攻击与防御（非常细）](https://blog.csdn.net/qq_43378996/article/details/123910614)
+
 关键在于攻击者的代码盗用了用户的cookie。
+
 [使用 Same-Site Cookie 属性防止 CSRF 攻击](https://www.tubring.cn/articles/same-site-cookie-attribute-prevent-cross-site-request-forgery)
+
 这个就是我的想法，我觉得cookie只要限制好了作用域就不会产生csrf问题呀
+
 [为什么token能够防止CSRF（修正版）](https://blog.csdn.net/qq_45888932/article/details/124002586)
 
 [Web安全之CSRF实例解析](https://blog.csdn.net/frontend_frank/article/details/107171772)
+
 好例子
+
 [Spring Boot项目CSRF (跨站请求伪造)攻击演示与防御](https://oscar.blog.csdn.net/article/details/125830688)
+
 简单看看就行
+
 [一文带你了解CSRF、Cookie、Session和token，JWT之间的关系](https://blog.csdn.net/Gherbirthday0916/article/details/126874913)
+
 [ CSRF 详解：攻击，防御，Spring Security应用等](https://www.cnblogs.com/pengdai/p/12164754.html)
+
 > CSRF 攻击是黑客借助受害者的 cookie 骗取服务器的信任，但是黑客并不能拿到 cookie，也看不到 cookie 的内容。
+
 [前端安全系列（二）：如何防止CSRF攻击？](https://tech.meituan.com/2018/10/11/fe-security-csrf.html)
+
 > 前面讲到CSRF的另一个特征是，攻击者无法直接窃取到用户的信息（Cookie，Header，网站内容等），仅仅是冒用Cookie中的信息。而CSRF攻击之所以能够成功，是因为服务器误把攻击者发送的请求当成了用户自己的请求。那么我们可以要求所有的用户请求都携带一个CSRF攻击者无法获取到的Token。服务器通过校验请求是否携带正确的Token，来把正常的请求和攻击的请求区分开，也可以防范CSRF的攻击。
+
 [Understanding CSRF](https://github.com/pillarjs/understanding-csrf)
+
 > An attacker would have to somehow get the CSRF token from your site, and they would have to use JavaScript to do so. Make sure CSRF tokens can not be accessed with AJAX! Don't create a /csrf route just to grab a token, and especially don't support CORS on that route!
 
 关键在于确保攻击者没法拿到这个token，如果你傻不愣登提供了一个用cookie换token的接口，那就和没防御一样。
