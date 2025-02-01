@@ -1,0 +1,13 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: security1
+  resources:
+    static-locations: classpath:/META-INF/resources/, classpath:/resources/, classpath:/static/, classpath:/public/,
+      classpath:/templates/
+
+
+logging:
+  level:
+    ROOT: DEBUG
