@@ -1,5 +1,6 @@
 配合https://blog.csdn.net/leah126/article/details/141624726针对cors的demo
 
+以及https://cloud.tencent.com/developer/article/1953193
 
 # 前端项目
 使用vue+axios来进行请求发送
