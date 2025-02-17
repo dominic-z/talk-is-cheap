@@ -21,6 +21,7 @@ public class TestByteBufferReadWrite {
 
         System.out.println(buffer.get());
         debugAll(buffer);
+//        将已经读取的字符推走，见方法说明
         buffer.compact();
         log.info("after compact");
         debugAll(buffer);

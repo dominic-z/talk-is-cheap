@@ -1,3 +1,6 @@
+# 注意
+先在idea里把allow multi instance打开，让一个java代码可以运行多个不同的实例
+
 # P07
 
 这个bytebufferUtil的功能实现是通过buffer.get(index)实现的，buffer.get()会导致position+1，但是get(index)不会
