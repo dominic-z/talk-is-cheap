@@ -23,8 +23,10 @@ public class TestByteBufferString {
         debugAll(buffer3);
 
         // 4. 转为字符串
+        System.out.println("buffer2 position before read: " + buffer2.position());
         String str1 = StandardCharsets.UTF_8.decode(buffer2).toString();
         System.out.println(str1);
+        System.out.println("buffer2 position: " + buffer2.position());
 
         buffer1.flip();
         String str2 = StandardCharsets.UTF_8.decode(buffer1).toString();
