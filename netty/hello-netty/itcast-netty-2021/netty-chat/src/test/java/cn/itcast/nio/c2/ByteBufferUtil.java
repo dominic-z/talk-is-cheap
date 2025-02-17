@@ -7,12 +7,21 @@ import java.nio.ByteBuffer;
 import static io.netty.util.internal.MathUtil.isOutOfBounds;
 import static io.netty.util.internal.StringUtil.NEWLINE;
 
+/*
+本质上就是一个美化输出的工具，不太复杂，跟着main函数debug一边大概就知道每个方法都是做啥的了。
+ */
 public class ByteBufferUtil {
+    // 这个是相当于是将ascii转成字符的一个map，比如说97就是A
     private static final char[] BYTE2CHAR = new char[256];
+    // 没用上
     private static final char[] HEXDUMP_TABLE = new char[256 * 4];
+    // 填空用的，都是空格
     private static final String[] HEXPADDING = new String[16];
+    // 以16进制表示的用于指向当前行是第多少个字符，就是输出的最左边的内容
     private static final String[] HEXDUMP_ROWPREFIXES = new String[65536 >>> 4];
+    // 这个是相当于是将字节转成字符的一个map，十进制转16进制
     private static final String[] BYTE2HEX = new String[256];
+    // 空格，填空对齐用的
     private static final String[] BYTEPADDING = new String[16];
 
     static {
@@ -71,6 +80,7 @@ public class ByteBufferUtil {
 
     /**
      * 打印所有内容
+     *
      * @param buffer
      */
     public static void debugAll(ByteBuffer buffer) {
@@ -86,6 +96,7 @@ public class ByteBufferUtil {
 
     /**
      * 打印可读取内容
+     *
      * @param buffer
      */
     public static void debugRead(ByteBuffer buffer) {
