@@ -52,7 +52,7 @@ public class Server {
         while (true) {
             // 4. 处理事件, selectedKeys 内部包含了所有发生的事件
             log.debug("connecting...");
-            // 只有当有新连接连接进来的的时候，accept才会返回。
+            // 只有当有新连接连接进来的的时候，accept才会返回。返回的channel就是服务端与客户端可以进行数据交换的通道
             SocketChannel sc = ssc.accept();
             log.debug("connected .. {}", sc);
 
@@ -106,6 +106,7 @@ public class Server {
                 // 5. 接受客户端发送的数据
                 log.debug("before read ... channel: {}", channel);
                 while (channel.read(buffer) != -1) {
+                    // todo: 这里没有关闭链接，所有历史的channel都会一直存在在list里，按理说read返回-1就应该关闭链接了。
 //                channel.read(buffer);
                     buffer.flip();
                     ByteBufferUtil.debugRead(buffer);
@@ -156,12 +157,13 @@ public class Server {
             // 问题2：与问题1类似的，需要遍历全部的channel，哪怕有些channel的数据还没有ready，这也浪费了服务器的资源。
             for (SocketChannel channel : channels) {
                 // 5. 接受客户端发送的数据
+                // todo：缺了如何关闭链接的方法，历史的channel会一直在列表里，并且会被一直遍历，按理说read返回-1就应该关闭链接了。
                 log.debug("before read ... channel: {}", channel);
-                channel.read(buffer);
+                int read = channel.read(buffer);
                 buffer.flip();
                 ByteBufferUtil.debugRead(buffer);
                 buffer.clear();
-                log.debug("after read ... channel: {}", channel);
+                log.debug("after read: readcnt:{} ... channel: {}",read, channel);
             }
         }
     }
@@ -248,11 +250,15 @@ public class Server {
                         int read = channel.read(buffer); // 如果是客户端的正常断开，read 的方法的返回值是 -1
                         if (read == -1) {
                             // 如果不cancel的话，这个channel的事件一直处于未处理状态，也就是ready状态，
-                            // 那么selector每次都会认为，这个channel已经ready了
-                            // 但实际上这个channel的活已经干完了；他返回-1相当于告诉服务端，客户端已经close了
+                            // 那么selector每次都会认为，这个channel已经ready了，即使客户端已经关闭了。
+                            // read返回-1代表the channel has reached end-of-stream，实测中如果客户端已经关闭了，这个方法就会返回-1。
+                            // ps： 但是返回-1并不一定代表client被关闭了。
+                            // 这时候可以根据需要执行响应的关闭通道的工作。
+                            // cancel可以理解为register的逆向操作。
                             // 如果不cancel，就会一直触发selector.select();，导致一直循环
                             // 下面的cancel同理；
                             key.cancel();
+                            channel.close();
                         } else {
                             buffer.flip();
                             ByteBufferUtil.debugAll(buffer);
@@ -352,6 +358,7 @@ public class Server {
                             // 但实际上这个channel的活已经干完了；并且一旦cancel了，selector就不会继续监听这个channel上的任何事件
                             // 下面的cancel同理；
                             key.cancel();
+                            channel.close();
                         } else {
                             ByteBufferUtil.debugAll(buffer);
                             splitAndLogLines(buffer);
