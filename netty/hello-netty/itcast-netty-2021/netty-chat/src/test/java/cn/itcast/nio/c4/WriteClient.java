@@ -40,6 +40,7 @@ public class WriteClient {
             // 客户端这里做的是同步的。
             int read = sc.read(buffer);
             log.info("current read: {}", read);
+            // todo: 如果服务端断开链接，客户端也应该断开，而不是一直read
             count += read;
             log.info("total read count: {}", count);
             buffer.clear();

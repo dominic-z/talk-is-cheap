@@ -120,9 +120,14 @@ public class MultiThreadServer {
                             ByteBuffer buffer = ByteBuffer.allocate(16);
                             SocketChannel channel = (SocketChannel) key.channel();
                             log.debug("thread {} read...{}", this.name, channel.getRemoteAddress());
-                            channel.read(buffer);
-                            buffer.flip();
-                            debugAll(buffer);
+                            int readCnt = channel.read(buffer);
+                            if(readCnt!=-1){
+                                buffer.flip();
+                                debugAll(buffer);
+                            }else{
+                                key.cancel();
+                                channel.close();
+                            }
                         }
                     }
                 } catch (IOException e) {
