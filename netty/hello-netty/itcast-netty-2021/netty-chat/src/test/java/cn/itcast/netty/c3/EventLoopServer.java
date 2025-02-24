@@ -9,12 +9,14 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.Charset;
-
+/**
+ * 对应3.1
+ */
 @Slf4j
 public class EventLoopServer {
     public static void main(String[] args) {
         // 细分2：创建一个独立的 EventLoopGroup
-        EventLoopGroup group = new DefaultEventLoopGroup();
+        EventLoopGroup group = new DefaultEventLoopGroup(4);
         new ServerBootstrap()
                 // boss 和 worker
                 // 细分1：boss 只负责 ServerSocketChannel 上 accept 事件     worker 只负责 socketChannel 上的读写
