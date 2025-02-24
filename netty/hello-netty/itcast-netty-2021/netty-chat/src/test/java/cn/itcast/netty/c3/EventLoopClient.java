@@ -11,7 +11,13 @@ import io.netty.handler.codec.string.StringEncoder;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.InetSocketAddress;
+import java.util.Random;
+import java.util.UUID;
 
+
+/**
+ * 对应3.1
+ */
 @Slf4j
 public class EventLoopClient {
     public static void main(String[] args) throws InterruptedException {
@@ -37,13 +43,19 @@ public class EventLoopClient {
 //        log.debug("{}", channel);
 
         // 2.2 使用 addListener(回调对象) 方法异步处理结果
+        UUID uuid = UUID.randomUUID();
         channelFuture.addListener(new ChannelFutureListener() {
             @Override
             // 在 nio 线程连接建立好之后，会调用 operationComplete
             public void operationComplete(ChannelFuture future) throws Exception {
+
                 Channel channel = future.channel();
                 log.debug("{}", channel);
-                channel.writeAndFlush("hello, world");
+                channel.writeAndFlush("hello, world"+uuid);
+                // 中间加一段sleep，然后启动多个client，模拟多个客户端链接服务端，然后看服务端的代码可以发现，
+                // 客户端与服务端的会话会被服务端分配到对应的线程（或者说EventLoop）身上，并且会话和对应的eventloop是绑定的
+                Thread.sleep(new Random().nextInt(10000)+10000);
+                channel.writeAndFlush("hello, world"+uuid);
             }
         });
     }

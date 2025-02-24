@@ -4,6 +4,10 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.*;
 
+
+/**
+ * 对应3.3
+ */
 @Slf4j
 public class TestJdkFuture {
     public static void main(String[] args) throws ExecutionException, InterruptedException {
@@ -21,5 +25,6 @@ public class TestJdkFuture {
         // 3. 主线程通过 future 来获取结果
         log.debug("等待结果");
         log.debug("结果是 {}", future.get());
+        service.shutdown();
     }
 }
