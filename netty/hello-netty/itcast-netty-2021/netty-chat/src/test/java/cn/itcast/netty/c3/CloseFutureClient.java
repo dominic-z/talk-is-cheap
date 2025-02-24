@@ -26,13 +26,19 @@ public class CloseFutureClient {
                     @Override // 在连接建立后被调用
                     protected void initChannel(NioSocketChannel ch) throws Exception {
 //                        ch.pipeline().addLast(new LoggingHandler(LogLevel.DEBUG));
+                        // 当channel执行writeAndFlush的时候，就是由group里的worker来执行，并且会在pipeline中经过StringEncoder
                         ch.pipeline().addLast(new StringEncoder());
                     }
                 })
                 .connect(new InetSocketAddress("localhost", 8080));
         System.out.println(channelFuture.getClass());
+        channelFuture.addListener((ChannelFutureListener) future -> {
+            log.info("channel future listener: channel: {}", future.channel()); // 2
+        });
+
+
         Channel channel = channelFuture
-                .sync()
+                .sync()  // 同步，等到这个future执行完之后，也就是建立完链接之后。
                 .channel();
         log.debug("{}", channel);
         new Thread(()->{
@@ -40,7 +46,8 @@ public class CloseFutureClient {
             while (true) {
                 String line = scanner.nextLine();
                 if ("q".equals(line)) {
-                    channel.close(); // close 异步操作 1s 之后
+                    ChannelFuture future = channel.close();// close 异步操作 1s 之后
+                    log.info("close future: {}",future);
 //                    log.debug("处理关闭之后的操作"); // 不能在这里善后
                     break;
                 }
@@ -55,7 +62,7 @@ public class CloseFutureClient {
         /*log.debug("waiting close...");
         closeFuture.sync();
         log.debug("处理关闭之后的操作");*/
-        System.out.println(closeFuture.getClass());
+        log.info("close future: {}",closeFuture);
         closeFuture.addListener((ChannelFutureListener) future -> {
             log.debug("处理关闭之后的操作");
             group.shutdownGracefully();

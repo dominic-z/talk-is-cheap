@@ -34,6 +34,7 @@ public class TestNettyFuture {
             }
         });
         final Future<?> closeFuture = group.shutdownGracefully();
+        // 等待closeFuture执行结束
         closeFuture.await();
     }
 }
