@@ -5,6 +5,10 @@ import io.netty.buffer.ByteBufAllocator;
 
 import static cn.itcast.netty.c4.TestByteBuf.log;
 
+
+/**
+ * 对应3.5 slice
+ */
 public class TestSlice {
     public static void main(String[] args) {
         ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(10);
