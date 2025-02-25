@@ -40,8 +40,9 @@ public class TestPipeline {
                             public void channelRead(ChannelHandlerContext ctx, Object name) throws Exception {
                                 log.debug("2");
                                 Student student = new Student(name.toString());
-                                super.channelRead(ctx, student); // 将数据传递给下个 handler，如果不调用，调用链会断开 或者调用 ctx
-                                // .fireChannelRead(student);
+                                // 将数据传递给下个 handler，如果不调用，调用链会断开 或者调用 ctx.fireChannelRead(student);
+                                super.channelRead(ctx, student);
+                                //
                             }
                         });
 
@@ -63,14 +64,26 @@ public class TestPipeline {
                         pipeline.addLast("h5", new ChannelOutboundHandlerAdapter() {
                             @Override
                             public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-                                log.debug("5");
-                                super.write(ctx, msg, promise);
+                                log.debug("5： {}",promise);
+//                                super.write(ctx, msg, promise);
+                                ctx.write(msg,promise);
+//                                throw new RuntimeException("模拟异常");
                             }
                         });
                         pipeline.addLast("h6", new ChannelOutboundHandlerAdapter() {
                             @Override
                             public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-                                log.debug("6");
+                                log.debug("6： {}",promise);
+                                // 通过promise加一个回调，在抛出异常或者正常结束之后执行。
+                                promise.addListener(future -> {
+                                    if(future.isSuccess()){
+                                        log.info("promise done");
+                                    }else{
+                                        log.error("promise fail, ",promise.cause());
+                                    }
+                                });
+                                // 甚至可以手动将promise设置为成功，这样后续的super.write(ctx,msg,promise)就不会执行了
+//                                promise.setSuccess();
                                 super.write(ctx, msg, promise);
                             }
                         });
