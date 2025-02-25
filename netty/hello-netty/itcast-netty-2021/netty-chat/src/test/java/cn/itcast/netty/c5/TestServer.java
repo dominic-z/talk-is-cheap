@@ -4,7 +4,9 @@ import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Date;
-
+/**
+ * 对应4.1
+ */
 public class TestServer {
     public static void main(String[] args) throws IOException {
         ServerSocket ss = new ServerSocket(8888);
