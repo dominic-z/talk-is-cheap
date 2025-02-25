@@ -14,6 +14,10 @@ import io.netty.handler.codec.string.StringEncoder;
 import java.nio.charset.Charset;
 import java.util.Scanner;
 
+
+/**
+ * 对应4.1
+ */
 public class EchoClient {
     public static void main(String[] args) throws InterruptedException {
         NioEventLoopGroup group = new NioEventLoopGroup();
