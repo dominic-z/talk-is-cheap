@@ -18,7 +18,7 @@ import java.util.List;
 public class MessageCodec extends ByteToMessageCodec<Message> {
 
     /**
-     * 做的事情就是将将msy进行序列化，写入到out里
+     * 做的事情就是将将msg进行序列化，写入到out里
      *
      * @param ctx
      * @param msg
@@ -63,9 +63,9 @@ public class MessageCodec extends ByteToMessageCodec<Message> {
         in.readBytes(bytes, 0, length);
         ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(bytes));
         Message message = (Message) ois.readObject();
-        log.debug("{}, {}, {}, {}, {}, {}", magicNum, version, serializerType, messageType, sequenceId, length);
-        log.debug("{}", message);
+        log.debug("decode: {}, {}, {}, {}, {}, {}", magicNum, version, serializerType, messageType, sequenceId, length);
+        log.debug("decode message: {}", message);
         out.add(message);
-        log.info("{}", out);
+//        log.info("{}", out);
     }
 }

@@ -14,6 +14,10 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
+/**
+ * 对应1.1~1.4的客户端
+ */
 public class Client1 {
     static final Logger log = LoggerFactory.getLogger(Client1.class);
 
@@ -39,12 +43,22 @@ public class Client1 {
                         // 会在连接 channel 建立成功后，会触发 active 事件
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) {
+                            // 发送10个16字节大小的数据，模拟粘包
                             for (int i = 0; i < 10; i++) {
-                                ByteBuf buf = ctx.alloc().buffer(16);
+                                ByteBuf buf = ctx.alloc().buffer();
                                 buf.writeBytes(new byte[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
                                         11, 12, 13, 14, 15});
                                 ctx.writeAndFlush(buf);
                             }
+
+                            // 发送一个160字节大小的数据，模拟半包
+//                            ByteBuf buf = ctx.alloc().buffer();
+//                            for (int i = 0; i < 10; i++) {
+//                                buf.writeBytes(new byte[]{16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
+//                                        27, 28, 29, 30, 31});
+//                            }
+//                            ctx.writeAndFlush(buf);
+                            // 干完活，关闭通道
                             ctx.channel().close();
                         }
                     });

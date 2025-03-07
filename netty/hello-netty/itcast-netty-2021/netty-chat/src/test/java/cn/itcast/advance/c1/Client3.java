@@ -16,6 +16,9 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Random;
 
+/**
+ * 1.4 方法三
+ */
 public class Client3 {
     static final Logger log = LoggerFactory.getLogger(Client1.class);
 

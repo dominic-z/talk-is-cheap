@@ -1,5 +1,6 @@
 package cn.itcast.test;
 
+import cn.itcast.nio.c2.ByteBufferUtil;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -14,12 +15,20 @@ import io.netty.handler.logging.LoggingHandler;
 import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
+
+/**
+ * netty03 2.2
+ * <p>
+ * 没跑通，妈的
+ */
 @Slf4j
 public class TestRedis {
     public static void main(String[] args) {
         NioEventLoopGroup worker = new NioEventLoopGroup();
-        byte[] LINE = {13, 10};
+        byte[] LINE = {13, 10};// \r和\n
+
         try {
             Bootstrap bootstrap = new Bootstrap();
             bootstrap.channel(NioSocketChannel.class);
@@ -32,9 +41,14 @@ public class TestRedis {
                         // 会在连接 channel 建立成功后，会触发 active 事件
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) {
-                            set(ctx);
-                            get(ctx);
+                            try {
+                                set(ctx);
+                                get(ctx);
+                            } catch (Exception e) {
+                                log.error("error", e);
+                            }
                         }
+
                         private void get(ChannelHandlerContext ctx) {
                             ByteBuf buf = ctx.alloc().buffer();
                             buf.writeBytes("*2".getBytes());

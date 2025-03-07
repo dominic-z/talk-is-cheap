@@ -2,6 +2,7 @@ package cn.itcast.netty.c3;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
@@ -21,28 +22,28 @@ public class TestEmbeddedChannel {
         ChannelInboundHandlerAdapter h1 = new ChannelInboundHandlerAdapter() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                log.debug("1");
+                log.debug("1, {}", ((ByteBuf)msg).toString(Charset.forName("utf8")));
                 super.channelRead(ctx, msg);
             }
         };
         ChannelInboundHandlerAdapter h2 = new ChannelInboundHandlerAdapter() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                log.debug("2");
+                log.debug("2, {}",((ByteBuf)msg).toString(Charset.forName("utf8")));
                 super.channelRead(ctx, msg);
             }
         };
         ChannelOutboundHandlerAdapter h3 = new ChannelOutboundHandlerAdapter() {
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-                log.debug("3");
+                log.debug("3, {}",((ByteBuf)msg).toString(Charset.forName("utf8")));
                 super.write(ctx, msg, promise);
             }
         };
         ChannelOutboundHandlerAdapter h4 = new ChannelOutboundHandlerAdapter() {
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-                log.debug("4");
+                log.debug("4, {}",((ByteBuf)msg).toString(Charset.forName("utf8")));
                 super.write(ctx, msg, promise);
             }
         };
@@ -53,4 +54,9 @@ public class TestEmbeddedChannel {
         channel.writeOutbound(ByteBufAllocator.DEFAULT.buffer().writeBytes("world".getBytes()));
 
     }
+
+
+//    static String byteBufToString(ByteBuf buf){
+//        buf.toString()
+//    }
 }
