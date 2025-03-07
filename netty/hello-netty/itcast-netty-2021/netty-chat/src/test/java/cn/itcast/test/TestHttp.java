@@ -14,6 +14,12 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 
+
+/**
+ * 对应2.3
+ * <p>
+ * 然后浏览器或者postman访问http://localhost:8080/hello?name=1
+ */
 @Slf4j
 public class TestHttp {
     public static void main(String[] args) {
@@ -31,15 +37,28 @@ public class TestHttp {
                     ch.pipeline().addLast(new SimpleChannelInboundHandler<DefaultHttpRequest>() {
                         @Override
                         protected void channelRead0(ChannelHandlerContext ctx, DefaultHttpRequest msg) throws Exception {
-                            log.debug("{}", msg.uri());
-                            QueryStringDecoder decoder = new QueryStringDecoder(msg.uri());
-                            List<String> name = decoder.parameters().get("name");
-                            DefaultFullHttpResponse response = new DefaultFullHttpResponse(msg.protocolVersion(), HttpResponseStatus.OK);
-                            byte[] bytes = ("<h1>hello!" + name.get(0) + "</h1>").getBytes();
-                            response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html");
-                            response.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, bytes.length);
-                            response.content().writeBytes(bytes);
-                            ctx.writeAndFlush(response);
+
+                            try {
+                                log.debug("{}", msg.uri());
+                                QueryStringDecoder decoder = new QueryStringDecoder(msg.uri());
+                                List<String> name = decoder.parameters().get("name");
+                                DefaultFullHttpResponse response = new DefaultFullHttpResponse(msg.protocolVersion(),
+                                        HttpResponseStatus.OK);
+                            /*
+                            第一次访问测试的时候一直访问的是http://localhost:8080，然后浏览器一直拿不到结果，debug才发现在这一步报错，因为name是null
+                            所以是因为这里的异常会被吞掉，不会暴露出来，所以这里应该有个try catch
+                             */
+                                byte[] bytes = ("<h1>hello!" + name.get(0) + "</h1>").getBytes();
+                                response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html");
+                                response.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, bytes.length);
+                                response.content().writeBytes(bytes);
+//                            response.
+                                ctx.writeAndFlush(response);
+                            } catch (Exception e) {
+
+                                log.error("error ", e);
+                            }
+
                         }
                     });
                 }

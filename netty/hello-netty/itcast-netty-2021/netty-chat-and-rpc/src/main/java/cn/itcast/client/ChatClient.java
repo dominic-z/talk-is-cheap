@@ -62,7 +62,7 @@ public class ChatClient {
                         // 接收响应消息
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                            log.debug("msg: {}", msg);
+                            log.info("msg: {}", msg);
                             if ((msg instanceof LoginResponseMessage)) {
                                 LoginResponseMessage response = (LoginResponseMessage) msg;
                                 if (response.isSuccess()) {
