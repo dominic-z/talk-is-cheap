@@ -36,7 +36,10 @@ public class TestBacklogClient {
                     });
                 }
             });
+
+            log.info("connecting");
             ChannelFuture channelFuture = bootstrap.connect("127.0.0.1", 8080).sync();
+            log.info("connected");
             channelFuture.channel().closeFuture().sync();
         } catch (InterruptedException e) {
             log.error("client error", e);

@@ -17,12 +17,15 @@
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-all</artifactId>
-            <version>4.1.39.Final</version>
+            <!--            版本太久，在aliyun的maven镜像上已经找不到了-->
+            <!--            <version>4.1.39.Final</version>-->
+            <version>4.1.117.Final</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.16.18</version>
+            <!--            <version>1.16.18</version>-->
+            <version>1.18.36</version>
         </dependency>
         <dependency>
             <groupId>com.google.code.gson</groupId>
@@ -32,7 +35,9 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>19.0</version>
+            <!--            版本太久，在aliyun的maven镜像上已经找不到了-->
+            <!--            <version>19.0</version>-->
+            <version>33.4.0-jre</version>
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>
@@ -42,7 +47,9 @@
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
-            <version>3.11.3</version>
+            <!--            3.11.3太老了，在aliyun的maven镜像上已经找不到了-->
+            <!--            <version>3.11.3</version>-->
+            <version>4.29.3</version>
         </dependency>
     </dependencies>
 </project>

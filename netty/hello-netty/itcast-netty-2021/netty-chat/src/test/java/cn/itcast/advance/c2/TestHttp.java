@@ -21,6 +21,10 @@ import java.nio.charset.StandardCharsets;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 
+
+/**
+ * 对应2.3
+ */
 @Slf4j
 public class TestHttp {
     public static void main(String[] args) {
@@ -40,6 +44,7 @@ public class TestHttp {
                         @Override
                         protected void channelRead0(ChannelHandlerContext ctx, HttpRequest msg) throws Exception {
                             // 获取请求
+                            // todo: 需要trycatch，否则这里发生的异常会被吞掉。
                             log.debug(msg.uri());
 
                             // 返回响应
