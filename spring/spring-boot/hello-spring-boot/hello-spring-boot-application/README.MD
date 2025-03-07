@@ -12,6 +12,8 @@ docker run --name some-mysql -e MYSQL_ROOT_PASSWORD=my-secret-pw -p 3306:3306 -d
 ## redis
 docker pull redis:6.2.5
 docker run -p 6379:6379 --name redis -d redis
+
+docker exec -it redis redis-cli
 redis-cli -h some-redis-ip -p some-port
 
 

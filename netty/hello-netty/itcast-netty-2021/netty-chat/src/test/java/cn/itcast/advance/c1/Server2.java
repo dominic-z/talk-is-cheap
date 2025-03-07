@@ -13,6 +13,9 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * 1.4 方法2
+ */
 @Slf4j
 public class Server2 {
     void start() {
@@ -24,7 +27,7 @@ public class Server2 {
             // 调整系统的接收缓冲区（滑动窗口）
 //            serverBootstrap.option(ChannelOption.SO_RCVBUF, 10);
             // 调整 netty 的接收缓冲区（byteBuf）
-            serverBootstrap.childOption(ChannelOption.RCVBUF_ALLOCATOR, new AdaptiveRecvByteBufAllocator(16, 16, 16));
+//            serverBootstrap.childOption(ChannelOption.RCVBUF_ALLOCATOR, new AdaptiveRecvByteBufAllocator(16, 16, 16));
             serverBootstrap.group(boss, worker);
             serverBootstrap.childHandler(new ChannelInitializer<SocketChannel>() {
                 @Override

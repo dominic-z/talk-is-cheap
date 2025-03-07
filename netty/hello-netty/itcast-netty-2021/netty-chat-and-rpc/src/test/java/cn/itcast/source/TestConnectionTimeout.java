@@ -9,6 +9,10 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LoggingHandler;
 import lombok.extern.slf4j.Slf4j;
 
+
+/**
+ * 第四章1.2
+ */
 @Slf4j
 public class TestConnectionTimeout {
     public static void main(String[] args) {
@@ -22,7 +26,7 @@ public class TestConnectionTimeout {
         try {
             Bootstrap bootstrap = new Bootstrap()
                     .group(group)
-                    .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 1000)
+                    .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 300)
                     .channel(NioSocketChannel.class)
                     .handler(new LoggingHandler());
             ChannelFuture future = bootstrap.connect("127.0.0.1", 8080);

@@ -5,6 +5,7 @@ import com.google.gson.*;
 import java.io.*;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 /**
  * 用于扩展序列化、反序列化算法
@@ -63,7 +64,9 @@ public interface Serializer {
     }
 
     /**
-     * 告知gson，对于某些类，如何序列化，这个是用来处理Class的
+     * 告知gson，对于某些类，如何序列化，这个是用来处理Class的，用来告诉Gson，处理Class类型的时候如何序列化
+     * 实现方式挺简单的，序列化的时候就是将class的完整名作为序列化结果，反序列化的时候就只是使用Class.forname加载回来。
+     * 在rpc之中用到了
      */
     class ClassCodec implements JsonSerializer<Class<?>>, JsonDeserializer<Class<?>> {
 
@@ -82,5 +85,13 @@ public interface Serializer {
             // class -> json
             return new JsonPrimitive(src.getName());
         }
+    }
+
+    public static void main(String[] args) {
+        byte[] serialized = Algorithm.Json.serialize(String.class);
+        System.out.println(Arrays.toString(serialized));
+        System.out.println(new String(serialized));
+        Class deserialize = Algorithm.Json.deserialize(Class.class, serialized);
+        System.out.println(deserialize);
     }
 }

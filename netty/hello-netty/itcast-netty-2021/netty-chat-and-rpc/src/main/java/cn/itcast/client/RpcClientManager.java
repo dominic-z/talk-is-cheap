@@ -53,6 +53,7 @@ public class RpcClientManager {
             // 就是将这个promise放进一个map里，然后再通过RpcResponseMessageHandler对这个promise进行设置值；
             // 之所以用promise，是因为promise拥有等待功能；当RpcResponseMessageHandler修改了promise的返回值的时候；
             // await方法自动就会放过去了
+            // 我觉得这个应该先put promise，然后再writeAndFlush
             DefaultPromise<Object> promise = new DefaultPromise<>(getChannel().eventLoop());
             RpcResponseMessageHandler.PROMISES.put(sequenceId, promise);
 

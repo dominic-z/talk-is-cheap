@@ -19,6 +19,24 @@ invokeChannelRead`方法里，这里会判断该由那个线程（即executor）
 
 为啥要异步，我倒想问问为啥要同步，建立链接的过程中是内核态需要执行，这时候我完全可以切回用户态执行我的用户任务啊。多路复用也是同样道理，目标都在于让cpu不要闲下来
 
+
+# 03 Netty进阶
+
+## 2.2 redis协议
+
+使用docker，但是要记住，如果在虚拟机里启动docker，记得`systemctl restart docker`，否则可能在虚拟机暂停重启后，主机无法通过网络桥接访问docker容器。
+```shell
+touch redis/redis.log
+chmod 777 redis/redis.log
+docker run --rm -v ./redis/redisconf:/usr/local/etc/redis -v ./redis/redis.log:/usr/local/etc/redis.log --name redis-server -p 6379:6379 redis /usr/local/etc/redis/redis.conf
+
+// 也可以不用日志，简单点
+docker run --rm -p 6379:6379 redis /usr/local/etc/redis/redis.conf
+
+docker exec -it redis-server redis-cli
+```
+
+
 # 注意
 先在idea里把allow multi instance打开，让一个java代码可以运行多个不同的实例
 
