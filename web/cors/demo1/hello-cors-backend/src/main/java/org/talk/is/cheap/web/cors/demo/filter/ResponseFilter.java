@@ -13,6 +13,7 @@ import org.springframework.web.filter.GenericFilterBean;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Enumeration;
 
 @Configuration
 @Slf4j
@@ -36,9 +37,20 @@ public class ResponseFilter extends OncePerRequestFilter {
 
 //            原文链接：https://blog.csdn.net/leah126/article/details/141624726
             log.info("req method: {}", request.getMethod());
+            if (StringUtils.equals(request.getMethod(), "OPTIONS")) {
+                // 跨域请求的OPTIONS预检请求会带一个"access-control-request-headers"的header，用于询问服务器的后面的post/put请求这个可不可以带上这些header
+                // 如果可以，就在response的Access-Control-Allow-Headers加上
+                Enumeration<String> headers = request.getHeaders("access-control-request-headers");
+                while (headers.hasMoreElements()) {
+                    String s = headers.nextElement();
+                    response.addHeader("Access-Control-Allow-Headers", s);
+                }
+            }
             response.addHeader("Access-Control-Allow-Origin", request.getHeader("origin"));
-            response.addHeader("Access-Control-Allow-Headers", "customized");
-            response.addHeader("Access-Control-Allow-Headers", "content-type");
+            response.addHeader("Access-Control-Expose-Headers", "littleMouse");
+            response.addHeader("Access-Control-Allow-Credentials", "true");
+            response.addHeader("littleMouse", "littleMouse");
+            response.addHeader("bigMouse", "bigMouse");
         }
 
         filterChain.doFilter(request, response);

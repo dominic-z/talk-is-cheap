@@ -3,6 +3,11 @@
 以及https://cloud.tencent.com/developer/article/1953193
 
 # 前端项目
+
+```shell 
+nvm list
+nvm use v18.20.4
+```
 使用vue+axios来进行请求发送
 ```shell
 npm create vite@latest
