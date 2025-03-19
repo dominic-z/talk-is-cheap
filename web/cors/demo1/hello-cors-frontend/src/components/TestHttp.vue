@@ -45,6 +45,7 @@ function post(uri) {
 
 <template>
     <div>
+        <!-- 用来设置cookie -->
         login: <button @click="simplePost('/api/login')">login</button>
     </div>
     <div>
