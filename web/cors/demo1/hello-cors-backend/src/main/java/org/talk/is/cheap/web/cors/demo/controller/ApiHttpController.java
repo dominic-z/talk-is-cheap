@@ -1,8 +1,11 @@
 package org.talk.is.cheap.web.cors.demo.controller;
 
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpCookie;
+import org.springframework.http.ResponseCookie;
 import org.springframework.web.bind.annotation.*;
 import org.talk.is.cheap.web.cors.demo.message.Request;
 import org.talk.is.cheap.web.cors.demo.message.Response;
@@ -12,6 +15,33 @@ import org.talk.is.cheap.web.cors.demo.message.Response;
 @Slf4j
 
 public class ApiHttpController {
+
+    // 用来给客户端设置cookie
+    // 用来测试Access-Control-Allow-Credentials
+    //
+    @CrossOrigin("http://localhost:5000")
+    @RequestMapping(method = {RequestMethod.POST}, path = "/login")
+    @ResponseBody
+    public Response<String> login( HttpServletRequest request, HttpServletResponse response) {
+        Cookie cookie = new Cookie("test", "test");
+        // 设置 Cookie 的有效期（单位：秒），这里设置为 1 小时
+        cookie.setMaxAge(3600);
+        cookie.setDomain("localhost");
+
+        response.addCookie(cookie);
+        return Response.OK("ok");
+    }
+
+    @CrossOrigin("http://localhost:5000")
+    @RequestMapping(method = RequestMethod.POST, path = "/logout")
+    @ResponseBody
+    public Response<String> logout(@RequestBody Request req, HttpServletRequest request, HttpServletResponse response) {
+        Cookie cookie = new Cookie("test", "test");
+        cookie.setMaxAge(0);
+        response.addCookie(cookie);
+        return Response.OK("ok");
+    }
+
 
     @RequestMapping(method = RequestMethod.POST, path = "/post1")
     @ResponseBody
@@ -38,6 +68,7 @@ public class ApiHttpController {
 
     /**
      * 这种方法是不行的，因为都tm进不来post3的方法里，预检请求就被毙了
+     *
      * @param req
      * @param request
      * @param response
