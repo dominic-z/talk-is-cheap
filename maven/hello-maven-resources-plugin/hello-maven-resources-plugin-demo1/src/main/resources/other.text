@@ -1,0 +1,8 @@
+# Database configuration
+database:
+  url: ${database.url}
+  username: ${database.username}
+  password: ${database.password}
+
+config:
+  env: ${config.env}

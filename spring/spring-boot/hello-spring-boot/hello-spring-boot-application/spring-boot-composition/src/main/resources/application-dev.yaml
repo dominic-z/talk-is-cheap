@@ -1,8 +1,8 @@
 server:
-  port: 8080
+  port: 8081
 
 env:
-  prop: ${env1.prop}
+  prop: @env1.prop@
 # 配合mybatis的logPrefix使用打印mybatis日志的另一种方式
 # 很神奇的是，即使我配置的root这个logger的level是info了，但是mybatis的log仍然能打印出来debug结果；
 # 日志打印位置 BaseJdbcLogger这个类之中；猜测是做了什么奇怪的操作吧。由于太trick，所以我不想用
@@ -77,4 +77,4 @@ ribbon:
   nacos:
     enabled: false
 
-hello-world: Hello World!
+hello-world: Hello World!thisisdev

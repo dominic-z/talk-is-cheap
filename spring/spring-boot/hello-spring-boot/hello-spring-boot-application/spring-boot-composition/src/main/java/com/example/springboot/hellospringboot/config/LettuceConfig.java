@@ -38,7 +38,7 @@ public class LettuceConfig {
         RedisStandaloneConfiguration configuration = new RedisStandaloneConfiguration();
         // 2.0后的写法
         configuration.setHostName(redisProperties.getHost());
-//        configuration.setPassword(RedisPassword.of(redisProperties.getPassword()));
+        configuration.setPassword(RedisPassword.of(redisProperties.getPassword()));
         configuration.setPort(redisProperties.getPort());
         configuration.setDatabase(0);
         LettuceConnectionFactory factory = new LettuceConnectionFactory(configuration);
