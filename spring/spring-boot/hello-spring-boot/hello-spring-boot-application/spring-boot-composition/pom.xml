@@ -44,8 +44,8 @@
             </exclusions>
         </dependency>
 
-<!--        这个是用于触发loadbalancer的CaffeineLoadBalancerCacheManagerConfiguration的conditionOnClass自动配置，-->
-<!--        必须得是版本2的，因为版本3的是jdk11编译的，无法被加载器加载，所以spring认为conditionOnClass不满足条件-->
+        <!--        这个是用于触发loadbalancer的CaffeineLoadBalancerCacheManagerConfiguration的conditionOnClass自动配置，-->
+        <!--        必须得是版本2的，因为版本3的是jdk11编译的，无法被加载器加载，所以spring认为conditionOnClass不满足条件-->
         <!-- https://mvnrepository.com/artifact/com.github.ben-manes.caffeine/caffeine -->
         <dependency>
             <groupId>com.github.ben-manes.caffeine</groupId>
@@ -175,4 +175,18 @@
 
 
     </dependencies>
+
+
+    <build>
+        <filters>
+            <filter>../spring-config/${env}.properties</filter>
+        </filters>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+    </build>
+
 </project>
