@@ -36,6 +36,7 @@ public class RedissonConfig {
         redissonConfig
                 .setCodec(new StringCodec()) // 使用utf8编码，否则会往redis里存乱码
                 .useSingleServer()
+                .setPassword(redisProperties.getPassword())
                 .setAddress(String.format("redis://%s:%d", redisProperties.getHost(), redisProperties.getPort()));
 
         RedissonClient redissonClient = Redisson.create(redissonConfig);
