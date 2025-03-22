@@ -1,0 +1,9 @@
+# Database configuration
+database:
+  url: ${database1.url}
+  username: ${database1.username}
+  password: ${database1.password}
+
+# 另一种形式就是@xxx@的形式
+config:
+  env: @config1.env@
