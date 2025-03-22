@@ -11,7 +11,7 @@ docker run --name some-mysql -e MYSQL_ROOT_PASSWORD=my-secret-pw -p 3306:3306 -d
 
 ## redis
 docker pull redis:6.2.5
-docker run -p 6379:6379 --name redis -d redis
+docker run -p 6379:6379 --name redis -d redis --requirepass "admin"
 
 docker exec -it redis redis-cli
 redis-cli -h some-redis-ip -p some-port
@@ -19,7 +19,7 @@ redis-cli -h some-redis-ip -p some-port
 
 ## nacos
 ```shell
-docker run -d -p 8848:8848 --env MODE=standalone  --name hello-nacos1.4.2  nacos/nacos-server:1.4.2
+docker run -d -p 8848:8848 --env MODE=standalone  --name nacos1  nacos/nacos-server:1.4.2
 
 # 或者
 docker run -d -p 8848:8848 -p 9848:9848 -p 9849:9849 --env MODE=standalone  --name hello-nacosv2.0.4  nacos/nacos-server:v2.0.4

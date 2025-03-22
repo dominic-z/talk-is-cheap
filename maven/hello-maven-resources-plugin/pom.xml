@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.example</groupId>
+    <artifactId>hello-maven-resources-plugin</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <modules>
+        <module>hello-maven-resources-plugin-demo1</module>
+        <module>maven-resources-plugin-demo2</module>
+    </modules>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
+
+                <!--                <configuration>-->
+                <!--                如果不做配置的话，默认是${}。若设置为 @，则占位符格式变为 @property.name@。-->
+                <!--                但是实测中， ${xx}和@xx@，都是有效的-->
+<!--                有一次${xx}不会被识别，手动指定一下delimiter就行了-->
+                <!--                    <delimiters>-->
+                <!--                        <delimiter>@</delimiter>-->
+                <!--                    </delimiters>-->
+
+                <!--&lt;!&ndash;                    <delimiters>&ndash;&gt;-->
+                <!--&lt;!&ndash;                        <delimiter>${}</delimiter>&ndash;&gt;-->
+                <!--&lt;!&ndash;                    </delimiters>&ndash;&gt;-->
+                <!--                </configuration>-->
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>dev</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <env>dev</env>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>prod</id>
+            <properties>
+                <env>prod</env>
+            </properties>
+        </profile>
+    </profiles>
+
+</project>
