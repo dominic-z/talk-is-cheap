@@ -1,0 +1,14 @@
+server:
+  port: 8082
+
+# 如果需要配置多个路径，可能需要通过手动配置bean的方式，没尝试过。
+spring:
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates1/
+    suffix: .html
+#  script.js文件位于src/main/resources/static/js目录下，Spring Boot 会自动把static目录下的文件当作静态资源处理。
+  web:
+    resources:
+      static-locations:
+        - classpath:/templates1/
