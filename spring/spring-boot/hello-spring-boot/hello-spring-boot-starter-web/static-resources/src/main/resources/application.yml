@@ -1,0 +1,12 @@
+server:
+  port: 8082
+
+spring:
+  web:
+    resources:
+      static-locations:
+#        默认静态资源在classpath:/static/
+#        此路径表示在类路径下的 static 目录中查找静态资源。你需要在 src/main/resources 目录下创建 static 目录，并将静态资源放置其中。
+        - classpath:/my-static
+#       该路径表示在文件系统的指定目录中查找静态资源。你可以将静态资源存放在任意外部目录，然后使用绝对路径进行指定。
+        - file:/path/to/external/static/resources/
