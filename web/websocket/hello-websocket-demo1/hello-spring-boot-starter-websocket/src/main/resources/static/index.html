@@ -1,16 +1,21 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
-    <title>WebsocketClient本地运行即可</title>
-
+    <title>WebSocket Demo</title>
     <script>
-        var ws = new WebSocket('ws://localhost:8080/echo');
+
+        const clientId = prompt("请输入一个clientId：");
+        var ws = new WebSocket(`ws://localhost:8080/echo?q=abc`);
         ws.onopen = function() {
             console.log('WebSocket 连接已经建立。');
-            ws.send('Hello, server!');
+<!--            标准的浏览器 WebSocket 没有 isLast 参数，若你在实际项目里需要使用类似功能，可能得自己实现或者使用支持该功能的第三方库。-->
+<!--            发送13个字符，分两次发送-->
+            ws.send('Hello Server!');
+            ws.send(`I am ${clientId}`);
         };
         ws.onmessage = function(event) {
+
             console.log('收到服务器消息：', event.data);
         };
         ws.onerror = function(event) {
@@ -21,15 +26,8 @@
         };
 
     </script>
-
 </head>
-
-
-<body>
-
 <body>
 <h1>WebSocket Demo</h1>
-</body>
-
 </body>
 </html>
