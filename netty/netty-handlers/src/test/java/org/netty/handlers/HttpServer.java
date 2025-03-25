@@ -57,7 +57,7 @@ public class HttpServer {
                               于是，HttpObjectAggregator的作用就是将这俩东西合并成一个DefaultFullHttpRequest
                              */
                             ch.pipeline().addLast(new HttpObjectAggregator(65536));
-
+                            // ChunkedWriteHandler和HttpObjectAggregator顺序好像不重要，会根据message类型来判断由哪个来encode和decode这个数据。
                             ch.pipeline().addLast(new ChunkedWriteHandler());
                             // 添加自定义处理器来处理 HTTP 请求
                             ch.pipeline().addLast(new NettyHttpServerHandler());

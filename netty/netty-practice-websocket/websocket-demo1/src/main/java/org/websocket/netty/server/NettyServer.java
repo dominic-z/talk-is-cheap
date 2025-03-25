@@ -30,8 +30,8 @@ public class NettyServer {
                             socketChannel.pipeline()
                                     .addLast(new HttpServerCodec())
                                     .addLast(new LoggingHandler(LogLevel.INFO))
-                                    .addLast(new ChunkedWriteHandler())
                                     .addLast(new HttpObjectAggregator(8192))
+                                    .addLast(new ChunkedWriteHandler())
                                     .addLast(new WebSocketServerProtocolHandler("/ws", null, true, 65536 * 10))
                                     .addLast(new MyWebSocketHandler());
                         }
