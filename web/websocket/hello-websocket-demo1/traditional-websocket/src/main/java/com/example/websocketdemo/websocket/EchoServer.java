@@ -1,5 +1,6 @@
 package com.example.websocketdemo.websocket;
 
+import com.example.websocketdemo.config.SessionConfig;
 import jakarta.websocket.*;
 import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
@@ -11,7 +12,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-@ServerEndpoint("/echo/{clientId}")
+@ServerEndpoint(value = "/echo/{clientId}", configurator = SessionConfig.class)
 @Component
 @Slf4j
 public class EchoServer {
@@ -32,18 +33,22 @@ public class EchoServer {
 
     // 浏览器打开两个localhost/index.html，模拟两个客户端。
     @OnOpen
-    public void onOpen(Session session, @PathParam("clientId") String clientId) {
-
-        log.info("Connection opened: session id: {}, client id: {}", session.getId(), clientId);
+    public void onOpen(Session session, @PathParam("clientId") String clientId, EndpointConfig sec) {
+        String sessionKey = (String) sec.getUserProperties().get("Connected");
+        log.info("Connection opened: session id: {}, client id: {}, configSessionKey: {}", session.getId(), clientId,
+                sessionKey);
         sessions.put(session.getId(), session);
         webSocketMap.put(clientId, this);
-        // 这里可以发现，每个链接都是一个不同的server对象。
-        log.info("server hashcode : {}", this.hashCode());
+        // 这里可以发现，每个链接都是一个不同的server对象。不同的config
+//        也因此，说明这个实例不是由spring容器管理的
+//        @ServerEndpoint注解的类在WebSocket服务器端点中无法直接使用Spring的依赖注入机制，如字段注入（@Autowired和@Resource）或构造器注入。
+//        这是因为@ServerEndpoint注解的类是由Java WebSocket API（JSR 356）管理的，而不是由Spring容器直接管理的。
+        log.info("endpoint hashcode : {}, config hashcode: {}", this.hashCode(), sec.hashCode());
         this.clientId = clientId;
         this.session = session;
 
         Map<String, List<String>> query = session.getRequestParameterMap();
-        log.info("clientId: {}, query: {}",clientId,query);
+        log.info("clientId: {}, query: {}", clientId, query);
 
         onlineCount.incrementAndGet();
         log.info("客户端连接:" + clientId + ",当前在线人数为:" + onlineCount);
