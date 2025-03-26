@@ -33,7 +33,9 @@ public class NettyServer {
                                     .addLast(new HttpObjectAggregator(8192))
                                     .addLast(new ChunkedWriteHandler())
                                     .addLast(new WebSocketServerProtocolHandler("/ws", null, true, 65536 * 10))
-                                    .addLast(new MyWebSocketHandler());
+                                    .addLast(new MyWebSocketHandler())
+
+                                    ;
                         }
                     })
             ;
