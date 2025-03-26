@@ -1,27 +1,30 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
+
 <head>
     <meta charset="UTF-8">
     <title>Thymeleaf 示例1</title>
 </head>
+
 <body>
-<!--变量表达式用于访问模型中定义的变量。在控制器中，你可以将数据添加到模型中，然后在 Thymeleaf 模板中使用变量表达式来显示这些数据-->
-<h1 th:text="${message}">默认消息</h1>
+    <!--变量表达式用于访问模型中定义的变量。在控制器中，你可以将数据添加到模型中，然后在 Thymeleaf 模板中使用变量表达式来显示这些数据-->
+    <h1 th:text="${message}">默认消息</h1>
 
-<p th:if="${user.age > 18}">你已成年</p>
-<p th:unless="${user.age > 18}">你未成年</p>
+    <p th:if="${user.age > 18}">你已成年</p>
+    <p th:unless="${user.age > 18}">你未成年</p>
 
-<ul>
-<!--    xmlns:th="http://www.thymeleaf.org"：引入 Thymeleaf 命名空间。
+    <ul>
+        <!--    xmlns:th="http://www.thymeleaf.org"：引入 Thymeleaf 命名空间。
 th:text="${message}"：将 message 变量的值显示在 <h1> 标签内。
 th:each="item : ${items}"：遍历 items 列表，并将每个元素的值显示在 <li> 标签内。-->
-    <li th:each="item : ${items}" th:text="${item}">默认列表项</li>
-</ul>
+        <li th:each="item : ${items}" th:text="${item}">默认列表项</li>
+    </ul>
 
-<div>
-    <a th:href="@{/aboutus}">关于我们</a>
+    <div>
+        <a th:href="@{/aboutus}">关于我们</a>
 
-</div>
+    </div>
 
 </body>
+
 </html>

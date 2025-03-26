@@ -1,8 +1,8 @@
 
-function simpleAlert(message){
+function simpleAlert(message) {
     alert(message)
 }
 
-function doSomeMath(){
+function doSomeMath() {
     console.log("1+1=2")
 }
