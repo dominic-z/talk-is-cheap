@@ -1,60 +1,89 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Title</title>
 
-  <<title>Netty-Websocket</title>
-  <script type="text/javascript">
-        // by zhengkai.blog.csdn.net
+    <title>Netty-Websocket</title>
+    <script type="text/javascript">
         var socket;
-        if(!window.WebSocket){
-            window.WebSocket = window.MozWebSocket;
+        window.onload = function () {
+            // 页面加载完成后执行的代码
+
+            // by zhengkai.blog.csdn.net
+            
+            if (!window.WebSocket) {
+                window.WebSocket = window.MozWebSocket;
+            }
+            if (window.WebSocket) {
+                socket = new WebSocket("ws://127.0.0.1:12345/ws");
+                socket.onmessage = function (event) {
+                    var ta = document.getElementById('responseText');
+                    ta.value += event.data + "\r\n";
+                };
+                socket.onopen = function (event) {
+                    var ta = document.getElementById('responseText');
+                    ta.value = "Netty-WebSocket服务器。。。。。。连接  \r\n";
+                };
+                socket.onclose = function (event) {
+                    var ta = document.getElementById('responseText');
+                    ta.value = "Netty-WebSocket服务器。。。。。。关闭 \r\n";
+                };
+            } else {
+                alert("您的浏览器不支持WebSocket协议！");
+            }
+            const sendButton = document.getElementById('sendButton');
+
+            sendButton.addEventListener('click', () => {
+                const file = fileInput.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const binaryData = event.target.result;
+                        // 发送二进制数据
+                        socket.send(binaryData);
+                        console.log('文件已发送');
+                    };
+                    // 以二进制形式读取文件
+                    reader.readAsArrayBuffer(file);
+                } else {
+                    console.log('请选择一个文件');
+                }
+            });
         }
-        if(window.WebSocket){
-            socket = new WebSocket("ws://127.0.0.1:12345/ws");
-            socket.onmessage = function(event){
-                var ta = document.getElementById('responseText');
-                ta.value += event.data+"\r\n";
-            };
-            socket.onopen = function(event){
-                var ta = document.getElementById('responseText');
-                ta.value = "Netty-WebSocket服务器。。。。。。连接  \r\n";
-            };
-            socket.onclose = function(event){
-                var ta = document.getElementById('responseText');
-                ta.value = "Netty-WebSocket服务器。。。。。。关闭 \r\n";
-            };
-        }else{
-            alert("您的浏览器不支持WebSocket协议！");
-        }
-        function send(){
+
+        function send() {
             var id = document.getElementById('id').value;
             var message = document.getElementById('message').value
             console.log(id)
             console.log(message)
-            if(!window.WebSocket){return;}
-            if(socket.readyState == WebSocket.OPEN){
+            if (!window.WebSocket) { return; }
+            if (socket.readyState == WebSocket.OPEN) {
                 socket.send(message);
-            }else{
+            } else {
                 alert("WebSocket 连接没有建立成功！");
             }
 
         }
-        </script>
+
+
+    </script>
 </head>
+
 <body>
-<form onSubmit="return false;">
-  <label>ID</label><input type="text" name="uid" id="id"/> <br />
-  <label>TEXT</label><input type="text" name="message" value="这里输入消息" id="message"/> <br />
-  <br /> <input type="button" value="发送ws消息"
-                onClick="send()" />
-  <hr color="black" />
-  <h3>服务端返回的应答消息</h3>
-  <textarea id="responseText" style="width: 1024px;height: 300px;"></textarea>
-</form>
+    <form onSubmit="return false;">
+        <label>ID</label><input type="text" name="uid" id="id" /> <br />
+        <label>TEXT</label><input type="text" name="message" value="这里输入消息" id="message" /> <br />
+        <input type="file" id="fileInput">
+        <button id="sendButton">Send File</button>
+
+
+        <br /> <input type="button" value="发送ws消息" onClick="send()" />
+        <hr color="black" />
+        <h3>服务端返回的应答消息</h3>
+        <textarea id="responseText" style="width: 1024px;height: 300px;"></textarea>
+    </form>
 </body>
+
 </html>
-
-
-
