@@ -10,3 +10,10 @@ spring:
         - classpath:/my-static
 #       该路径表示在文件系统的指定目录中查找静态资源。你可以将静态资源存放在任意外部目录，然后使用绝对路径进行指定。
         - file:/path/to/external/static/resources/
+
+
+
+  servlet:
+    multipart:
+      max-file-size: 10MB # 设置文件上传的最大大小
+      max-request-size: 10MB
