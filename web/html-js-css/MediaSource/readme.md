@@ -7,3 +7,6 @@ mediasource的案例需要一个后端服务作为文件下载服务提供方，
 参考资料:
 1. [mdn mediasource](https://developer.mozilla.org/zh-CN/docs/Web/API/MediaSource#%E7%A4%BA%E4%BE%8B)
 2. [video 为什么有的视频地址是blob开头？](https://juejin.cn/post/7221865079168253989) ---好文，百度存一份
+
+
+样例视频来自[fmp4样例视频](https://raw.githubusercontent.com/nickdesaulniers/netfix/gh-pages/demo/frag_bunny.mp4)
