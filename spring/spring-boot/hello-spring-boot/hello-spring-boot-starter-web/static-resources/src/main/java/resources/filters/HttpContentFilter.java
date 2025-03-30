@@ -23,13 +23,14 @@ import java.util.Enumeration;
  * 在filter里读取请求和响应的所有内容
  * 因为请求和响应的内容只能读取一次，无法读取多次，因此需要将读取的内容缓存下来
  */
-@Configuration
+//@Configuration
 @Slf4j
 public class HttpContentFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
 
         // 或者直接用Spring提供的ContentCachingRequestWrapper
+        // 对待其他类型的请求适配不好，比如文件上传下传这种就适配不好。
         MyContentCachingRequestWrapper myContentCachingRequestWrapper = new MyContentCachingRequestWrapper(request);
 
         StringBuilder stringBuilder = new StringBuilder();
