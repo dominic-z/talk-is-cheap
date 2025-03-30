@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>media-source示例</title>
+
+</head>
+
+<body>
+<script>
+
+
+        const assetURL = "http://localhost:8082/download";
+        const mimeCodec = 'video/mp4; codecs="mp4a.40.2,avc1.64002a"';
+
+        const video = document.createElement("video");
+        video.width = 200;
+        video.controls = true;
+        document.body.appendChild(video);
+
+        const supportMediaSource =
+            window.MediaSource &&
+            typeof window.MediaSource.isTypeSupported === "function" &&
+            window.MediaSource.isTypeSupported(mimeCodec);
+        console.log(supportMediaSource);
+
+        const mediaSource = new MediaSource();
+        video.src = URL.createObjectURL(mediaSource);
+        mediaSource.addEventListener("sourceopen", sourceOpen);
+
+        function sourceOpen() {
+            // 新建一个 sourceBuffer
+            const sourceBuffer = mediaSource.addSourceBuffer(mimeCodec);
+            // 加载一段 chunk，然后 append 到 sourceBuffer 中
+            fetchBuffer(assetURL, (buffer) => {
+                sourceBuffer.addEventListener("updateend", function (resp) {
+                    console.log(resp)
+                    if (!sourceBuffer.updating && mediaSource.readyState == "open") {
+                        mediaSource.endOfStream();
+                        video.play();
+                    } else{
+                        console.log("视频不支持，不是fmp4格式")
+                    }
+                    console.log(mediaSource.readyState); // ended
+                });
+                sourceBuffer.appendBuffer(buffer);
+            });
+        }
+
+        function fetchBuffer(url, callback) {
+            const xhr = new XMLHttpRequest();
+            xhr.open("get", url);
+            xhr.responseType = "arraybuffer";
+            xhr.onload = function () {
+                callback(xhr.response);
+            };
+            xhr.onerror = (error)=>console.error(error)
+            xhr.send();
+        }
+
+    </script>
+
+</body>
