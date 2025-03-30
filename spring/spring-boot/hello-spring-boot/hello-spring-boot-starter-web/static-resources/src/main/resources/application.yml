@@ -17,3 +17,6 @@ spring:
     multipart:
       max-file-size: 10MB # 设置文件上传的最大大小
       max-request-size: 10MB
+logging:
+  level:
+    root: info

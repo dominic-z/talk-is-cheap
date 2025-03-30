@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>input 示例</title>
+</head>
+
+<body>
+
+    <div>文件读取事件，获得一个视频的封面，视频来源https://sample-videos.com/</div>
+    <div>
+        <script>
+            function uploadFile(element) {
+                // event.preventDefault()
+                console.log(element.files[0])
+                let file = element.files[0]
+                let objectURL = URL.createObjectURL(file)
+                console.log(objectURL)
+
+                if (file.name.endsWith('mp4')) {
+                    const preview = document.getElementById('videoPreview');
+                    preview.src = objectURL;
+                    preview.style.display = 'block';
+
+                } else {
+                    const preview = document.getElementById('imgPreview');
+                    preview.src = objectURL;
+                    preview.style.display = 'block';
+                }
+
+            }
+        </script>
+        <!-- 在 HTML 中，当使用 <input type="file"> 选择文件后，可以通过 JavaScript 监听 change 事件来触发相应操作。 -->
+
+        <!-- 目的：自定义上传按钮，实际上是触发fileInput -->
+        <input type="button" id="uploadBtn" value="选择文件" onclick="document.getElementById('fileInput').click()">
+        <input type="file" id="fileInput" style="display: none;" onchange="uploadFile(this)">
+
+        <img id="imgPreview" src="#" alt="Image Preview" style="display: none;">
+        <video id="videoPreview" src="#" alt="Image Preview" style="display: none;" </div>
+
+    </div>
+
+
+</body>
+
+</html>

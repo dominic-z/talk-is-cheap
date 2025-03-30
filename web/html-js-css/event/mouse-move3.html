@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mousemove 事件属性示例</title>
+    <style>
+        #container {
+            position: relative;
+            left: 50px;
+            top: 200px;
+            width: 600px;
+            height: 300px;
+            border: solid;
+            align-items: center;
+            text-align: center;
+        }
+
+        #corp {
+            width: 75%;
+            height: 75%;
+            top: 12.5%;
+            left: 12.5%;
+            position: relative;
+            border: dashed;
+        }
+
+        #anchor {
+            border-radius: 50%;
+
+
+            width: 10px;
+            height: 10px;
+            border: solid;
+            position: absolute;
+
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="container">
+        <div id="corp">
+        <div id="anchor" style="left: -10px;top: -10px;"></div>
+
+        </div>
+
+    </div>
+    <script>
+        const anchor = document.getElementById('anchor');
+        const corp = document.getElementById('corp');
+
+        let initialX = 0;
+        let initialY = 0;
+        let anchorInitialLeft = 0;
+        let anchorInitialTop = 0;
+        let corpInitialLeft = 0;
+        let corpInitialTop = 0;
+        let corpInitialWidth = 0;
+        let corpInitialHeight = 0;
+
+        let toNumber = (x)=>Number(x.slice(0,-2))
+        anchor.addEventListener('mousedown', function (event) {
+
+            event.preventDefault();
+            event.stopPropagation();
+            
+
+            initialX = event.clientX
+            initialY = event.clientY
+
+            // anchorInitialLeft = Number(anchor.style.left.slice(0,-2))
+            // anchorInitialTop = Number(anchor.style.top.slice(0,-2))
+
+            const anchorStyle = getComputedStyle(anchor);
+            anchorInitialLeft = toNumber(anchorStyle.left);
+            anchorInitialTop = toNumber(anchorStyle.top);
+            console.log(anchorInitialLeft)
+
+
+            // 获取初始的left和宽度和高度
+            const corpStyle = getComputedStyle(corp);
+            corpInitialLeft = toNumber(corpStyle.left);
+            corpInitialTop = toNumber(corpStyle.top);
+            corpInitialWidth = toNumber(corpStyle.width);
+            corpInitialHeight = toNumber(corpStyle.height);
+
+
+
+            // anchor.addEventListener('mousemove',mousemove)
+            // anchor.addEventListener('mouseup',mouseup)
+
+            // JS鼠标拖动功能（拖拽过快失效的优化方案）
+            // 问题：鼠标移动过快，导致mousemove事件频繁触发，相应的事件处理函数也频繁调用，引起延迟。延迟过后由于元素的移动速度不及鼠标的移动速度，造成鼠标移动到元素外，从而触发mouseout事件，提前结束拖拽。
+            // 将事件处理函数添加到 document 上，而非目标元素上，让 mousemove事件在有延迟的情况下仍然可以被响应即可。
+            document.addEventListener('mousemove', mousemove)
+            document.addEventListener('mouseup', mouseup)
+        });
+
+        function mousemove(event) {
+            event.preventDefault();
+
+            // console.log('相对于窗口的坐标: (' + event.clientX + ', ' + event.clientY + ')');
+            // console.log('相对于文档的坐标: (' + event.pageX + ', ' + event.pageY + ')');
+            // console.log('相对于屏幕的坐标: (' + event.screenX + ', ' + event.screenY + ')');
+            // 让anchor跟随
+            let deltaX = (event.clientX - initialX);
+            let deltaY = (event.clientY - initialY);
+
+            let anchorLeft = anchorInitialLeft + deltaX
+            let anchorTop = anchorInitialTop + deltaY
+            // 保持anchor的相对位置固定
+            // anchor.style.left = anchorLeft + 'px';
+            // anchor.style.top = anchorTop + 'px';
+
+            let corpWidth = corpInitialWidth - deltaX;
+            let corpLeft = corpInitialLeft + deltaX;
+            let corpHeight = corpInitialHeight - deltaY;
+            let corpTop = corpInitialTop + deltaY;
+            corp.style.width = corpWidth + 'px'
+            corp.style.left = corpLeft + 'px'
+            corp.style.height = corpHeight + 'px'
+            corp.style.top = corpTop + 'px'
+        }
+
+        function mouseup(event) {
+            document.removeEventListener('mousemove', mousemove)
+            document.removeEventListener('mouseup', mouseup)
+            event.preventDefault();
+        }
+        
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas 示例</title>
+</head>
+
+<body>
+    <!-- 创建一个 canvas 元素 -->
+    <canvas id="canvas1" width="400" height="200" style="border: 1px solid;"></canvas>
+    <script>
+        // 获取 canvas 元素
+        const canvas1 = document.getElementById('canvas1');
+        // 获取 2D 绘图上下文
+        const ctx1 = canvas1.getContext('2d');
+        // 绘制一个红色的矩形
+        ctx1.fillStyle = 'red';
+        ctx1.fillRect(10, 10, 100, 50);
+    </script>
+
+
+    <!-- 创建一个 canvas 元素 -->
+    <canvas id="canvas2" style="border: 1px solid;"></canvas>
+    <script>
+        // 获取 canvas 元素
+        const canvas2 = document.getElementById('canvas2');
+        // 获取 2D 绘图上下文
+        const ctx2 = canvas2.getContext('2d');
+        // 填充矩形
+        ctx2.fillStyle = 'blue';
+        ctx2.fillRect(120, 10, 100, 50);
+
+        // 绘制矩形边框
+        ctx2.strokeStyle = 'green';
+        ctx2.lineWidth = 2;
+        ctx2.strokeRect(230, 10, 100, 50);
+
+        // 清除指定区域
+        ctx2.clearRect(240, 20, 80, 30);
+    </script>
+
+    <div>填充文字</div>
+    <canvas id="canvas3" style="border: 1px solid;"></canvas>
+    <script>
+        // 获取 canvas 元素
+        const canvas3 = document.getElementById('canvas3');
+        // 获取 2D 绘图上下文
+        const ctx3 = canvas3.getContext('2d');
+        // 设置字体样式
+        ctx3.font = '20px Arial';
+        ctx3.fillStyle = 'black';
+        // 填充文本
+        ctx3.fillText('Hello, Canvas!', 10, 30);
+
+        // 设置字体样式
+        ctx3.font = '24px Verdana';
+        ctx3.strokeStyle = 'brown';
+        // 绘制文本边框
+        ctx3.strokeText('Canvas 文本', 10, 60);
+    </script>
+
+    <div>绘制动画</div>
+    <canvas id="animationCanvas1" width="400" height="200"></canvas>
+    <script>
+        const animationCanvas1 = document.getElementById('animationCanvas1');
+        const animationCtx1 = animationCanvas1.getContext('2d');
+
+        let x = 0;
+        let speed = 2;
+
+        function draw() {
+            // 清除整个画布
+            animationCtx1.clearRect(0, 0, animationCanvas1.width, animationCanvas1.height);
+
+            // 绘制一个移动的矩形
+            animationCtx1.fillStyle = 'red';
+            animationCtx1.fillRect(x, 100, 50, 30);
+
+            // 更新矩形的位置
+            x += speed;
+            // console.log(x)
+
+            // 当矩形超出画布边界时，改变移动方向
+            if (x > animationCanvas1.width - 50 || x < 0) {
+                speed = -speed;
+            }
+
+            // 循环调用 draw 函数，实现动画效果
+            requestAnimationFrame(draw);
+        }
+
+        // 开始动画
+        draw();
+    </script>
+
+
+    <div>获得一个视频的封面，视频来源https://sample-videos.com/</div>
+    <div>
+
+        <!-- 在 HTML 中，当使用 <input type="file"> 选择文件后，可以通过 JavaScript 监听 change 事件来触发相应操作。 -->
+
+        <!-- 目的：自定义上传按钮，实际上是触发fileInput -->
+        <input type="button" id="uploadBtn" value="选择文件" onclick="document.getElementById('fileInput').click()">
+        <input type="file" id="fileInput" style="display: none;" onchange="uploadFile(this)">
+
+        <video id="video" src="#"  style="display: none;"></video>
+
+        <canvas id="videoPreview" style="display: none;"></canvas>
+        <img id="cover" src="#"  style="display: none;">
+        <script>
+            function uploadFile(element) {
+                // event.preventDefault()
+                console.log(element.files[0])
+                let file = element.files[0]
+                let objectURL = URL.createObjectURL(file)
+                console.log(objectURL)
+
+                const video = document.getElementById('video');
+                video.src = objectURL;
+
+
+                let whenCanplay = () => {
+                    video.crossOrigin = 'anonymous' // 解决跨域问题，也就是提示污染资源无法转换视频
+                    video.currentTime = 1 // 第一秒
+                    const previewCanvas = document.getElementById('videoPreview');
+                    const previewCtx = previewCanvas.getContext('2d')
+                    previewCtx.drawImage(video, 0, 0,previewCanvas.width,previewCanvas.height)
+                    const coverDataURL = previewCanvas.toDataURL('image/jpeg');
+
+                    // 使用 canvas.toDataURL 方法将 canvas 上的内容转换为 Base64 编码的图片数据，并将其设置为 img 元素的 src 属性。
+                    const cover = document.getElementById('cover');
+                    cover.src = coverDataURL;
+                    cover.style=""
+
+                }
+                video.addEventListener('canplay', whenCanplay)
+
+            }
+        </script>
+    </div>
+
+
+</body>
+
+</html>
