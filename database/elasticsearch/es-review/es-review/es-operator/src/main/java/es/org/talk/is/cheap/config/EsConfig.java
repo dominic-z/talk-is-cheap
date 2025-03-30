@@ -24,18 +24,24 @@ public class EsConfig {
     private String esHost;
     @Value("${es.port}")
     private int esPort;
+
+    @Value("${es.username}")
+    private String username;
+
+    @Value("${es.password}")
+    private String password;
     @Bean
     public ElasticsearchTransport restClientTransport() {
 
         // 如果es有配置了密码，可以通过这种方式配置
-//        // 配置凭证提供器
-//        final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
-//        // 设置用户名和密码
-//        credentialsProvider.setCredentials(AuthScope.ANY,
-//                new UsernamePasswordCredentials("your_username", "your_password"));
+        // 配置凭证提供器
+        final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+        // 设置用户名和密码
+        credentialsProvider.setCredentials(AuthScope.ANY,
+                new UsernamePasswordCredentials(username, password));
 
         var restClient = RestClient.builder(new HttpHost(esHost, esPort))
-//                .setHttpClientConfigCallback(httpAsyncClientBuilder -> httpAsyncClientBuilder.setDefaultCredentialsProvider(credentialsProvider))
+                .setHttpClientConfigCallback(httpAsyncClientBuilder -> httpAsyncClientBuilder.setDefaultCredentialsProvider(credentialsProvider))
                 .build();
         // Create the transport with a Jackson mapper
         return new RestClientTransport(
