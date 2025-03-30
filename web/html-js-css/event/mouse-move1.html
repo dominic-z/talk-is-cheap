@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mousemove 事件属性示例</title>
+    <style>
+        #trackArea {
+            width: 400px;
+            height: 400px;
+            background-color: lightgreen;
+            position: absolute;
+            left: 50px;
+            top: 100px;
+        }
+    </style>
+</head>
+
+<body>
+    
+    <div id="trackArea">在这个区域移动鼠标查看坐标</div>
+    <script>
+        const trackArea = document.getElementById('trackArea');
+        trackArea.addEventListener('mousemove', function (event) {
+            console.log('相对于窗口的坐标: (' + event.clientX + ', ' + event.clientY + ')');
+            console.log('相对于文档的坐标: (' + event.pageX + ', ' + event.pageY + ')');
+            console.log('相对于屏幕的坐标: (' + event.screenX + ', ' + event.screenY + ')');
+        });
+    </script>
+</body>
+
+</html>

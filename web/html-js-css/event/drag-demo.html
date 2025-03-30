@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drag 事件示例</title>
+    <style>
+        #dragElement {
+            width: 100px;
+            height: 100px;
+            background-color: lightblue;
+            cursor: move;
+        }
+
+        #dropTarget {
+            width: 200px;
+            height: 200px;
+            border: 2px dashed gray;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 可拖动的元素 -->
+    <div id="dragElement" draggable="true">拖动我</div>
+    <!-- 放置目标区域 -->
+    <div id="dropTarget">放置到这里</div>
+
+    <script>
+        const dragElement = document.getElementById('dragElement');
+        const dropTarget = document.getElementById('dropTarget');
+
+        // dragstart 事件处理函数
+        dragElement.addEventListener('dragstart', function (event) {
+            // 设置拖动的数据
+            event.dataTransfer.setData('text/plain', '这是拖动的数据');
+            // 这个dragElement允许什么效果，需要与dropEffect匹配。
+            event.dataTransfer.effectAllowed = 'all';
+        });
+
+        // drag 事件处理函数
+        dragElement.addEventListener('drag', function (event) {
+            console.log('正在拖动...');
+        });
+
+        // dragend 事件处理函数
+        dragElement.addEventListener('dragend', function (event) {
+            console.log('拖动结束');
+        });
+
+        // dragenter 事件处理函数
+        dropTarget.addEventListener('dragenter', function (event) {
+            // 阻止默认行为
+            event.preventDefault();
+            // 添加视觉反馈
+            this.style.backgroundColor = 'lightgreen';
+        });
+
+        // dragover 事件处理函数
+        dropTarget.addEventListener('dragover', function (event) {
+            // 阻止默认行为，允许放置
+            event.preventDefault();
+            // 设置 dropEffect 为 move
+            // 可以看到，设置不同的dropEffect属性值，鼠标的手形就会有不一样的表现。
+            // event.dataTransfer.effectAllowed 属性指定了允许的拖放效果，而 event.dataTransfer.dropEffect 属性则指定了实际执行的拖放效果。dropEffect 属性通常在 dragover、dragenter 和 drop 事件处理函数中设置，并且其值必须是 effectAllowed 属性所允许的值之一。
+            event.dataTransfer.dropEffect = "move"
+        });
+
+        // dragleave 事件处理函数
+        dropTarget.addEventListener('dragleave', function (event) {
+            // 移除视觉反馈
+            this.style.backgroundColor = '';
+        });
+
+        // drop 事件处理函数
+        dropTarget.addEventListener('drop', function (event) {
+            // 阻止默认行为
+            event.preventDefault();
+            console.log(event.dataTransfer)
+
+            // 获取拖动的数据
+            const data = event.dataTransfer.getData('text/plain');
+            // 处理放置操作
+            this.innerHTML = `放置成功！数据：${data}`;
+            // 移除视觉反馈
+            this.style.backgroundColor = '';
+        });
+
+
+    </script>
+</body>
+
+</html>
