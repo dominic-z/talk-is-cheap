@@ -27,7 +27,7 @@ public class FileUploadController {
     private static final String UPLOAD_DIR = "git_ignore";
 
     @PostMapping("/upload")
-    public ResponseEntity<String> uploadFile(@RequestParam("file") MultipartFile file,@RequestParam("test") String test) {
+    public ResponseEntity<String> uploadFile(@RequestParam("file") MultipartFile file,@RequestParam(value = "test",required = false) String test) {
         log.info("test : {}",test);
         if (file.isEmpty()) {
             return new ResponseEntity<>("请选择要上传的文件", HttpStatus.BAD_REQUEST);
