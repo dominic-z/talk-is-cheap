@@ -1,6 +1,8 @@
 package com.example.springboot.hellospringboot;
 
+import com.example.springboot.hellospringboot.dao.customized.CustomersDao;
 import com.example.springboot.hellospringboot.dao.jdbc.template.ItemJdbcDao;
+import com.example.springboot.hellospringboot.domain.pojo.Customers;
 import lombok.extern.slf4j.Slf4j;
 import org.example.spring.starter.log.Loggers;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +36,8 @@ public class HelloSpringBootApplication implements CommandLineRunner {
     @Autowired
     private ItemJdbcDao itemJdbcDao;
 
+    @Autowired
+    private CustomersDao customersDao;
 
     @Override
     public void run(String... args) throws Exception {
@@ -44,5 +48,7 @@ public class HelloSpringBootApplication implements CommandLineRunner {
         log.error("test log back error", new RuntimeException());
         log.info("helloWordText: {}", this.helloWordText);
         log.info("envProp: {}", this.envProp);
+
+        Customers customers = customersDao.selectByCustomerNumber(103);
     }
 }

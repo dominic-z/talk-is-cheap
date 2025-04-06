@@ -32,8 +32,6 @@ docker run --name consul1.6.10 -d -p 8500:8500 -p 8300:8300 -p 8301:8301 -p 8302
 ```
 
 # 结合spring-boot-log-starter配置
-
-经测验，如果在spring-boot-composition再配置一个logback.xml，starter的log配置仍然会存在，但是对于console的log日志会丢掉
-不知道为啥
+注意这个工程结合了spring-boot-log-starter，所以实际上logback的配置文件即包含了spring-boot-log-starter中定制化的，也包含了本工程中的logback.xml，所以注意两个logback配置不要有冲突，例如不要有一样name的appender
 
 

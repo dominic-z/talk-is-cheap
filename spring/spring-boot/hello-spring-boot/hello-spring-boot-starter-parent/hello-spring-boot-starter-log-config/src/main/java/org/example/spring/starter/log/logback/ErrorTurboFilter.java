@@ -19,8 +19,9 @@ public class ErrorTurboFilter extends TurboFilter {
         if (format == null) {
             return FilterReply.NEUTRAL;
         }
-        // 如果当前error日志没有走ERROR_LOG
-        if (!logger.getName().equals("error") && !logger.getName().equals("root") && level == Level.ERROR) {
+
+        // 把所有错误日志都汇总起来，不仅是业务打印的异常，还有框架本身的异常
+        if (logger!=Loggers.ERROR_LOG && logger!=Loggers.ROOT_LOG && level == Level.ERROR) {
             Loggers.ERROR_LOG.error(format, params, t);
         }
         return FilterReply.NEUTRAL;
