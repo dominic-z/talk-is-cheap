@@ -1,34 +1,47 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
+<!--scan: true: 配置文件改变就重新加载，默认为true-->
+<!--scanPeriod: 扫描间隔-->
+<!--debug: 是否打印logback内部的日志-->
 <configuration scan="true" scanPeriod="60 seconds" debug="false">
     　　  <!--其他配置省略-->
 
+    <!--定义一些变量，日志文件的存储地址根目录变量 勿在 LogBack 的配置中使用相对路径-->
     <property name="LOG_DIR" value="logback-demo/logs"/>
 
-    <appender name="ROOT" class="ch.qos.logback.core.FileAppender">
-        <!--        默认值的写法-->
-        <file>${LOG_DIR1:-logback-demo/logs}/root.log</file>
-        <append>true</append>
-        <encoder>
-            <!--            <pattern>%-4relative [%thread] %-5level %logger{35} - %msg%n</pattern>-->
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%-5level] %logger{50} - %msg%n</pattern>
-        </encoder>
-    </appender>
-
-
+    <!--    一个appender代表一个日志输出的配置，作用在于定义日志的输出方式
+    name指明这个输出方式的名字，用于识别，class指明输出方式的类别，这个类指的是打印日志到指定文件
+    -->
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <!--            如果没有写%ex，那么log.error会将错误栈打印在下一行里-->
-            <!--            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%-5level] %logger{50} - %msg %ex%n</pattern>-->
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%-5level] %logger{50} - %msg %n</pattern>
+            <!--            %d是日期 %thread是打印当前线程
+                %-5level是打印当前日志的级别，其中%-5的含义是：日志默认输出日志时右对齐左填充的，-5指的是最大长度5，不够的话右侧填充，指定为5是为了保证各种日志级别的日志能对齐，例如有的level是DEBUG 5个字符
+                %logger{5} 打印当前的logger的名称，来自于下面的logger标签的name字段，{5}代表：如果logger的名字超过5，则
+                %class{5} 打印当前打印日志的类的名称，例如在aaa.bbb.ccc.DDD类中打印日志，那么class指的就是这个全限定名，{5}代表如果超过5，那么只保留最后一个字段的完整，前面的简化，例如打印出来就会a.b.c.DDD
+                %method 当前执行打印的方法名
+                %line 执行打印的代码行数
+                %msn，打印的日志内容
+                ￥%relative 输出从程序启动到创建日志记录的时间，单位是毫秒。
+                %n 换行符
+                %ex 异常
+            -->
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%-5level] %logger{5} %class{5} %method{5} %line %relative-
+                %msg %n %ex
+            </pattern>
         </encoder>
     </appender>
 
-    <appender name="FILTER_STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
-            <level>warn</level>
-        </filter>
+
+    <!--    这个appender是向文件输出日志-->
+    <appender name="ROOT" class="ch.qos.logback.core.FileAppender">
+        <!--   定义输出文件的路径 如果定义了LOG_DIR1这个变量，就使用LOG_DIR1，否则使用logback-demo/logs-->
+        <file>${LOG_DIR1:-logback-demo/logs}/root.log</file>
+        <!--        true则为追加写入，否则为覆盖写入，也就是在logger配置开始的时候清空file内容，但并不是每次打印都清空-->
+        <append>false</append>
+        <!--        日志的格式-->
         <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%-5level] %logger{50} - %msg%n</pattern>
+            <!--            <pattern>%-4relative [%thread] %-5level %logger{35} - %msg%n</pattern>-->
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%-5level] %logger{50} %class{5} - %msg%n</pattern>
         </encoder>
     </appender>
 
@@ -41,13 +54,17 @@
         </encoder>
     </appender>
 
+    <!--    日志输出的方式是滚动文件，也就是不会在单一文件里一直写，当满足一定条件的时候，会在新文件里写入-->
     <appender name="TIME_BASED_ROLLING_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_DIR}/rolling-file.log</file>
+        <!--        配置滚动策略：基于事件的滚动策略-->
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!--            每秒输出一个日志文件-->
             <fileNamePattern>${LOG_DIR}/time-based-rolling-file.%d{yyyy-MM-dd-HH-mm-ss}.log</fileNamePattern>
-            <maxHistory>30</maxHistory>
-            <!--  该appender的输出日志总大小不超过1000字节-->
-            <totalSizeCap>1000</totalSizeCap>
+            <!--            最多保留5个日志文件-->
+            <maxHistory>5</maxHistory>
+            <!--  该appender的输出日志总大小不超过10000字节  总大小，所有文件的总大小，不是一个文件的大小，超过的话会删除历史日志-->
+            <totalSizeCap>3000</totalSizeCap>
         </rollingPolicy>
         <encoder>
             <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%-5level] %logger{50} - %msg%n</pattern>
@@ -55,13 +72,15 @@
         　　　
     </appender>
 
-
+    <!--    日志输出的方式是滚动文件，也就是不会在单一文件里一直写，当满足一定条件的时候，会在新文件里写入-->
     <appender name="SIZE_BASED_ROLLING_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_DIR}/size-based-rolling-file.log</file>
+        <!--        滚动策略是固定窗口，就是说保留最近的日志-->
         <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
             <fileNamePattern>${LOG_DIR}/size-based-rolling-file.%i.log</fileNamePattern>
+            <!--           最多保留4个文件，越新序号越小 -->
             <minIndex>1</minIndex>
-            <maxIndex>3</maxIndex>
+            <maxIndex>4</maxIndex>
         </rollingPolicy>
         <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
             <!--            该appender的每个文件不超过1000字节，可以看到结果的每个size-based-rolling-file.1.log大小都差不多1kb这样-->
@@ -81,7 +100,7 @@
             <fileNamePattern>${LOG_DIR}/size-and-time-based-rolling-file.%d{yyyy-MM-dd-HH-mm}.%i.log</fileNamePattern>
             <!--  该appender的每个日志总大小不超过1000字节-->
             <maxFileSize>1000</maxFileSize>
-            <maxHistory>30</maxHistory>
+            <maxHistory>10</maxHistory>
             <!--  该appender的输出日志总大小不超过1000字节-->
             <totalSizeCap>10000</totalSizeCap>
         </rollingPolicy>
@@ -92,12 +111,54 @@
     </appender>
 
 
-    <logger name="console" level="INFO" additivity="false">
+
+    <appender name="THRESHOLD_FILTER_STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>warn</level>
+        </filter>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%-5level] %logger{50} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+
+
+    <!--   拥有多个过滤器的logger-->
+    <appender name="MULTI_FILTER_STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <!--        将只-->
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>INFO</level>
+            <!--            ACCEPT：如果返回ACCEPT（通过），则跳出过滤链 比如传递了一个INFO日志，会打印出来，不会因为下面那个ThreadFilter而被清掉 -->
+            <onMatch>ACCEPT</onMatch>
+            <!--            NEUTRAL：如果返回NEUTRAL（中立），则继续过滤链中的下一个过滤器。-->
+            <!--            DENY：如果方法返回DENY（拒绝），则跳出过滤链，而该 logging event 也会被抛弃。 -->
+<!--            <onMismatch>DENY</onMismatch>-->
+            <onMismatch>NEUTRAL</onMismatch>
+        </filter>
+
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>warn</level>
+        </filter>
+
+
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%-5level] %logger{50} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!--    配置logger，比如这个logger的name是console，他的输出配置是这个叫STDOUT的appender-->
+    <!--    可以通过LoggerFactory.getLogger("console");获得这个looger-->
+    <!--    level是INFO，INFO及以上的日志会输出，比如debug就不会输出-->
+    <!--    日志是否向上传递，因为所有logger的根节点是root，所以使用这个logger打印的日志，也会送到root那个looger里-->
+    <logger name="console" level="INFO" additivity="true">
         <appender-ref ref="STDOUT"/>
     </logger>
-    <logger name="filter_console" level="INFO" additivity="false">
-        <appender-ref ref="FILTER_STDOUT"/>
-    </logger>
+
+    <!--    根logger，名称默认命名为root 是所有logger的上级-->
+    <root>
+        <appender-ref ref="ROOT"/>
+    </root>
+
     <logger name="file" level="INFO" additivity="false">
         <appender-ref ref="FILE"/>
     </logger>
@@ -113,9 +174,11 @@
         <appender-ref ref="SIZE_AND_TIME_BASED_ROLLING_FILE"/>
     </logger>
 
+    <logger name="threshold_filter_console" level="INFO" additivity="false">
+        <appender-ref ref="THRESHOLD_FILTER_STDOUT"/>
+    </logger>
 
-    <root>
-        <appender-ref ref="ROOT"/>
-    </root>
-
+    <logger name="multi_filter_console" level="INFO" additivity="false">
+        <appender-ref ref="MULTI_FILTER_STDOUT"/>
+    </logger>
 </configuration>
