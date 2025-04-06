@@ -3,6 +3,7 @@ package demo.logback;
 
 import demo.logback.util.Loggers;
 import org.junit.jupiter.api.Test;
+import org.slf4j.MDC;
 
 
 // 在test里运行不太一样，在test里运行xml配置中的file日志的根目录是当前子模块，而如果放在正常代码里执行，根目录在父工程里。需要注意。
@@ -68,5 +69,17 @@ public class UnitTest {
         Loggers.MULTI_FILTER_CONSOLE.info("MULTI_FILTER_CONSOLE info"); // 会输出
         Loggers.MULTI_FILTER_CONSOLE.warn("MULTI_FILTER_CONSOLE warn");
         Loggers.MULTI_FILTER_CONSOLE.error("MULTI_FILTER_CONSOLE error", new Exception());
+    }
+
+
+    @Test
+    public void testMDCLogger(){
+//        在多线程环境中，MDC 是基于线程的，每个线程都有自己独立的 MDC 副本。
+        MDC.put("myTraceId","aabbccdd");
+
+        new Thread(()->{
+            MDC.put("myTraceId","aabbccddee");
+        });
+        Loggers.MDC_CONSOLE.info("show my traceID");
     }
 }
