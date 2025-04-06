@@ -126,7 +126,7 @@
 
     <!--    配合mybatis的logPrefix使用-->
     <!--    还是这种方式清晰明确-->
-    <logger name="mybatis" level="DEBUG" additivity="false">
+    <logger name="mybatis1" level="DEBUG" additivity="false">
         <appender-ref ref="MYBATIS"/>
         <appender-ref ref="STDOUT"/>
     </logger>

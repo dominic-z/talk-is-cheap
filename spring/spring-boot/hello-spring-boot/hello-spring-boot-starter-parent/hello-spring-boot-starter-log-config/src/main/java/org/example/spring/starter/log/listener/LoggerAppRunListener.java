@@ -37,7 +37,7 @@ public class LoggerAppRunListener implements SpringApplicationRunListener {
 //        SpringApplicationRunListener.super.starting(bootstrapContext);
 
         final Properties applicationProperties = new Properties();
-        // 读取当前应用的system.properties文件
+        // 读取当前应用的system.properties文件，其中一些变量将用于logback-spring.xml中，例如hello.starter.log.mybatis.level
         final URL url = this.getClass().getClassLoader().getResource(SYSTEM_PROPERTIES);
         if (url != null) {
             try (FileInputStream fileInputStream = new FileInputStream(Paths.get(url.getPath()).toFile())) {
@@ -52,7 +52,7 @@ public class LoggerAppRunListener implements SpringApplicationRunListener {
 
         }
 
-        // 关键在这，你看到logback-spring.xml里有一个配置项目${log.dir}，如果在项目的resources中的system.properties文件中没有配置log.dir，
+        // 可以看到logback-spring.xml里有一个配置项目${log.dir}，如果在项目的resources中的system.properties文件中没有配置log.dir，
         // 那么就在环境变量里设置一个默认的log.dir
         final String LOG_DIR = "log.dir";
         if (!System.getProperties().containsKey(LOG_DIR)) {

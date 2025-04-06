@@ -7,8 +7,14 @@
     <settings>
         <setting name="useColumnLabel" value="true"/>
         <setting name="mapUnderscoreToCamelCase" value="true"/>
-<!--        配合logger使用-->
-        <setting name="logPrefix" value="mybatis."/>
+        <!--        指定mybatis的logger-->
+        <!--        之所以能用，是因为我在hello-spring-log-starter里定义了一个name叫做mybatis1的logger-->
+        <!--        也挺trick的-->
+        <setting name="logPrefix" value="mybatis1."/>
+<!--        或者手动撸出来一个log，思路是新建一个类，就是某个logger的代理，然后配置在这里-->
+<!--        可以上网搜mybatis自定义日志实现-->
+        <!--        <setting name="logImpl" value="SLF4J"/>-->
+
     </settings>
 
     <typeAliases>
