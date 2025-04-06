@@ -6,6 +6,7 @@ import ch.qos.logback.classic.joran.JoranConfigurator;
 import ch.qos.logback.core.joran.spi.JoranException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 import java.io.File;
 import java.net.URISyntaxException;
@@ -62,6 +63,7 @@ public class Loggers {
             "size_and_time_based_rolling_file");
     public static final Logger THRESHOLD_FILTER_CONSOLE = LoggerFactory.getLogger("threshold_filter_console");
     public static final Logger MULTI_FILTER_CONSOLE = LoggerFactory.getLogger("multi_filter_console");
+    public static final Logger MDC_CONSOLE = LoggerFactory.getLogger("mdc_console");
 
     public static final Logger CUSTOM_CONFIG_LOG;
 }
