@@ -5,11 +5,12 @@
     <property name="LOG_DIR" value="spring-boot-composition/logs"/>
 
 
-    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder>
-            <pattern>%green(%d{yyyy-MM-dd HH:mm:ss.SSS}) %yellow([%thread]) -- %highlight([%-5level]) %cyan(%logger{50}) - %msg%n</pattern>
-        </encoder>
-    </appender>
+<!--    appender的name不要和依赖里的其他logback重了-->
+<!--    <appender name="APP_STDOUT" class="ch.qos.logback.core.ConsoleAppender">-->
+<!--        <encoder>-->
+<!--            <pattern>%green(%d{yyyy-MM-dd HH:mm:ss.SSS}) %yellow([%thread]) &#45;&#45; %highlight([%-5level]) %cyan(%logger{50}) - %msg%n</pattern>-->
+<!--        </encoder>-->
+<!--    </appender>-->
 
     <appender name="APP_ROLLING_ROOT_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_DIR}/app-rolling-root.log</file>

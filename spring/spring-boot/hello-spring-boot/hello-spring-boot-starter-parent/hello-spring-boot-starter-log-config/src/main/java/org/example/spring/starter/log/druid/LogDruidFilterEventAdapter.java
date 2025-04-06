@@ -5,6 +5,7 @@ import com.alibaba.druid.proxy.jdbc.StatementProxy;
 import org.example.spring.starter.log.Loggers;
 
 /**
+ * druid数据源的过滤器，用来打印sql的
  * @author dominiczhu
  * @version 1.0
  * @title Adapter

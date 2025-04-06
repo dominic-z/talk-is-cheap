@@ -20,20 +20,6 @@ import org.springframework.core.io.ClassPathResource;
 public class LogbackConfigListener implements ApplicationListener<ApplicationEnvironmentPreparedEvent> {
     @Override
     public void onApplicationEvent(ApplicationEnvironmentPreparedEvent event) {
-        try {
-
-            LoggerContext lc = (LoggerContext) LoggerFactory.getILoggerFactory();
-
-            final String config = "logback-spring.xml";
-
-            JoranConfigurator configurator = new JoranConfigurator();
-            configurator.setContext(lc);
-            lc.reset();
-            // 读取本jar包下的文件
-            ClassPathResource resource = new ClassPathResource(config);
-            configurator.doConfigure(resource.getInputStream());
-        } catch (Exception e) {
-            throw new RuntimeException("logback config error", e);
-        }
+        // 20250406 挪到LoggerAppRunListener那去了
     }
 }

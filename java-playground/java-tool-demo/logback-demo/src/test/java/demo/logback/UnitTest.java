@@ -82,4 +82,11 @@ public class UnitTest {
         });
         Loggers.MDC_CONSOLE.info("show my traceID");
     }
+
+    @Test
+    public void testTurbo(){
+        Loggers.CUSTOM_CONFIG_LOG.info("turbo log1,{}","aa");
+        Loggers.CUSTOM_CONFIG_LOG.info("turbo log2,{},{}","bb","ee");
+        Loggers.CUSTOM_CONFIG_LOG.error("turbo error1",new RuntimeException());
+    }
 }
