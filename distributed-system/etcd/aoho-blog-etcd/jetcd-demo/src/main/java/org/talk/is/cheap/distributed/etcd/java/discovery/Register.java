@@ -90,7 +90,6 @@ public class Register {
 
             // put操作时的可选项，在这里指定租约ID
             PutOption putOption = PutOption.newBuilder().withLeaseId(leaseId).build();
-
             // put操作
             kvClient.put(bytesOf(key), bytesOf(value), putOption)
                     .thenAccept(putResponse -> {
@@ -128,6 +127,7 @@ public class Register {
                             public void onNext(LeaseKeepAliveResponse resp) {
 
                                 log.info("续租完成,{}", resp);
+
                             }
 
                             @Override
@@ -137,6 +137,8 @@ public class Register {
 
                             @Override
                             public void onCompleted() {
+                                // 大致看了一眼源码，好像不会有什么地方会调用到这里
+                                log.info("onCompleted方法执行");
                             }
                         });
                     });
@@ -158,4 +160,5 @@ public class Register {
             e.printStackTrace();
         }
     }
+
 }
