@@ -25,8 +25,7 @@
                 %n 换行符
                 %ex 异常
             -->
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%-5level] %logger{5} %class{5} %method{5} %line %relative-
-                %msg %n %ex
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%-5level] %logger{5} %class{5} %method{5} %line %relative - %msg %n %ex
             </pattern>
         </encoder>
     </appender>
@@ -146,6 +145,13 @@
         </encoder>
     </appender>
 
+    <appender name="MDC_STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%-5level] %logger{50} -%X{myTraceId} %msg%n</pattern>
+        </encoder>
+    </appender>
+
+
     <!--    配置logger，比如这个logger的name是console，他的输出配置是这个叫STDOUT的appender-->
     <!--    可以通过LoggerFactory.getLogger("console");获得这个looger-->
     <!--    level是INFO，INFO及以上的日志会输出，比如debug就不会输出-->
@@ -180,5 +186,10 @@
 
     <logger name="multi_filter_console" level="INFO" additivity="false">
         <appender-ref ref="MULTI_FILTER_STDOUT"/>
+    </logger>
+
+
+    <logger name="mdc_console" level="INFO" additivity="false">
+        <appender-ref ref="MDC_STDOUT"/>
     </logger>
 </configuration>
