@@ -1,3 +1,13 @@
+# Spring的spi机制
+
+
+## ApplicationListener
+starting()：在 Spring 应用程序开始启动时调用，此时 Spring 容器尚未创建，可用于执行一些最开始的初始化操作，如记录启动开始日志。
+environmentPrepared(ConfigurableEnvironment environment)：当 Spring Boot 应用程序的环境准备好后调用，可在此方法中对应用的配置环境进行检查或修改。
+contextPrepared(ConfigurableApplicationContext context)：在 Spring 应用上下文准备好但尚未加载 bean 定义时调用，可用于对应用上下文进行一些预处理，如添加自定义的 BeanFactoryPostProcessor。
+contextLoaded(ConfigurableApplicationContext context)：当 Spring 应用上下文已加载所有 bean 定义后调用，可用于在所有 bean 都加载完成后执行一些操作，如检查特定 bean 是否正确加载。
+finished(ConfigurableApplicationContext context, Throwable exception)：在 Spring 应用程序启动完成后调用，如果启动过程中发生异常，exception参数将包含相应的异常信息，可用于记录启动完成日志或处理启动异常。
+
 # hello-spring-boot-starter-feign-client
 
 ## 将feign改为okhttp
@@ -30,4 +40,6 @@ public Client feignClient(okhttp3.OkHttpClient client) {
 }
 ```
 2. 负载均衡配置`OkHttpFeignLoadBalancerConfiguration`，关键在`feignClient`这个配置，需要这个feign
+
+
 
