@@ -43,23 +43,24 @@ public class ServerLogRequestFilter extends OncePerRequestFilter {
 
         filterChain.doFilter(reqWrapper, respWrapper);
 
+        try{
+            final String srcAddr = reqWrapper.getRemoteAddr();
+            final String requestURI = reqWrapper.getRequestURI();
+            final String method = reqWrapper.getMethod();
+            final String formatReqBody =
+                    format(new String(reqWrapper.getContentAsByteArray(),
+                            reqWrapper.getCharacterEncoding()));
+            final Map<String, String[]> parameterMap = request.getParameterMap();
 
-        final String srcAddr = reqWrapper.getRemoteAddr();
-        final String requestURI = reqWrapper.getRequestURI();
-        final String method = reqWrapper.getMethod();
-        final String formatReqBody =
-                format(new String(reqWrapper.getContentAsByteArray(),
-                        reqWrapper.getCharacterEncoding()));
-        final Map<String, String[]> parameterMap = request.getParameterMap();
+            final String formatParameterMap = format(JacksonUtil.MAPPER.writeValueAsString(parameterMap));
 
-        final String formatParameterMap = format(JacksonUtil.MAPPER.writeValueAsString(parameterMap));
-
-        final String formatRespBody =
-                format(new String(respWrapper.getContentAsByteArray(), respWrapper.getCharacterEncoding()));
-        Loggers.SERVER_LOG.info("{},{},{},{},{},{}", srcAddr, requestURI, method, formatReqBody, formatParameterMap,
-                formatRespBody);
-
-        respWrapper.copyBodyToResponse();
+            final String formatRespBody =
+                    format(new String(respWrapper.getContentAsByteArray(), respWrapper.getCharacterEncoding()));
+            Loggers.SERVER_LOG.info("{},{},{},{},{},{}", srcAddr, requestURI, method, formatReqBody, formatParameterMap,
+                    formatRespBody);
+        }finally {
+            respWrapper.copyBodyToResponse();
+        }
     }
 
     private String format(String s) {

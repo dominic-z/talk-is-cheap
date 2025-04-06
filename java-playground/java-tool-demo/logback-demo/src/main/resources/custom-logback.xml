@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration scan="true" scanPeriod="60 seconds" debug="false">
 
+    <turboFilter class="demo.logback.MyTurboFilter">
+        <!-- 可以在这里配置过滤器的属性 -->
+    </turboFilter>
+
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <!--            如果没有写%ex，那么log.error会将错误栈打印在下一行里-->
