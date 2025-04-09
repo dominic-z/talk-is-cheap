@@ -30,7 +30,7 @@ $ create-react-app myapp --template typescript
 
 https://developer.mozilla.org/zh-CN/docs/Learn/Getting_started_with_the_web
 
-mdn代码https://github.com/mdn/learning-area直接拷贝就行
+mdn对应代码资料https://github.com/mdn/learning-area
 
 
 ## Installing_basic_software
