@@ -4,6 +4,8 @@ package concurrent.volatille;
 
 //import jdk.internal.misc.Unsafe;
 
+import org.junit.Test;
+
 import java.lang.reflect.Field;
 
 public class VolatileDemo {
@@ -52,5 +54,28 @@ public class VolatileDemo {
             }
         }
         System.out.println("main thread end");
+    }
+
+
+    private static int a = 0;
+    private static volatile boolean flag = false;
+
+    public static void writer() {
+        a = 1;         // 语句 1
+        flag = true;   // 语句 2
+    }
+
+    public static void reader() {
+        if (flag) {    // 语句 3
+            int i = a; // 语句 4
+            System.out.println(i);
+        }
+    }
+
+    @Test
+    public void reorder(){
+        // 在这个例子中，由于 flag 被 volatile 修饰，语句 1 一定会在语句 2 之前执行，语句 3 一定会在语句 4 之前执行，避免了指令重排序带来的问题。
+        writer();
+        reader();
     }
 }

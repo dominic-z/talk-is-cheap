@@ -4,10 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.stream.Collectors;
 
 /**
@@ -78,4 +76,28 @@ public class MapDemo {
 // 空指针异常
         bookList.stream().collect(Collectors.toMap(Person::getName, Person::getPhoneNumber));
     }
+
+    @Test
+    public void testConcurrentSkipListMap(){
+        ConcurrentSkipListMap<String, Integer> skipListMap = new ConcurrentSkipListMap<>();
+        HashMap<String, Integer> hashMap = new HashMap<>();
+
+        Random random = new Random();
+        StringBuilder sb = new StringBuilder();
+        for(int i=0;i<100;i++){
+            for(int j=0;j<3;j++){
+                sb.append((char)('a'+random.nextInt(26)));
+            }
+            hashMap.put(sb.toString(),i);
+            skipListMap.put(sb.toString(),i);
+            sb.delete(0,sb.length());
+        }
+        System.out.println(hashMap);
+
+        // skipListMap的key是排序的
+        System.out.println(skipListMap);
+    }
+
+
+
 }

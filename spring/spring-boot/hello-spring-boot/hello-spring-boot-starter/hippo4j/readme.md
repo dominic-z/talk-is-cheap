@@ -1,7 +1,7 @@
 
 
 # 配置server
-hippo与springboot3不兼容，不知道为啥
+hippo与springboot3不兼容，不知道为啥，不如用Dynamic TP
 ```shell
 docker pull hippo4j/hippo4j-server:1.5.0
 
