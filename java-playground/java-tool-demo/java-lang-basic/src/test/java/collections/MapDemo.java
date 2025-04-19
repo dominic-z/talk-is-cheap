@@ -1,9 +1,14 @@
 package collections;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * @author dominiczhu
@@ -53,5 +58,24 @@ public class MapDemo {
         map.put(new Key(3), 1);
         System.out.println(map);
 
+    }
+
+
+    @Data
+    @AllArgsConstructor
+    static class Person {
+        private String name;
+        private String phoneNumber;
+        // getters and setters
+
+    }
+
+    @Test
+    public void testNullValueToMap(){
+        List<Person> bookList = new ArrayList<>();
+        bookList.add(new Person("jack","18163138123"));
+        bookList.add(new Person("martin",null));
+// 空指针异常
+        bookList.stream().collect(Collectors.toMap(Person::getName, Person::getPhoneNumber));
     }
 }

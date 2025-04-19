@@ -1,4 +1,4 @@
-package concurrent.jstack;
+package jdk.jstack;
 
 /**
  * @author dominiczhu
