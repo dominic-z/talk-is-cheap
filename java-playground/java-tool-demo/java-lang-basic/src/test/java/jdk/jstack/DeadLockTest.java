@@ -1,15 +1,20 @@
-package concurrent.jstack;
+package jdk.jstack;
 
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
+ * 可以使用jdk中的jconsole来查看jvm情况，以及检测死锁，也可以使用jstack堆栈跟踪信息
+ *  1, 使用jps查看java进程pid
+ *  2. 使用jstack pid查看死锁情况
+ *
  * @author dominiczhu
  * @version 1.0
  * @title DeadLockTest
  * @date 2021/8/9 下午8:48
  */
 public class DeadLockTest {
+
     private static Lock lock1 = new ReentrantLock();
     private static Lock lock2 = new ReentrantLock();
 
