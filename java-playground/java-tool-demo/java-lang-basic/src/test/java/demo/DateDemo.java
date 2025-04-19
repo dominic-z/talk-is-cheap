@@ -1,4 +1,4 @@
-package date;
+package demo;
 
 import org.junit.Test;
 

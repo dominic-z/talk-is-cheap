@@ -1,0 +1,2 @@
+
+TransmittableThreadLocal 的好处是将线程池和thread-local结合起来了，这样线程池里的线程也能继承

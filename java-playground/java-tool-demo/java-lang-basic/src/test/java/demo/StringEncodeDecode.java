@@ -11,7 +11,7 @@ import java.util.Arrays;
  * @title StringDemo
  * @date 2021/8/5 下午6:22
  */
-public class StringDemo {
+public class StringEncodeDecode {
 
     @Test
     public void testCharset() {

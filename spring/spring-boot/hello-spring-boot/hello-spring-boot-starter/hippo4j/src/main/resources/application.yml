@@ -1,0 +1,22 @@
+server:
+  port: 8080
+spring:
+  application:
+    # 服务端创建的项目 id 需要与 application.name 保持一致
+    name: zzz-dynamic-threadpool-example
+  dynamic:
+    thread-pool:
+      server-addr: http://localhost:6691  # Hippo4j 服务端地址
+      item-id: zzz-dynamic-threadpool-example  # 项目标识
+      # 租户 id, 对应 tenant 表
+      namespace: prescription
+      username: admin
+      password: 123456
+
+      monitor:
+        enable: true
+
+logging:
+  level:
+    root: info
+
