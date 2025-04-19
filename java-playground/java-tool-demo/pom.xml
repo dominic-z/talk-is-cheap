@@ -23,6 +23,7 @@
         <module>lettuce-demo</module>
         <module>jdbc-demo</module>
         <module>logback-demo</module>
+        <module>transmittable-thread-local-demo</module>
     </modules>
 
     <dependencies>
