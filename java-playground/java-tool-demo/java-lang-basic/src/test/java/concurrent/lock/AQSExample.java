@@ -11,7 +11,7 @@ import java.util.concurrent.CyclicBarrier;
 public class AQSExample {
 
     @Test
-    public void semaphore(){
+    public void samphoreTest(){
 
     }
 
