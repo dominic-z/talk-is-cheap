@@ -16,13 +16,13 @@ public class WhileTrueTask implements Runnable {
         synchronized (lock) {
             long sum = 0L;
             while (true) {
-//                try {
+                try {
                     sum += 1;
 
-//                    Thread.sleep(300);
-//                } catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
+                    Thread.sleep(300);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 //Do Nothing
             }
         }
