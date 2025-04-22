@@ -1,4 +1,4 @@
-package jdk.jstack;
+package jdk;
 
 /**
  * @author dominiczhu
