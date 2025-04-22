@@ -1,4 +1,4 @@
-package jdk.jstack;
+package jdk;
 
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
