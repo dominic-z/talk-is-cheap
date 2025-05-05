@@ -130,7 +130,11 @@
         <appender-ref ref="MYBATIS"/>
         <appender-ref ref="STDOUT"/>
     </logger>
-
+<!--    配置回滚日志输出-->
+    <logger name="org.springframework.transaction.interceptor" level="TRACE" additivity="false">
+        <appender-ref ref="MYBATIS"/>
+        <appender-ref ref="STDOUT"/>
+    </logger>
 
     <logger name="console" level="INFO" additivity="false">
         <appender-ref ref="STDOUT"/>
