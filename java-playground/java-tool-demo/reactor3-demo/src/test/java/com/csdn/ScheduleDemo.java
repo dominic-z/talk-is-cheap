@@ -30,7 +30,7 @@ public class ScheduleDemo {
     public void testSyncToAsync() throws InterruptedException {
         CountDownLatch countDownLatch = new CountDownLatch(2);
         Mono.fromCallable(this::getStringSync)    // 1
-                .subscribeOn(Schedulers.elastic())  // 2
+                .subscribeOn(Schedulers.boundedElastic())  // 2
                 .subscribe((s)->{
                     log.info("Publish {}, {}", Thread.currentThread(), s);
                 }, null, countDownLatch::countDown);
@@ -46,7 +46,7 @@ public class ScheduleDemo {
         Flux.range(1, 6)
                 .doOnRequest(n -> log.info("Request {} number", n)) // 注意顺序造成的区别
                 .doOnComplete(() -> log.info("Publisher COMPLETE 1"))
-                .publishOn(Schedulers.elastic())
+                .publishOn(Schedulers.boundedElastic())
                 .map(i -> {
                     log.info("Publish {}, {}", Thread.currentThread(), i);
                     try {
@@ -66,6 +66,21 @@ public class ScheduleDemo {
 
 
         countDownLatch.await(20, TimeUnit.SECONDS);
+    }
+
+
+
+    @Test
+    public void testMultiThread() throws InterruptedException {
+        Flux.range(1, 10)
+                // 通过当前线程进行发布
+                .publishOn(Schedulers.immediate())
+                // 在新的单一线程上进行订阅
+                .subscribeOn(Schedulers.newSingle("new single"))
+                .subscribe(i->{
+                    System.out.println(Thread.currentThread()+":"+i);
+                });
+        Thread.sleep(10000);
     }
 
 

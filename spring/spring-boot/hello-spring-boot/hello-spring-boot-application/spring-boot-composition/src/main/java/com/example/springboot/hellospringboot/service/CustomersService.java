@@ -5,20 +5,22 @@ import com.example.springboot.hellospringboot.dao.customized.CustomersDao;
 import com.example.springboot.hellospringboot.domain.pojo.Customers;
 import com.example.springboot.hellospringboot.domain.query.example.CustomersExample;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 /**
  * @author codegen
  * @date 2022/01/14
  */
 @Service
+@Slf4j
 public class CustomersService {
 
     @Autowired
@@ -27,7 +29,34 @@ public class CustomersService {
     @Autowired
     private CustomersMapper customersMapper;
 
-    public int testTransaction() throws Exception {
+
+    @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRED)
+    public void testTransactionPropagation() {
+        final Customers customer498 = customersMapper.selectByPrimaryKey(496);
+        customer498.setCustomernumber(498);
+        customer498.setCity("new york");
+        customersMapper.insert(customer498);
+
+        try {
+            int i = testTransactionPropagationInner(customer498);
+        } catch (Exception e) {
+            log.error("error: ", e);
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class, propagation = Propagation.NESTED)
+    public int testTransactionPropagationInner(Customers record) {
+        record.setCustomernumber(record.getCustomernumber() + 1);
+        record.setCity("taiwan");
+        int insert = customersMapper.insert(record);
+        int i = 0;
+        if (i == 0) {
+            throw new RuntimeException("抛出异常 尝试回滚");
+        }
+        return insert;
+    }
+
+    public int testInnerCallTransaction() throws Exception {
         return createTwo();
     }
 

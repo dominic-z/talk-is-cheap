@@ -23,7 +23,7 @@ public class DaoTest {
 
     @Test
     public void testTransaction() throws Exception {
-        customersService.testTransaction();
+        customersService.testInnerCallTransaction();
     }
 
 
