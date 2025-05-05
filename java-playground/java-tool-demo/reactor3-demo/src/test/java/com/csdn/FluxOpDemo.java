@@ -58,12 +58,14 @@ public class FluxOpDemo {
 
         Flux.range(1, 6)
                 .map(i -> 10 / (i - 3))
+                // 错误的时候返回缺省值
                 .onErrorReturn(0)   // 1
                 .map(i -> i * i)
                 .subscribe(System.out::println, System.err::println);
 
         Flux.range(1, 6)
                 .map(i -> 10 / (i - 3))   // 1
+                // 捕获异常并重新抛出
                 .onErrorMap(original -> new Exception("SLA exceeded", original)).subscribe(System.out::println, System.err::println); // 2
 
         LongAdder statsCancel = new LongAdder();    // 1

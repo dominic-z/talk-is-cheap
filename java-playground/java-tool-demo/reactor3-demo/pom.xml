@@ -9,10 +9,10 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>Reactor3Demo</artifactId>
+    <artifactId>reactor3-demo</artifactId>
 
     <properties>
-        <reactor.version>3.3.8.RELEASE</reactor.version>
+        <reactor.version>3.8.0-M2</reactor.version>
     </properties>
     <dependencies>
         <dependency>
