@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>SSE Example</title>
+</head>
+
+<body>
+<ul id="messages"></ul>
+<script>
+        const eventSource = new EventSource('/sse/sse');
+        eventSource.onmessage = function (event) {
+            const messagesList = document.getElementById('messages');
+            const newMessage = document.createElement('li');
+            newMessage.textContent = `Received: ${event.data}`;
+            messagesList.appendChild(newMessage);
+            if(event.data=="done"){
+                console.log("done");
+                eventSource.close();
+            }
+        };
+        eventSource.onerror = function (error) {
+            console.error('EventSource failed:', error);
+        };
+    </script>
+</body>
+
+</html>
