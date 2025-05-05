@@ -1,19 +1,18 @@
 package com.example.springboot.hellospringboot.controller;
 
-import com.example.springboot.hellospringboot.domain.messages.HelloRequest;
-import com.example.springboot.hellospringboot.domain.messages.HelloResponse;
 import com.example.springboot.hellospringboot.domain.pojo.Customers;
 import com.example.springboot.hellospringboot.service.CustomersService;
-import com.example.springboot.hellospringboot.service.HelloService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @author dominiczhu
@@ -36,5 +35,19 @@ public class DaoTestController {
         log.debug("1232");
 
         return customersService.selectByPrimaryKey(id);
+    }
+
+
+    @ResponseBody
+    @RequestMapping(path = "/testTransaction", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public Map<String,Object> testTransaction(){
+        HashMap<String, Object> map = new HashMap<>();
+        try {
+            customersService.testTransactionPropagation();
+            map.put("msg","done");
+        } catch (Exception e) {
+            map.put("msg",e.getMessage());
+        }
+        return map;
     }
 }
