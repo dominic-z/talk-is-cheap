@@ -10,6 +10,7 @@ import reactor.core.scheduler.Schedulers;
 import reactor.test.StepVerifier;
 
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -120,6 +121,14 @@ public class FluxMonoDemo {
                     return state + 1;
                 });
 
+
+        Flux.create(fluxSink -> {
+            Random t = new Random();
+            for(int i = 0;i<5;i++){
+                int anInt = t.nextInt(10);
+                fluxSink.next(anInt);
+            }
+        }).subscribe(System.out::println);
         // create
         // 这个完全是
         abstract class EventListener<T> {
