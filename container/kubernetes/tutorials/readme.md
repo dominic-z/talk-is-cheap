@@ -3,9 +3,9 @@
 
 kubernetes的[官方教程](https://kubernetes.io/zh-cn/docs/tutorials/hello-minikube/)
 
-# 准备工作
+# 入门
 
-## 安装
+## 学习环境
 
 教程里选择minikube，于是我们也要安装minikube，参照[Get Started](https://minikube.sigs.k8s.io/docs/start/?arch=%2Flinux%2Fx86-64%2Fstable%2Fbinary+download)
 
@@ -21,7 +21,11 @@ curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stabl
 ```
 很慢。
 
-# 你好，Minikube
+
+
+# 教程
+
+### 你好，Minikube
 
 因为网络问题，所以`minikube start`会拉不来kicbase镜像，需要通过docker手动拉取，参考：[本文](https://blog.csdn.net/weixin_49244483/article/details/139616895)
 ```shell
@@ -71,7 +75,7 @@ registry.cn-hangzhou.aliyuncs.com/google_containers/kicbase:v0.0.46
 
 
 
-## dashboard
+### dashboard
 
 
 
@@ -216,7 +220,7 @@ kubernetes-dashboard   kubernetes-dashboard-7779f9b69b-qmfn5        0/1     Imag
 
 ```
 
-### 修改镜像路径
+#### 修改镜像路径
 
 随后可以有两种方式，如上文博客所示，一个方法是修改容器的路径
 
@@ -252,11 +256,7 @@ kubernetes-dashboard   kubernetes-dashboard-7779f9b69b-qmfn5        0/1     Imag
 
 
 
-## 创建 Deployment
-
-- 
-
-
+### 创建 Deployment
 
 执行下面命令的时候，发现仍然无法启动
 
@@ -353,7 +353,7 @@ I0518 08:16:21.634767       1 log.go:195] Started UDP server on port  8081
 
 
 
-### 启用插件
+#### 启用插件
 
 启用`metrics-server`后`minikube addons enable metrics-server`
 
@@ -441,10 +441,88 @@ service/metrics-server   ClusterIP   10.102.249.140   <none>        443/TCP     
 
 ```
 
-## 小结
+### 小结
 
 概念：
 
 - pod：一些容器组成的组；
 - service：“将在集群中运行的应用通过同一个面向外界的端点公开出去，即使工作负载分散于多个后端也完全可行。”。例如，默认情况下，Pod 只能通过 Kubernetes 集群中的内部 IP 地址访问。 要使得 `hello-node` 容器可以从 Kubernetes 虚拟网络的外部访问，你必须将 Pod 通过 Kubernetes [**Service**](https://kubernetes.io/zh-cn/docs/concepts/services-networking/service/) 公开出来。Kubernetes 中 Service 是 将运行在一个或一组 [Pod](https://kubernetes.io/zh-cn/docs/concepts/workloads/pods/) 上的网络应用程序公开为网络服务的方法。
 - Deployment ：用于管理运行一个应用负载的一组 Pod，通常适用于不保持状态的负载。个人理解，这东西既然叫做“部署”，那应该就是一个抽象的概念，类似于部署不同pod过程中进行资源管理的工具。
+
+
+
+## 使用 Minikube 创建集群
+
+### Kubernetes 集群
+
+
+
+关于k8s到底是干啥的，文档中的介绍是
+
+> **Kubernetes 协调一个高可用计算机集群，每个计算机互相连接之后作为同一个工作单元运行。** Kubernetes 中的抽象允许你将容器化的应用部署到集群，而无需将它们绑定到某个特定的独立计算机。 为了使用这种新的部署模型，需要以将应用与单个主机解耦的方式打包：它们需要被容器化。 与过去的那种应用直接以包的方式深度与主机集成的部署模型相比，容器化应用更灵活、更可用。 **Kubernetes 以更高效的方式跨集群自动分布和调度应用容器。** Kubernetes 是一个开源平台，并且可应用于生产环境。
+
+非常晦涩，问豆包“Kubernetes解决了什么问题？”给的答案很好理解了，说白了，就是原本都是要准备好多台物理服务器或者虚拟机，每个物理服务器或者虚拟机运行一个或者多个应用，在微服务情况下，要部署一堆应用，如果部署在同一台机器下，应用之间会抢资源；如果部署在不同的机器下，管理多个机器挨个部署管理网络配置dns非常麻烦。而k8s相当于作为一个中间层屏蔽了底层的“物理服务器或者虚拟机”，面向应用提供统一的计算存储资源、网络管理、高可用等功能。
+
+> #### 1. **容器编排与调度**
+>
+> - **问题**：
+>   传统部署方式中，应用与基础设施强绑定（如 VM 或物理机），资源利用率低且扩展困难。容器化后，单个应用可能拆分为数十个微服务容器，手动管理这些容器的部署、网络和生命周期变得极其复杂。
+> - K8s 解决方案：
+>   - **自动化调度**：根据资源需求和节点状态，自动将容器调度到合适的节点上。
+>   - **水平扩展**：一键调整应用副本数（如从 3 个 Pod 扩展到 10 个）。
+>   - **资源隔离**：通过资源配额（Requests/Limits）确保容器间互不干扰。
+>
+> #### 2. **高可用性与自愈**
+>
+> - **问题**：
+>   容器可能因各种原因（如代码崩溃、节点故障）意外终止，传统方式需人工干预恢复。
+> - K8s 解决方案：
+>   - **副本机制**：通过 Deployment、StatefulSet 等控制器维持指定数量的 Pod 副本。
+>   - **健康检查**：通过 Liveness Probe 和 Readiness Probe 自动检测和重启不健康的容器。
+>   - **自动故障转移**：节点故障时，Pod 会自动迁移到其他节点。
+>
+> #### 3. **服务发现与负载均衡**
+>
+> - **问题**：
+>   在微服务架构中，服务间调用关系复杂，服务实例动态变化（如扩容、故障重启），传统 DNS 难以满足需求。
+> - K8s 解决方案：
+>   - **Service 资源**：为一组 Pod 提供稳定的访问入口（如 ClusterIP、NodePort、LoadBalancer）。
+>   - **自动负载均衡**：Service 自动将请求分发到后端 Pod。
+>   - **DNS 集成**：内部域名解析（如`my-service.my-namespace.svc.cluster.local`）。
+>
+> #### 4. **滚动更新与回滚**
+>
+> - **问题**：
+>   传统应用升级需停机，新版本可能存在兼容性问题，回滚困难。
+> - K8s 解决方案：
+>   - **滚动更新**：逐个替换旧版本 Pod，确保服务无中断。
+>   - **版本控制**：自动保存历史版本，支持一键回滚。
+>   - **灰度发布**：通过金丝雀部署（Canary Release）逐步验证新版本。
+>
+> #### 5. **配置与密钥管理**
+>
+> - **问题**：
+>   应用配置（如数据库连接字符串、API 密钥）硬编码在镜像中，不同环境（开发 / 测试 / 生产）需频繁修改。
+> - K8s 解决方案：
+>   - **ConfigMap**：存储非敏感配置，与容器解耦。
+>   - **Secret**：安全存储敏感信息（如密码、证书），避免明文暴露。
+>   - **动态注入**：通过环境变量或挂载文件的方式注入配置。
+
+一个K8s集群由多个角色组成：
+
+- Node：物理机或者虚拟机，**节点是一个虚拟机或者物理机，它在 Kubernetes 集群中充当工作机器的角色。** 
+  - Kubelet：它管理节点而且是节点与控制面通信的代理。
+  - docker：提供容器化服务的仍然是docker
+- Control Plane：**控制面负责管理整个集群。** 控制面协调集群中的所有活动，例如调度应用、维护应用的期望状态、对应用扩容以及将新的更新上线等等。
+
+
+
+随后阅读：[Kubernetes 架构](# Kubernetes 架构)
+
+
+
+
+
+# 概念
+
+## Kubernetes 架构
