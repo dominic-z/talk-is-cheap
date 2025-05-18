@@ -1,0 +1,17 @@
+server:
+  port: 9091
+
+spring:
+  application:
+    name: backend # 指定应用名称，用于服务注册时候指定服务名
+  profiles:
+    active: prod
+  cloud:
+    nacos:
+      server-addr: localhost:8848
+      discovery:
+        namespace: prod # 会注册到对应的服务的命名空间ID，替换为实际的ID
+        group: DEV_GROUP # 配置分组
+      config:
+        import-check:
+          enabled: false
