@@ -25,7 +25,7 @@ curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stabl
 
 # 教程
 
-### 你好，Minikube
+## 你好，Minikube
 
 因为网络问题，所以`minikube start`会拉不来kicbase镜像，需要通过docker手动拉取，参考：[本文](https://blog.csdn.net/weixin_49244483/article/details/139616895)
 ```shell
@@ -451,9 +451,9 @@ service/metrics-server   ClusterIP   10.102.249.140   <none>        443/TCP     
 
 
 
-## 使用 Minikube 创建集群
+## 学习Kubernetes基础支持
 
-### Kubernetes 集群
+### 使用 Minikube 创建集群
 
 
 
@@ -518,6 +518,315 @@ service/metrics-server   ClusterIP   10.102.249.140   <none>        443/TCP     
 
 
 随后阅读：[Kubernetes 架构](# Kubernetes 架构)
+
+### 部署应用
+
+这里引入了“deployment”这个概念，当k8s集群运行起来之后，就可以向其中*部署*容器化应用了，这就是一个“部署”，会创建一个deployment，deployment控制器会监视管理这些容器化的应用，例如抓一个不错的节点来运行这些容器。
+
+这里可以看出k8s和docker的一些区别，当使用docker时，我们是在某一台机器上启用了一个容器；而当使用k8s的时候，k8s集群本身包含了多个机器，就像我们在多台机器上部署容器一样，只不过k8s屏蔽了不同机器之间的差别。简单说：
+
+- 一台机器-通过docker运行一个docker容器
+- 多台机器-运行k8s运行一堆docker容器
+
+先参照[kubernetes-bootcamp镜像](https://github.com/anjia0532/gcr.io_mirror/issues/3911)把依赖的镜像捞下来
+
+```shell
+#下载并重命名镜像
+docker pull anjia0532/google-samples.kubernetes-bootcamp:v1 
+
+docker tag  anjia0532/google-samples.kubernetes-bootcamp:v1 gcr.io/google-samples/kubernetes-bootcamp:v1
+```
+
+
+
+开始
+
+```shell
+(base) dominiczhu@ubuntu:~/Desktop$ minikube start
+😄  minikube v1.35.0 on Ubuntu 22.04
+✨  Using the docker driver based on existing profile
+👍  Starting "minikube" primary control-plane node in "minikube" cluster
+🚜  Pulling base image v0.0.46 ...
+🔄  Restarting existing docker container for "minikube" ...
+🐳  Preparing Kubernetes v1.32.0 on Docker 27.4.1 ...
+🔎  Verifying Kubernetes components...
+    ▪ Using image docker.io/kubernetesui/metrics-scraper:v1.0.8
+    ▪ Using image docker.io/kubernetesui/dashboard:v2.7.0
+    ▪ Using image gcr.io/k8s-minikube/storage-provisioner:v5
+💡  Some dashboard features require the metrics-server addon. To enable all features please run:
+
+	minikube addons enable metrics-server
+
+🌟  Enabled addons: default-storageclass, storage-provisioner, dashboard
+🏄  Done! kubectl is now configured to use "minikube" cluster and "default" namespace by default
+
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl version
+Client Version: v1.33.1
+Kustomize Version: v5.6.0
+Server Version: v1.32.0
+
+# 说明这里启动了一个节点，叫做minikube
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl get nodes
+NAME       STATUS   ROLES           AGE    VERSION
+minikube   Ready    control-plane   3d1h   v1.32.0
+
+# 创建了一个叫做kubernetes-bootcamp的deployment
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl create deployment kubernetes-bootcamp --image=gcr.io/google-samples/kubernetes-bootcamp:v1
+deployment.apps/kubernetes-bootcamp created
+
+# 输出字段的含义可以问豆包
+(base) dominiczhu@ubuntu:~/Desktop$  kubectl get deployments
+NAME                  READY   UP-TO-DATE   AVAILABLE   AGE
+kubernetes-bootcamp   1/1     1            1           2m19s
+
+```
+
+打开第二个窗口
+
+```shell
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl proxy
+Starting to serve on 127.0.0.1:8001
+
+```
+
+回到第一个窗口
+
+```shell
+# 现在可以通过http接口来访问集群了
+(base) dominiczhu@ubuntu:~/Desktop$ curl http://localhost:8001/version
+{
+  "major": "1",
+  "minor": "32",
+  "gitVersion": "v1.32.0",
+  "gitCommit": "70d3cc986aa8221cd1dfb1121852688902d3bf53",
+  "gitTreeState": "clean",
+  "buildDate": "2024-12-11T17:59:15Z",
+  "goVersion": "go1.23.3",
+  "compiler": "gc",
+  "platform": "linux/amd64"
+}
+
+
+# 这个命令就是获取pods的name
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl get pods -o go-template --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}'
+kubernetes-bootcamp-9bc58d867-x9x9v
+
+(base) dominiczhu@ubuntu:~/Desktop$ curl http://localhost:8001/api/v1/namespaces/default/pods/kubernetes-bootcamp-9bc58d867-x9x9v:8080/proxy/
+Hello Kubernetes bootcamp! | Running on: kubernetes-bootcamp-9bc58d867-x9x9v | v=1
+
+```
+
+
+
+### 了解你的应用
+
+
+
+#### pod
+
+> **只有容器紧耦合并且需要共享磁盘等资源时，才应将其编排在一个 Pod 中。**
+
+不过我暂时想不出什么情况需要共享磁盘资源就是了。。。
+
+
+
+
+
+#### 使用 kubectl 进行故障排查
+
+```shell
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl get pods
+NAME                                  READY   STATUS    RESTARTS   AGE
+kubernetes-bootcamp-9bc58d867-x9x9v   1/1     Running   0          34m
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl describe pods
+Name:             kubernetes-bootcamp-9bc58d867-x9x9v
+Namespace:        default
+Priority:         0
+Service Account:  default
+Node:             minikube/192.168.49.2
+Start Time:       Tue, 20 May 2025 21:35:24 +0800
+Labels:           app=kubernetes-bootcamp
+                  pod-template-hash=9bc58d867
+Annotations:      <none>
+Status:           Running
+IP:               10.244.0.38
+IPs:
+  IP:           10.244.0.38
+Controlled By:  ReplicaSet/kubernetes-bootcamp-9bc58d867
+Containers:
+  kubernetes-bootcamp:
+    Container ID:   docker://51a532d20e1f860dcb18fb8628fe6c31614695693e700cfdf1b8d443ae46628f
+    Image:          gcr.io/google-samples/kubernetes-bootcamp:v1
+    Image ID:       docker-pullable://gcr.io/google-samples/kubernetes-bootcamp@sha256:0d6b8ee63bb57c5f5b6156f446b3bc3b3c143d233037f3a2f00e279c8fcc64af
+........
+```
+
+
+
+
+
+#### 在容器中执行命令
+
+可以通过kubectl来进入容器了
+
+```shell
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl exec kubernetes-bootcamp-9bc58d867-x9x9v -- env 
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+HOSTNAME=kubernetes-bootcamp-9bc58d867-x9x9v
+KUBERNETES_PORT_443_TCP_PROTO=tcp
+KUBERNETES_PORT_443_TCP_PORT=443
+KUBERNETES_PORT_443_TCP_ADDR=10.96.0.1
+KUBERNETES_SERVICE_HOST=10.96.0.1
+KUBERNETES_SERVICE_PORT=443
+KUBERNETES_SERVICE_PORT_HTTPS=443
+KUBERNETES_PORT=tcp://10.96.0.1:443
+KUBERNETES_PORT_443_TCP=tcp://10.96.0.1:443
+NPM_CONFIG_LOGLEVEL=info
+NODE_VERSION=6.3.1
+HOME=/root
+
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl exec -ti kubernetes-bootcamp-9bc58d867-x9x9v -- bash
+root@kubernetes-bootcamp-9bc58d867-x9x9v:/# cat server.js
+var http = require('http');
+var requests=0;
+var podname= process.env.HOSTNAME;
+var startTime;
+var host;
+var handleRequest = function(request, response) {
+  response.setHeader('Content-Type', 'text/plain');
+  response.writeHead(200);
+  response.write("Hello Kubernetes bootcamp! | Running on: ");
+  response.write(host);
+  response.end(" | v=1\n");
+  console.log("Running On:" ,host, "| Total Requests:", ++requests,"| App Uptime:", (new Date() - startTime)/1000 , "seconds", "| Log Time:",new Date());
+}
+var www = http.createServer(handleRequest);
+www.listen(8080,function () {
+    startTime = new Date();;
+    host = process.env.HOSTNAME;
+    console.log ("Kubernetes Bootcamp App Started At:",startTime, "| Running On: " ,host, "\n" );
+});
+
+
+root@kubernetes-bootcamp-9bc58d867-x9x9v:/# curl http://localhost:8080
+Hello Kubernetes bootcamp! | Running on: kubernetes-bootcamp-9bc58d867-x9x9v | v=1
+```
+
+
+
+### 公开地暴露你的应用
+
+Pod需要对外提供应用，但外部应用并不需要关注pod是啥，于是就抽象出了一个中间层，外部通过service来访问pod
+
+
+
+```shell
+
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl get pods
+NAME                                  READY   STATUS    RESTARTS   AGE
+kubernetes-bootcamp-9bc58d867-x9x9v   1/1     Running   0          58m
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl get services
+NAME         TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+kubernetes   ClusterIP   10.96.0.1    <none>        443/TCP   3d2h
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl get deployments
+NAME                  READY   UP-TO-DATE   AVAILABLE   AGE
+kubernetes-bootcamp   1/1     1            1           58m
+
+# 将一个部署通过service对外暴露出去，相当于将deployment/kubernetes-bootcamp这个部署里的pod的容器的8080端口映射到minikube集群的某个端口，这里就是30822
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl expose deployment/kubernetes-bootcamp --type="NodePort" --port 8080
+service/kubernetes-bootcamp exposed
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl get services
+NAME                  TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
+kubernetes            ClusterIP   10.96.0.1       <none>        443/TCP          3d2h
+kubernetes-bootcamp   NodePort    10.103.27.125   <none>        8080:30822/TCP   42s
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl describe services/kubernetes-bootcamp
+Name:                     kubernetes-bootcamp
+Namespace:                default
+Labels:                   app=kubernetes-bootcamp
+Annotations:              <none>
+Selector:                 app=kubernetes-bootcamp
+Type:                     NodePort
+IP Family Policy:         SingleStack
+IP Families:              IPv4
+IP:                       10.103.27.125
+IPs:                      10.103.27.125
+Port:                     <unset>  8080/TCP
+TargetPort:               8080/TCP
+NodePort:                 <unset>  30822/TCP
+Endpoints:                10.244.0.38:8080
+Session Affinity:         None
+External Traffic Policy:  Cluster
+Internal Traffic Policy:  Cluster
+Events:                   <none>
+
+
+# 查看这个service的端口
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl get services/kubernetes-bootcamp -o go-template='{{(index .spec.ports 0).nodePort}}'
+30822
+# 查看集群（即minikube）的ip
+(base) dominiczhu@ubuntu:~/Desktop$ minikube ip
+192.168.49.2
+(base) dominiczhu@ubuntu:~/Desktop$ curl http://192.168.49.2:30822
+Hello Kubernetes bootcamp! | Running on: kubernetes-bootcamp-9bc58d867-x9x9v | v=1
+```
+
+
+
+使用标签，标签相当于给deployment、pod等等打的一个记号，可以通过标签来查询、标识
+
+```shell
+# 输出结果可以看到label
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl describe deployment/kubernetes-bootcamp
+Name:                   kubernetes-bootcamp
+Namespace:              default
+CreationTimestamp:      Tue, 20 May 2025 21:35:24 +0800
+Labels:                 app=kubernetes-bootcamp
+
+# 可以基于标签进行查询
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl get deployments -l app=kubernetes-bootcamp
+NAME                  READY   UP-TO-DATE   AVAILABLE   AGE
+kubernetes-bootcamp   1/1     1            1           68m
+
+# 对于service、pod也是同理
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl describe pod/kubernetes-bootcamp-9bc58d867-x9x9v
+Name:             kubernetes-bootcamp-9bc58d867-x9x9v
+Namespace:        default
+Priority:         0
+Service Account:  default
+Node:             minikube/192.168.49.2
+Start Time:       Tue, 20 May 2025 21:35:24 +0800
+Labels:           app=kubernetes-bootcamp
+                  pod-template-hash=9bc58d867
+
+
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl get pods -l app=kubernetes-bootcamp
+NAME                                  READY   STATUS    RESTARTS   AGE
+kubernetes-bootcamp-9bc58d867-x9x9v   1/1     Running   0          69m
+
+# 手动打标签
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl label pods kubernetes-bootcamp-9bc58d867-x9x9v version=v1
+pod/kubernetes-bootcamp-9bc58d867-x9x9v labeled
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl describe pod/kubernetes-bootcamp-9bc58d867-x9x9v
+Name:             kubernetes-bootcamp-9bc58d867-x9x9v
+Namespace:        default
+Priority:         0
+Service Account:  default
+Node:             minikube/192.168.49.2
+Start Time:       Tue, 20 May 2025 21:35:24 +0800
+Labels:           app=kubernetes-bootcamp
+                  pod-template-hash=9bc58d867
+                  version=v1
+
+```
+
+
+
+删除service
+
+```shell
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl delete service -l app=kubernetes-bootcamp
+service "kubernetes-bootcamp" deleted
+```
 
 
 
@@ -819,3 +1128,22 @@ k8s通过节点控制器来管理节点的状态；
 这里提到了Finalizers，这个东西和Java的Finalizers方法是一样的，在GC之前会被触发，用于gc前的一些操作，在k8s中，可以理解为真正释放、删除对象之前要执行的操作，例如在删除目标资源前清理相关资源或基础设施。
 
 针对容器和镜像的垃圾收集，有一点点像java的gc，释放镜像的时候，是基于最近最少使用；容器垃圾收集有点像java的gc，基于年龄等。
+
+
+
+### 混合版本代理
+
+
+
+升级过程中可能会存在多个版本的api-server，这个混合版本代理就是使得升级过程中，如果需要使用高版本api-server才能提供的功能的时候，如果这样的使用请求发到了低版本的api-server，那么这个请求能够被转发到高版本的api-server.
+
+
+
+#### 内部工作原理
+
+每个API server通过storageVersion来知道哪些api server提供哪些功能。以下为猜想，个人理解的内容。
+
+1. 如果收到请求的API知道如何处理，那么他就会本地处理
+2. 如果收到请求的API server从storageVersion里找到能处理这个请求的对象，那么就说明集群里没有这功能，就走扩展API服务器看看能不能处理；
+3. 如果找到了对应的StorageVersion并且本地确实处理不了某个请求，那么就会转发
+   1. 
