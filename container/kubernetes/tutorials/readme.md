@@ -451,7 +451,7 @@ service/metrics-server   ClusterIP   10.102.249.140   <none>        443/TCP     
 
 
 
-## 学习Kubernetes基础支持
+## 学习Kubernetes基础知识
 
 ### 使用 Minikube 创建集群
 
@@ -864,7 +864,7 @@ service "kubernetes-bootcamp" deleted
 
 #### 对象名称和ID
 
-每个对象的名称得是唯一的。
+每个对象的名称在同一资源的同一名称空间中得是唯一的。
 
 > 名称在同一资源的所有API版本中必须是唯一的。
 
@@ -877,6 +877,17 @@ service "kubernetes-bootcamp" deleted
 ##### 标签选择算符
 
 用于根据标签选择一部分的对象，例如文中提到的，可以基于标签来让一个pod运行在某个节点上。
+
+##### 在 API 对象中设置引用
+
+就是说k8s里内置的对象也是通过label来定位其他对象的，例如service就是通过label和标签选择算符来圈定一部分其他对象的。
+
+```shell
+kubectl get pods -l app=nginx -L tier
+
+```
+
+这段指令的含义是过滤所有label中`app=nginx`的pod，并且新增一列展示这些pod的tier标签。
 
 
 
