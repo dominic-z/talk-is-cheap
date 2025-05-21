@@ -891,6 +891,189 @@ kubectl get pods -l app=nginx -L tier
 
 
 
+#### 命名空间
+
+
+
+在启动了 minikube之后，可以查看并操作 命名空间了
+
+
+
+```shell
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl get namespace
+NAME                   STATUS   AGE
+default                Active   3d20h
+kube-node-lease        Active   3d20h
+kube-public            Active   3d20h
+kube-system            Active   3d20h
+kubernetes-dashboard   Active   3d20h
+
+# 查看当前所有命名空间中的pods
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl get pods --all-namespaces
+NAMESPACE              NAME                                         READY   STATUS    RESTARTS        AGE
+default                kubernetes-bootcamp-9bc58d867-x9x9v          1/1     Running   0               19h
+kube-system            coredns-668d6bf9bc-8kvp2                     1/1     Running   7 (2d23h ago)   3d20h
+kube-system            etcd-minikube                                1/1     Running   7 (2d23h ago)   3d20h
+kube-system            kube-apiserver-minikube                      1/1     Running   7 (2d23h ago)   3d20h
+kube-system            kube-controller-manager-minikube             1/1     Running   7 (2d23h ago)   3d20h
+kube-system            kube-proxy-4pdnz                             1/1     Running   7 (2d23h ago)   3d20h
+kube-system            kube-scheduler-minikube                      1/1     Running   7 (2d23h ago)   3d20h
+kube-system            storage-provisioner                          1/1     Running   14 (19h ago)    3d20h
+kubernetes-dashboard   dashboard-metrics-scraper-5d59dccf9b-lpv4m   1/1     Running   0               19h
+
+```
+
+先创建一个 命名空间，这次尝试用一下指令式对象配置，先创建一个application.yaml文件
+
+```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dev  # 命名空间名称
+  labels:    # 可选标签，用于分类和选择
+    env: development
+```
+
+
+
+
+
+随后启动一个pod并且赋予命名空间，
+
+```shell
+# 创建一个命名空间
+(base) dominiczhu@ubuntu:~/Coding/talk-is-cheap/container/kubernetes/tutorials$ kubectl apply -f create-namespace.yaml
+namespace/dev created
+
+(base) dominiczhu@ubuntu:~$ kubectl get namespace -L env
+NAME                   STATUS   AGE     ENV
+default                Active   3d21h   
+dev                    Active   69s     development
+kube-node-lease        Active   3d21h   
+kube-public            Active   3d21h   
+kube-system            Active   3d21h   
+kubernetes-dashboard   Active   3d21h   
+
+```
+这次换个方法来拉镜像，依靠另一位大佬的[工程](https://github.com/tech-shrimp/docker_image_pusher)
+
+```shell
+docker pull xxxxxx.cn-hangzhou.personal.cr.aliyuncs.com/goose-good/busybox:1.37.0
+docker tag xxxxxx.cn-hangzhou.personal.cr.aliyuncs.com/goose-good/busybox:1.37.0 goose-good/busybox:1.37.0
+
+
+```
+
+这时候还不行，因为我使用的是minikube，minikube此时并不知道这个镜像到本地了，需要重新加载，参考[博客](minikube(k8s单机)安装和dashboard镜像拉取不到的处理)
+
+```shell
+# 加载镜像
+minikube image load goose-good/busybox:1.37.0
+```
+
+
+
+
+
+```shell
+
+
+# 如果要用本地的已经拉下来的镜像，必须指定版本，否则还是会重新拉
+(base) dominiczhu@ubuntu:~$ kubectl run my-busybox --image=goose-good/busybox:1.37.0 --namespace=dev
+pod/my-busybox created
+
+# 也可以用下面的方法创建
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-busybox
+  namespace: dev  # 指定命名空间
+spec:
+  containers:
+  - name: my-goose-busybox
+    image: goose-good/busybox:1.37.0  # 直接使用本地标签
+    imagePullPolicy: IfNotPresent  # 重要！
+EOF
+
+
+# 查看 这是因为busybox本身就不是一个可以在后台持续运行的容器，所以直接completed了
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl get pods --namespace=dev
+NAME         READY   STATUS      RESTARTS      AGE
+my-busybox   0/1     Completed   2 (20s ago)   21s
+
+kubectl describe pod my-busybox --namespace=dev
+
+
+# 删除pod，因为这个pod在某个特定的namespace里，所以必须指定命名空间
+(base) dominiczhu@ubuntu:~$ kubectl delete pod my-busybox --namespace=dev
+pod "my-busybox" deleted
+# 示例：删除名为dev的命名空间
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl delete namespace dev
+namespace "dev" deleted
+```
+
+
+
+> You can permanently save the namespace for all subsequent kubectl commands in that context.
+
+意思是说：原本默认的名称空间是default，执行`get pods`操作的时候，如果希望查特定namespace的，必须指定，但是也可以修改当前默认的namespace
+
+> When you create a [Service](https://kubernetes.io/docs/concepts/services-networking/service/), it creates a corresponding [DNS entry](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/). This entry is of the form `<service-name>.<namespace-name>.svc.cluster.local`, which means that if a container only uses `<service-name>`, it will resolve to the service which is local to a namespace. 
+
+当启动了一个service之后，就会创建一个与这个service相关的DNS入口，格式就是`<service-name>.<namespace-name>.svc.cluster.local`，这个很像一个真正的网站，其他容器可以通过`http://<service-name>.<namespace-name>.svc.cluster.local`来访问这个service，同一个namespace里的容器可以只使用`<service-name>`访问这个服务；
+
+
+
+Q：svc.cluster.local是啥？
+
+A：参考[Service 与 Pod 的 DNS](https://kubernetes.io/zh-cn/docs/concepts/services-networking/dns-pod-service/)，就是字符意义上的`svc.cluster.local`，纯字符串。没啥别的含义。
+
+> By creating namespaces with the same name as [public top-level domains](https://data.iana.org/TLD/tlds-alpha-by-domain.txt), Services in these namespaces can have short DNS names that overlap with public DNS records. Workloads from any namespace performing a DNS lookup without a [trailing dot](https://datatracker.ietf.org/doc/html/rfc1034#page-8) will be redirected to those services, taking precedence over public DNS.
+
+这块看的不太懂，“[public top-level domains](https://data.iana.org/TLD/tlds-alpha-by-domain.txt)”值得是顶级域名，例如最后那个com，这些域名等级会在dns中起到作用，具体问豆包“DNS和域名是如何工作的”，如果你创建了一个叫做“com”的namespace，如果其他容器执行一个“a DNS lookup without a [trailing dot](https://datatracker.ietf.org/doc/html/rfc1034#page-8) ”，例如访问一个“example.com”，那么这个dns解析就会解析到“com”的namespace的example服务里，而不会访问公共的dns服务器。
+
+另，这个trailing dot其实是说，我们真实的网站最后还应该有一个点的，例如`www.google.com.`才是完整的，最后那个点就是trailing dot
+
+> 当用户在浏览器中输入 `www.example.com` 时，DNS 解析过程如下（以**递归解析模式**为例）：
+>
+> #### **1. 客户端发起查询（浏览器 / 操作系统）**
+>
+> - 用户输入域名后，浏览器先检查**本地缓存**（浏览器缓存或操作系统的 `hosts` 文件），若存在记录则直接使用 IP 地址，否则向**本地 DNS 服务器**（递归解析器，通常由 ISP 提供）发送查询请求。
+>
+> #### **2. 本地 DNS 服务器递归查询**
+>
+> 本地 DNS 服务器通过**迭代查询**逐步获取域名的 IP 地址，过程如下：
+>
+> ##### **步骤 1：查询根域名服务器（Root Nameservers）**
+>
+> - 本地 DNS 服务器首先向**根域名服务器**（全球共 13 组，用 `A-M` 标识，如 `a.root-servers.net`）发送查询，询问 `.com` 顶级域名服务器的地址。
+> - **根域名服务器响应**：返回 `.com` 顶级域名服务器的 IP 地址（如 `gTLD` 服务器 `com1.verisign-grs.com`）。
+>
+> ##### **步骤 2：查询顶级域名服务器（TLD Nameservers）**
+>
+> - 本地 DNS 服务器向 `.com` 顶级域名服务器发送查询，询问 `example.com` 域名的**权威域名服务器**地址。
+> - **TLD 服务器响应**：返回 `example.com` 的权威服务器地址（如 `ns1.example.com` 和 `ns2.example.com` 的 IP）。
+>
+> ##### **步骤 3：查询权威域名服务器（Authoritative Nameservers）**
+>
+> - 本地 DNS 服务器向 `example.com` 的权威服务器发送查询，询问 `www.example.com` 的 IP 地址。
+> - **权威服务器响应**：返回具体的 IP 地址（如 `192.0.2.1`），并附带 TTL（生存时间，用于缓存）。
+
+
+
+Q：如果服务会被解析成`<service-name>.<namespace-name>.svc.cluster.local`，那即使我有一个叫做com的namespace，某个pod如果希望访问`someservice.com`的时候，应该也不会收到这个叫做com的namespace影响，而是应该直接访问外部的dns服务器才对把？
+
+A：参考[Service 与 Pod 的 DNS](https://kubernetes.io/zh-cn/docs/concepts/services-networking/dns-pod-service/)，DNS查询会被自动扩展，如下所示。
+
+> DNS 查询可以使用 Pod 中的 `/etc/resolv.conf` 展开。 Kubelet 为每个 Pod 配置此文件。 例如，对 `data` 的查询可能被扩展为 `data.test.svc.cluster.local`
+
+todo：
+
+Q：那我如果真的要访问一个外部的网站，会不会也被展开导致访问出错呢？
+
+A：我估计CoreDNS会发现这个是个顶级域名，回去问外部的DNS服务器，我估计是这样的。。。
+
 ## Kubernetes 架构
 
 ### 概述
