@@ -3,6 +3,13 @@
 
 kubernetes的[官方教程](https://kubernetes.io/zh-cn/docs/tutorials/hello-minikube/)
 
+学习顺序：
+
+1. 教程-你好，minikube
+2. 概念-kubernetes架构
+3. 教程-学习Kubernetes基础知识
+4. 概念-概述-Kubernetes对象
+
 # 入门
 
 ## 学习环境
@@ -964,11 +971,40 @@ docker tag xxxxxx.cn-hangzhou.personal.cr.aliyuncs.com/goose-good/busybox:1.37.0
 
 ```
 
-这时候还不行，因为我使用的是minikube，minikube此时并不知道这个镜像到本地了，需要重新加载，参考[博客](minikube(k8s单机)安装和dashboard镜像拉取不到的处理)
+这时候还不行，因为我使用的是minikube，minikube此时并不知道这个镜像到本地了，需要重新加载，参考[博客](minikube(k8s单机)安装和dashboard镜像拉取不到的处理)与[博客]([在Minikube中运行本地Docker镜像的简单方式](https://www.cnblogs.com/xiao2/p/16047455.html))
+
+> 因为Kubernetes默认从注册表中提取镜像，所以Kubernetes一般是不会使用本地镜像，并且在生产环境中也不应该使用本地镜像。
+
+
 
 ```shell
 # 加载镜像
 minikube image load goose-good/busybox:1.37.0
+```
+
+Q: 但是针对一些镜像，又能直接用本地docker的，例如`gcr.io/google-samples/kubernetes-bootcamp:v1`
+
+A: 可以查看minikube里的镜像，如下：
+
+```shell
+(base) dominiczhu@ubuntu:~/Desktop$ minikube image ls
+registry.k8s.io/pause:3.10
+registry.k8s.io/metrics-server/metrics-server:<none>
+registry.k8s.io/kube-scheduler:v1.32.0
+registry.k8s.io/kube-proxy:v1.32.0
+registry.k8s.io/kube-controller-manager:v1.32.0
+registry.k8s.io/kube-apiserver:v1.32.0
+registry.k8s.io/etcd:3.5.16-0
+registry.k8s.io/e2e-test-images/agnhost:2.39
+registry.k8s.io/coredns/coredns:v1.11.3
+registry.cn-hangzhou.aliyuncs.com/google_containers/metrics-scraper:v1.0.8
+registry.cn-hangzhou.aliyuncs.com/google_containers/dashboard:v2.7.0
+gcr.io/k8s-minikube/storage-provisioner:v5
+gcr.io/google-samples/kubernetes-bootcamp:v1
+docker.io/kubernetesui/metrics-scraper:<none>
+docker.io/kubernetesui/dashboard:<none>
+docker.io/goose-good/busybox:1.37.0
+
 ```
 
 
@@ -1073,6 +1109,90 @@ todo：
 Q：那我如果真的要访问一个外部的网站，会不会也被展开导致访问出错呢？
 
 A：我估计CoreDNS会发现这个是个顶级域名，回去问外部的DNS服务器，我估计是这样的。。。
+
+
+
+#### 注解
+注解和label类似，只不过label可以用来区分、查询不同的对象，但同时对label的字符限制更多，而注解不能用来区分、查询不同的对象，但对注解的字符限制更少，简单说，注解更像是一些贴在对象上的备注。
+
+```shell
+
+kubectl apply -f create-annotation.yaml
+
+
+(base) dominiczhu@ubuntu:~/Coding/talk-is-cheap/container/kubernetes/tutorials$ kubectl describe pod annotations-demo
+Name:             annotations-demo
+Namespace:        default
+Priority:         0
+Service Account:  default
+Node:             minikube/192.168.49.2
+Start Time:       Thu, 22 May 2025 13:07:21 +0800
+Labels:           <none>
+Annotations:      imageregistry: https://hub.docker.com/
+
+```
+
+
+
+
+
+
+
+#### 字段选择算符
+
+就是过滤一些对象的方法和指令，比如过滤metadata.name=xxx的对象。
+
+```shell
+(base) dominiczhu@ubuntu:~/Desktop$ kubectl get pods --field-selector status.phase=Running
+NAME                                  READY   STATUS    RESTARTS      AGE
+kubernetes-bootcamp-9bc58d867-x9x9v   1/1     Running   1 (26m ago)   39h
+
+```
+
+
+
+
+
+
+#### Finalizers
+和java的finalize方法真的很像，流程大概是：
+1. 用户告知K8s要删除一个对象；
+2. k8s将这个对象标记为删除中，并查看这个对象的finalizer；
+3. 执行这个对象的finalizer进行一些垃圾请理工作，主要是清楚这个对象拥有的资源，我理解例如持有的依赖、内存等等
+4. 执行完毕后删除finalizer对象
+5. 当全部finalizer对象都被清空后，k8s认为删除操作已经完成，然后真正的删除这个对象自己。
+
+
+
+> 一个常见的 Finalizer 的例子是 `kubernetes.io/pv-protection`， 它用来防止意外删除 `PersistentVolume` 对象。 当一个 `PersistentVolume` 对象被 Pod 使用时， Kubernetes 会添加 `pv-protection` Finalizer。 如果你试图删除 `PersistentVolume`，它将进入 `Terminating` 状态， 但是控制器因为该 Finalizer 存在而无法删除该资源。 当 Pod 停止使用 `PersistentVolume` 时， Kubernetes 清除 `pv-protection` Finalizer，控制器就会删除该卷。
+
+当一个pv被所有的pod释放后，finalizer才会被清除，这个pv才会被清除。
+
+
+
+#### 属主与附属
+
+在Finalizers章节里提到了
+
+> Job 控制器还为这些 Pod 添加了“属主引用”，指向创建 Pod 的 Job。 如果你在这些 Pod 运行的时候删除了 Job， Kubernetes 会使用属主引用（而不是标签）来确定集群中哪些 Pod 需要清理。
+
+这个例子里，Pod由Job创建，Job是owner，pod是dependent（直译是从者），他依赖于Job而存在的，具体怎样控制删除对象的，请看垃圾回收章节
+
+```shell
+(base) dominiczhu@ubuntu:~$ kubectl get pod kubernetes-bootcamp-9bc58d867-x9x9v -o yaml
+ ownerReferences:
+  - apiVersion: apps/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: ReplicaSet
+    name: kubernetes-bootcamp-9bc58d867
+    uid: 6053a328-013e-434f-9fc6-c7ef3f3134c5
+
+```
+
+
+
+
 
 ## Kubernetes 架构
 
@@ -1365,6 +1485,18 @@ k8s通过节点控制器来管理节点的状态；
 
 也就是说，A持有B的引用，那么A是owner属主对象，B是dependent，即A依赖B，而属主引用，就是dependent持有的owner引用，在这个例子里，就是说B持有了A的引用。所以说，如果一个对象没有属主引用，说明没有任何对象依赖自己，自己可以被回收。当然也可以手动删除某些对象，并级联地删除这些对象的依赖对象。
 
+属主引用的作用在前台/后台级联删除的例子里可以了解到，也就是说，在前台级联删除中，如果我需要删除一个owner，我会先尝试删除dependent，
+
+> 当属主对象进入**删除进行中**状态后，控制器会删除其已知的依赖对象。 在删除所有已知的依赖对象后，控制器会删除属主对象。 这时，通过 Kubernetes API 就无法再看到该对象。
+
+而在后台级联删除中，集群会有另一个线程找没有属主引用的对象，说明这些对象已经没有owner了，自然是没用的额对象，删掉；
+
+todo:
+
+Q：这里有个小疑问，从属对象有属主引用可以找到属主，那属主对象咋找到从属对象呢？
+
+A：利用标签：有一个创建 `EndpointSlice` 对象的 Service， 该 Service 使用[标签](https://kubernetes.io/zh-cn/docs/concepts/overview/working-with-objects/labels/)来让控制平面确定哪些 `EndpointSlice` 对象属于该 Service。
+
 这里提到了Finalizers，这个东西和Java的Finalizers方法是一样的，在GC之前会被触发，用于gc前的一些操作，在k8s中，可以理解为真正释放、删除对象之前要执行的操作，例如在删除目标资源前清理相关资源或基础设施。
 
 针对容器和镜像的垃圾收集，有一点点像java的gc，释放镜像的时候，是基于最近最少使用；容器垃圾收集有点像java的gc，基于年龄等。
@@ -1387,3 +1519,17 @@ k8s通过节点控制器来管理节点的状态；
 2. 如果收到请求的API server从storageVersion里找到能处理这个请求的对象，那么就说明集群里没有这功能，就走扩展API服务器看看能不能处理；
 3. 如果找到了对应的StorageVersion并且本地确实处理不了某个请求，那么就会转发
    1. 
+
+## 容器
+
+### 镜像
+
+如果不指定仓库，那么就默认使用的是docker的公共镜像。在 Kubernetes（K8s）中，**本身并不直接存储或管理镜像**，镜像通常存储在镜像仓库（如 Docker Hub、私有仓库）或节点本地缓存中。
+
+
+
+```shell
+
+
+```
+
