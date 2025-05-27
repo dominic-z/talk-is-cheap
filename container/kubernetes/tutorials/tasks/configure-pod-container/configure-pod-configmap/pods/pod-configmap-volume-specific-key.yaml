@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dapi-test-pod
+spec:
+  containers:
+    - name: test-container
+      image: goose-good/busybox:1.37.0
+      command: [ "/bin/sh","-c","cat /etc/config/my-keys" ]
+      volumeMounts:
+      - name: config-volume
+        mountPath: /etc/config
+  volumes:
+  # 这个数据卷的代表着： 数据来自special-config这个configmap的SPECIAL_LEVEL的value，并且将这个数据挂载到数据卷挂载目录的my-keys文件中。所以结果就是/etc/config/my-keys文件挂载到了这个数据卷，数据卷结果就是very
+    - name: config-volume
+      configMap:
+        name: special-config
+        items:
+        - key: SPECIAL_LEVEL
+          path: my-keys
+  restartPolicy: Never

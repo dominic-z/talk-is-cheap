@@ -5,10 +5,17 @@ kubernetes的[官方教程](https://kubernetes.io/zh-cn/docs/tutorials/hello-min
 
 学习顺序：
 
-1. 教程-你好，minikube
+1. 教程-你好，minikube：文档中几乎全部都可以通过minikube来进行学习
 2. 概念-kubernetes架构
 3. 教程-学习Kubernetes基础知识
 4. 概念-概述-Kubernetes对象
+4. 概念-概述-容器
+4. 任务-配置pods和容器-配置pod使用Config Map：看“教程-配置-教程-学习Kubernetes基础知识”发现这个任务是前置条件
+4. 概念-工作负载-Pod/工作负载管理/管理工作负载/自动扩缩工作负载：觉得教程中更多是基础只是串联的演练，看起来还是要先看概念或者任务，概念中看不太懂的地方可以问豆包或者先跳过，尤其是一些概述介绍，看不懂的部分同一笔记于章节中最后的“看不懂的额部分”中
+
+
+
+
 
 # 入门
 
@@ -27,6 +34,319 @@ sudo dpkg -i minikube_latest_amd64.deb
 curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
 ```
 很慢。
+
+# 任务
+
+## 配置Pods和容器
+
+
+
+
+
+### 配置 Pod 使用 ConfigMap
+
+#### 创建ConfigMap
+
+> 在 Kubernetes (K8s) 中，**ConfigMap** 是一种用于存储非敏感配置数据的资源对象，允许你将配置与容器镜像解耦，使应用更易于部署和维护。
+
+简单说，COnfigMap就是一个·配置映射，记录了`配置项key=配置项value`，这个配置映射是k8s的一个对象，可以被其他对象（例如容器）直接使用，例如直接使用`配置项key`，这样的话，就实现了一些配置项取值的统一管理
+
+
+
+基于目录来创建ConfigMap
+
+```shell
+
+(base) dominiczhu@ubuntu:configmap$ pwd
+/home/dominiczhu/Coding/talk-is-cheap/container/kubernetes/tutorials/tasks/configure-pod-container/configure-pod-configmap/configmap
+
+wget https://kubernetes.io/examples/configmap/game.properties -O game.properties
+wget https://kubernetes.io/examples/configmap/ui.properties -O ui.properties
+
+# 创建 ConfigMap
+(base) dominiczhu@ubuntu:configmap$ kubectl create configmap game-config --from-file=./
+configmap/game-config created
+(base) dominiczhu@ubuntu:configmap$ kubectl describe configmaps game-config
+Name:         game-config
+Namespace:    default
+Labels:       <none>
+Annotations:  <none>
+......
+
+(base) dominiczhu@ubuntu:configmap$ kubectl get configmaps game-config -o yaml
+apiVersion: v1
+data:
+  game.properties: |-
+    enemies=aliens
+    lives=3
+......
+
+
+```
+
+
+
+基于文件创建ConfigMap
+
+```shell
+kubectl create configmap game-config-2 --from-file=./game.properties
+kubectl describe configmaps game-config-2
+....
+
+kubectl delete configmap game-config-2
+# 基于多个文件，注意frome-file是不对文件内容做处理，直接将文件中所有数据直接当做value
+kubectl create configmap game-config-2 --from-file=./game.properties --from-file=./ui.properties
+kubectl describe configmaps game-config-2
+kubectl get configmap game-config-2 -o yaml
+kubectl get configmap game-config-2
+# 默认是用文件名作为key，可以自定义key
+kubectl create configmap game-config-3 --from-file=game-special-key=./game.properties
+kubectl describe configmap game-config-3
+
+
+# 使用env-file创建文件
+wget https://kubernetes.io/examples/configmap/game-env-file.properties -O ./game-env-file.properties
+wget https://kubernetes.io/examples/configmap/ui-env-file.properties -O ./ui-env-file.properties
+
+# 对比env-file和file创建configmap的结果，file是不对文件内容处理，将文件名作为key（默认行为可修改），将文件所有内容作为value
+# env-file视文件为properties，将文件进行处理输出多个键值对，将每个键值对作为configmap里的键值。
+kubectl create configmap game-config-env-file --from-env-file=./game-env-file.properties
+kubectl get configmap game-config-env-file -o yaml
+kubectl describe configmap game-config-env-file
+
+
+# 指定多个evn-file
+kubectl create configmap config-multi-env-files \
+        --from-env-file=./game-env-file.properties \
+        --from-env-file=./ui-env-file.properties
+kubectl get configmap config-multi-env-files -o yaml
+```
+
+
+
+根据字面值创建ConfigMap
+
+```shell
+(base) dominiczhu@ubuntu:configmap$ kubectl create configmap special-config --from-literal=special.how=very --from-literal=special.type=char
+configmap/special-config created
+(base) dominiczhu@ubuntu:configmap$ kubectl get configmaps special-config -o yaml
+apiVersion: v1
+data:
+
+```
+
+
+
+
+
+基于生成器创建 ConfigMap：其实就是将ConfigMap的定义写在yml文件里而已。掠了
+
+```shell
+kubectl apply -k .
+kubectl describe configmap/game-config-4-tbg7c4gc77
+```
+
+删除configmap
+
+```shell
+
+# 删除label里game-config=config-4或者config-5的
+kubectl delete configmap -l 'game-config in (config-4,config-5)'
+```
+
+
+
+#### 使用 ConfigMap 数据定义容器环境变量
+
+使用单一的configmap并使用这个configmap中的几个字段
+
+```shell
+
+kubectl create configmap special-config --from-literal=special.how=very
+
+mkdir pods
+wget -P ./pods https://kubernetes.io/examples/pods/pod-single-configmap-env-variable.yaml 
+# 然后对文件进行一些修改，主要是修改容器镜像的路径，镜像仓库，给minikube load镜像，因为minikube的docker是隔离的，与本机的dockerengine不同
+minikube image load goose-good/busybox:1.37.0
+kubectl create -f ./pods/pod-single-configmap-env-variable.yaml 
+
+# sh -c env 用于显示当前 shell 环境中的环境变量。
+# 可以看到环境变量里多了SPECIAL_LEVEL_KEY=very
+(base) dominiczhu@ubuntu:configmap$ kubectl logs pod/dapi-test-pod
+KUBERNETES_SERVICE_PORT=443
+KUBERNETES_PORT=tcp://10.96.0.1:443
+HOSTNAME=dapi-test-pod
+SHLVL=1
+HOME=/root
+KUBERNETES_PORT_443_TCP_ADDR=10.96.0.1
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+KUBERNETES_PORT_443_TCP_PORT=443
+KUBERNETES_PORT_443_TCP_PROTO=tcp
+SPECIAL_LEVEL_KEY=very
+KUBERNETES_PORT_443_TCP=tcp://10.96.0.1:443
+KUBERNETES_SERVICE_PORT_HTTPS=443
+KUBERNETES_SERVICE_HOST=10.96.0.1
+PWD=/
+
+
+kubectl describe pod/dapi-test-pod
+kubectl delete pod/dapi-test-pod
+```
+
+使用多个的configmap并使用这个configmap中的几个字段
+
+```shell
+(base) dominiczhu@ubuntu:configure-pod-configmap$ pwd
+/home/dominiczhu/Coding/talk-is-cheap/container/kubernetes/tutorials/tasks/configure-pod-container/configure-pod-configmap
+
+(base) dominiczhu@ubuntu:configure-pod-configmap$ kubectl create -f configmap/configmaps.yaml 
+configmap/special-config created
+configmap/env-config created
+
+(base) dominiczhu@ubuntu:configure-pod-configmap$ kubectl create -f ./pods/pod-multiple-configmap-env-variable.yaml 
+
+(base) dominiczhu@ubuntu:configure-pod-configmap$ kubectl logs dapi-test-pod
+KUBERNETES_SERVICE_PORT=443
+KUBERNETES_PORT=tcp://10.96.0.1:443
+LOG_LEVEL=INFO
+HOSTNAME=dapi-test-pod
+SHLVL=1
+HOME=/root
+KUBERNETES_PORT_443_TCP_ADDR=10.96.0.1
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+KUBERNETES_PORT_443_TCP_PORT=443
+KUBERNETES_PORT_443_TCP_PROTO=tcp
+SPECIAL_LEVEL_KEY=very
+KUBERNETES_SERVICE_PORT_HTTPS=443
+KUBERNETES_PORT_443_TCP=tcp://10.96.0.1:443
+KUBERNETES_SERVICE_HOST=10.96.0.1
+PWD=/
+
+kubectl delete pod dapi-test-pod --now
+kubectl delete configmap special-config
+kubectl delete configmap env-config
+```
+
+
+
+将 ConfigMap 中的所有键值对配置为容器环境变量
+
+```bash
+(base) dominiczhu@ubuntu:configure-pod-configmap$ kubectl create -f configmap/configmap-multikeys.yaml 
+configmap/special-config created
+(base) dominiczhu@ubuntu:configure-pod-configmap$ kubectl create -f pods/pod-configmap-envFrom.yaml 
+pod/dapi-test-pod created
+(base) dominiczhu@ubuntu:configure-pod-configmap$ kubectl logs dapi-test-pod
+KUBERNETES_PORT=tcp://10.96.0.1:443
+KUBERNETES_SERVICE_PORT=443
+HOSTNAME=dapi-test-pod
+SHLVL=1
+HOME=/root
+SPECIAL_LEVEL=very
+KUBERNETES_PORT_443_TCP_ADDR=10.96.0.1
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+KUBERNETES_PORT_443_TCP_PORT=443
+KUBERNETES_PORT_443_TCP_PROTO=tcp
+KUBERNETES_SERVICE_PORT_HTTPS=443
+KUBERNETES_PORT_443_TCP=tcp://10.96.0.1:443
+KUBERNETES_SERVICE_HOST=10.96.0.1
+PWD=/
+SPECIAL_TYPE=charm
+
+# 删除pod，但是不删除configmap，后面继续用 
+(base) dominiczhu@ubuntu:configure-pod-configmap$ kubectl delete pod dapi-test-pod --now
+pod "dapi-test-pod" deleted
+
+
+# 在命令中使用ConfigMap中的变量
+(base) dominiczhu@ubuntu:configure-pod-configmap$ kubectl create -f configmap/configmap-multikeys.yaml 
+configmap/special-config created
+(base) dominiczhu@ubuntu:configure-pod-configmap$ kubectl create -f pods/pod-configmap-env-var-valueFrom.yaml 
+pod/dapi-test-pod created
+(base) dominiczhu@ubuntu:configure-pod-configmap$ kubectl logs dapi-test-pod
+very charm
+(base) dominiczhu@ubuntu:configure-pod-configmap$ kubectl delete pod dapi-test-pod --now
+pod "dapi-test-pod" deleted
+(base) dominiczhu@ubuntu:configure-pod-configmap$ kubectl delete configmap/special-config
+configmap "special-config" deleted
+```
+
+将 ConfigMap 数据添加到一个卷中，这个操作其实相当于使用ConfigMap的数据作为数据卷挂载到pod容器里
+
+```shell
+# 使用存储在 ConfigMap 中的数据填充卷
+(base) dominiczhu@ubuntu:configure-pod-configmap$ kubectl create -f configmap/configmap-multikeys.yaml 
+configmap/special-config created
+(base) dominiczhu@ubuntu:configure-pod-configmap$ kubectl create -f pods/pod-configmap-volume.yaml 
+pod/dapi-test-pod created
+(base) dominiczhu@ubuntu:configure-pod-configmap$ kubectl logs  dapi-test-pod 
+total 0
+lrwxrwxrwx    1 root     root            20 May 23 08:59 SPECIAL_LEVEL -> ..data/SPECIAL_LEVEL
+lrwxrwxrwx    1 root     root            19 May 23 08:59 SPECIAL_TYPE -> ..data/SPECIAL_TYPE
+
+
+# 如果你把pod-configmap-volume.yaml的command改成command: [ "/bin/sh", "-c", "cat /etc/config/SPECIAL_LEVEL" ]
+# 就可以发现输出的结果是very，即configmap的vallue
+
+# 将 ConfigMap 数据添加到卷中的特定路径
+(base) dominiczhu@ubuntu:configure-pod-configmap$ kubectl create -f pods/pod-configmap-volume-specific-key.yaml 
+pod/dapi-test-pod created
+(base) dominiczhu@ubuntu:configure-pod-configmap$ kubectl logs dapi-test-pod
+very
+(base) dominiczhu@ubuntu:configure-pod-configmap$ kubectl delete pod dapi-test-pod
+pod "dapi-test-pod" deleted
+
+```
+
+Q：ConfigMap更新之后，挂载的volume会同步更新me？
+
+A：会更新，但是不同步
+
+
+
+了解 ConfigMap 和 Pod
+
+```shell
+# 这个例子里，说明了一个configmap可以有两种数据类型，数据和二进制数
+(base) dominiczhu@ubuntu:configure-pod-configmap$ kubectl create -f configmap/example-config.yaml 
+configmap/example-config created
+(base) dominiczhu@ubuntu:configure-pod-configmap$ kubectl describe configmap example-config
+Name:         example-config
+Namespace:    default
+Labels:       <none>
+Annotations:  <none>
+
+Data
+====
+example.property.2:
+----
+world
+
+example.property.file:
+----
+property.1=value-1
+property.2=value-2
+property.3=value-3    
+
+example.property.1:
+----
+hello
+
+
+BinaryData
+====
+binary: 12 bytes
+
+Events:  <none>
+(base) dominiczhu@ubuntu:configure-pod-configmap$ kubectl get configmap -o jsonpath='{.data}' example-config
+{"example.property.1":"hello","example.property.2":"world","example.property.file":"property.1=value-1\nproperty.2=value-2\nproperty.3=value-3    "}
+
+(base) dominiczhu@ubuntu:configure-pod-configmap$ kubectl get configmap -o jsonpath='{.binaryData}' example-c
+onfig
+{"binary":"balalbalal232132"}
+```
+
+
 
 
 
@@ -835,6 +1155,244 @@ Labels:           app=kubernetes-bootcamp
 service "kubernetes-bootcamp" deleted
 ```
 
+### 扩缩你的应用
+
+目前有一个deployment在运行着
+
+```shell
+(base) dominiczhu@ubuntu:~$ kubectl get deployment
+NAME                  READY   UP-TO-DATE   AVAILABLE   AGE
+kubernetes-bootcamp   1/1     1            1           47h
+(base) dominiczhu@ubuntu:~$ kubectl get pod
+NAME                                  READY   STATUS    RESTARTS     AGE
+kubernetes-bootcamp-9bc58d867-x9x9v   1/1     Running   1 (8h ago)   47h
+
+# 暴露一个服务
+(base) dominiczhu@ubuntu:~$ kubectl expose deployment/kubernetes-bootcamp --type="LoadBalancer" --port 8080
+service/kubernetes-bootcamp exposed
+(base) dominiczhu@ubuntu:~$ kubectl get service
+NAME                  TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
+kubernetes            ClusterIP      10.96.0.1       <none>        443/TCP          5d1h
+kubernetes-bootcamp   LoadBalancer   10.98.139.129   <pending>     8080:30467/TCP   7s
+```
+
+
+
+> Service 有一个集成的负载均衡器， 将网络流量分配到一个可公开访问的 Deployment 的所有 Pod 上。 Service 将会通过 Endpoints 来持续监视运行中的 Pod 集合，保证流量只分配到可用的 Pod 上。
+
+Q：那这岂不是可以取代服务发现功能
+
+A：简单场景还真可以。豆包说的。
+
+
+
+开始扩容
+
+```shell
+(base) dominiczhu@ubuntu:~$ kubectl scale deployments/kubernetes-bootcamp --replicas=4
+deployment.apps/kubernetes-bootcamp scaled
+(base) dominiczhu@ubuntu:~$ kubectl get deployments
+NAME                  READY   UP-TO-DATE   AVAILABLE   AGE
+kubernetes-bootcamp   4/4     4            4           2d
+(base) dominiczhu@ubuntu:~$ kubectl get pods -o wide
+NAME                                  READY   STATUS    RESTARTS     AGE   IP            NODE       NOMINATED NODE   READINESS GATES
+kubernetes-bootcamp-9bc58d867-5p7d2   1/1     Running   0            15s   10.244.0.53   minikube   <none>           <none>
+kubernetes-bootcamp-9bc58d867-jjrb2   1/1     Running   0            15s   10.244.0.52   minikube   <none>           <none>
+kubernetes-bootcamp-9bc58d867-jvmbl   1/1     Running   0            15s   10.244.0.54   minikube   <none>           <none>
+kubernetes-bootcamp-9bc58d867-x9x9v   1/1     Running   1 (8h ago)   2d    10.244.0.46   minikube   <none>           <none>
+
+(base) dominiczhu@ubuntu:~$ kubectl get rs
+NAME                            DESIRED   CURRENT   READY   AGE
+kubernetes-bootcamp-9bc58d867   4         4         4       2d
+
+(base) dominiczhu@ubuntu:~$ kubectl describe services/kubernetes-bootcamp
+Name:                     kubernetes-bootcamp
+Namespace:                default
+Labels:                   app=kubernetes-bootcamp
+Annotations:              <none>
+Selector:                 app=kubernetes-bootcamp
+Type:                     LoadBalancer
+IP Family Policy:         SingleStack
+IP Families:              IPv4
+IP:                       10.98.139.129
+IPs:                      10.98.139.129
+Port:                     <unset>  8080/TCP
+TargetPort:               8080/TCP
+NodePort:                 <unset>  30467/TCP
+Endpoints:                10.244.0.46:8080,10.244.0.54:8080,10.244.0.52:8080 + 1 more...
+Session Affinity:         None
+External Traffic Policy:  Cluster
+Internal Traffic Policy:  Cluster
+Events:                   <none>
+
+```
+
+随后可以访问这个service了
+
+
+
+```shell
+# 首先查看这个service映射到主机的端口
+(base) dominiczhu@ubuntu:~$ kubectl get services/kubernetes-bootcamp -o go-template='{{(index .spec.ports 0).nodePort}}'
+30467
+
+# 查看集群的ip
+(base) dominiczhu@ubuntu:~$ minikube ip
+192.168.49.2
+
+# 可以看到负载均衡了
+(base) dominiczhu@ubuntu:~$ curl http://"$(minikube ip):30467"
+Hello Kubernetes bootcamp! | Running on: kubernetes-bootcamp-9bc58d867-jjrb2 | v=1
+(base) dominiczhu@ubuntu:~$ curl http://"$(minikube ip):30467"
+Hello Kubernetes bootcamp! | Running on: kubernetes-bootcamp-9bc58d867-5p7d2 | v=1
+(base) dominiczhu@ubuntu:~$ curl http://"$(minikube ip):30467"
+Hello Kubernetes bootcamp! | Running on: kubernetes-bootcamp-9bc58d867-x9x9v | v=1
+(base) dominiczhu@ubuntu:~$ curl http://"$(minikube ip):30467"
+Hello Kubernetes bootcamp! | Running on: kubernetes-bootcamp-9bc58d867-jvmbl | v=1
+(base) dominiczhu@ubuntu:~$ curl http://"$(minikube ip):30467"
+Hello Kubernetes bootcamp! | Running on: kubernetes-bootcamp-9bc58d867-5p7d2 | v=1
+
+```
+
+
+
+接下来开始缩容
+
+```shell
+(base) dominiczhu@ubuntu:~$ kubectl scale deployments/kubernetes-bootcamp --replicas=2
+deployment.apps/kubernetes-bootcamp scaled
+(base) dominiczhu@ubuntu:~$ kubectl get deployments
+NAME                  READY   UP-TO-DATE   AVAILABLE   AGE
+kubernetes-bootcamp   2/2     2            2           2d
+(base) dominiczhu@ubuntu:~$ kubectl get pods -o wide
+NAME                                  READY   STATUS        RESTARTS     AGE     IP            NODE       NOMINATED NODE   READINESS GATES
+kubernetes-bootcamp-9bc58d867-5p7d2   1/1     Terminating   0            6m52s   10.244.0.53   minikube   <none>           <none>
+kubernetes-bootcamp-9bc58d867-jjrb2   1/1     Running       0            6m52s   10.244.0.52   minikube   <none>           <none>
+kubernetes-bootcamp-9bc58d867-jvmbl   1/1     Terminating   0            6m52s   10.244.0.54   minikube   <none>           <none>
+kubernetes-bootcamp-9bc58d867-x9x9v   1/1     Running       1 (9h ago)   2d      10.244.0.46   minikube   <none>           <none>
+
+```
+
+
+
+小结：
+
+这里就知道了什么是replica，这里指的就是一个deployment有多少个副本，
+
+```shell
+(base) dominiczhu@ubuntu:~$ kubectl get rs
+NAME                            DESIRED   CURRENT   READY   AGE
+kubernetes-bootcamp-9bc58d867   2         2         2       2d
+
+## 顺道服务删了
+
+kubectl delete service kubernetes-bootcamp
+```
+
+
+
+### 更新你的应用
+
+先把这一节要用的镜像捞下来
+
+```shell
+docker pull jocatalin/kubernetes-bootcamp:v2
+
+minikube image load jocatalin/kubernetes-bootcamp:v2
+# 验证一下
+kubectl run test-bootcamp --image=jocatalin/kubernetes-bootcamp:v2
+
+# 成功，删除
+kubectl delete pod test-bootcamp
+```
+
+
+
+开始升级
+
+```shell
+(base) dominiczhu@ubuntu:~$ kubectl get pods
+NAME                                  READY   STATUS    RESTARTS     AGE
+kubernetes-bootcamp-9bc58d867-jjrb2   1/1     Running   0            37m
+kubernetes-bootcamp-9bc58d867-x9x9v   1/1     Running   1 (9h ago)   2d
+
+(base) dominiczhu@ubuntu:~$ kubectl describe pods
+Containers:
+  kubernetes-bootcamp:
+    Container ID:   docker://18cd7539e1674cd0dbd4905d15160ce9e299ea36cf579c70bfff5b6b8e6a4d37
+    Image:          gcr.io/google-samples/kubernetes-bootcamp:v1
+
+
+
+(base) dominiczhu@ubuntu:~$ kubectl set image deployments/kubernetes-bootcamp kubernetes-bootcamp=jocatalin/kubernetes-bootcamp:v2
+deployment.apps/kubernetes-bootcamp image updated
+(base) dominiczhu@ubuntu:~$ kubectl get pods
+NAME                                  READY   STATUS        RESTARTS     AGE
+kubernetes-bootcamp-9bc58d867-jjrb2   1/1     Terminating   0            38m
+kubernetes-bootcamp-9bc58d867-x9x9v   1/1     Terminating   1 (9h ago)   2d
+kubernetes-bootcamp-c8bff69bf-7pgnp   1/1     Running       0            3s
+kubernetes-bootcamp-c8bff69bf-lprkq   1/1     Running       0            4s
+
+(base) dominiczhu@ubuntu:~$ kubectl get pods
+NAME                                  READY   STATUS    RESTARTS   AGE
+kubernetes-bootcamp-c8bff69bf-7pgnp   1/1     Running   0          51s
+kubernetes-bootcamp-c8bff69bf-lprkq   1/1     Running   0          52s
+
+(base) dominiczhu@ubuntu:~$ kubectl expose deployment/kubernetes-bootcamp --type="NodePort" --port 8080
+service/kubernetes-bootcamp exposed
+(base) dominiczhu@ubuntu:~$ kubectl get services/kubernetes-bootcamp -o go-template='{{(index .spec.ports 0).nodePort}}'
+32543
+
+(base) dominiczhu@ubuntu:~$ curl http://"$(minikube ip):32543"
+Hello Kubernetes bootcamp! | Running on: kubernetes-bootcamp-c8bff69bf-lprkq | v=2
+
+# 确认升级
+(base) dominiczhu@ubuntu:~$ kubectl rollout status deployments/kubernetes-bootcamp
+deployment "kubernetes-bootcamp" successfully rolled out
+
+(base) dominiczhu@ubuntu:~$ kubectl describe pods | grep "Image" -C 5
+  IP:           10.244.0.58
+Controlled By:  ReplicaSet/kubernetes-bootcamp-c8bff69bf
+Containers:
+  kubernetes-bootcamp:
+    Container ID:   docker://677d25ff66b6522d994f09a5486c22b40ccfe20bb89fa083f6a834dc0007c1d4
+    Image:          jocatalin/kubernetes-bootcamp:v2
+
+```
+
+
+
+尝试一次失败的更新
+
+
+
+```shell
+
+(base) dominiczhu@ubuntu:~$ kubectl set image deployments/kubernetes-bootcamp kubernetes-bootcamp=gcr.io/google-samples/kubernetes-bootcamp:v10
+deployment.apps/kubernetes-bootcamp image updated
+
+(base) dominiczhu@ubuntu:~$ kubectl get pods
+NAME                                   READY   STATUS         RESTARTS   AGE
+kubernetes-bootcamp-75bd5fd495-xzsz2   0/1     ErrImagePull   0          21s
+kubernetes-bootcamp-c8bff69bf-7pgnp    1/1     Running        0          7m27s
+kubernetes-bootcamp-c8bff69bf-lprkq    1/1     Running        0          7m28s
+
+# 这个镜像本身不存在
+(base) dominiczhu@ubuntu:~$ kubectl describe pods kubernetes-bootcamp-75bd5fd495-xzsz2
+  Normal   Pulling    2s (x2 over 34s)  kubelet            Pulling image "gcr.io/google-samples/kubernetes-bootcamp:v10"
+
+(base) dominiczhu@ubuntu:~$ kubectl rollout undo deployments/kubernetes-bootcamp
+deployment.apps/kubernetes-bootcamp rolled back
+(base) dominiczhu@ubuntu:~$ kubectl get pods
+NAME                                  READY   STATUS    RESTARTS   AGE
+kubernetes-bootcamp-c8bff69bf-7pgnp   1/1     Running   0          8m44s
+kubernetes-bootcamp-c8bff69bf-lprkq   1/1     Running   0          8m45s
+
+# 记得清理本地集群：
+kubectl delete deployments/kubernetes-bootcamp services/kubernetes-bootcamp
+
+```
+
 
 
 
@@ -1176,7 +1734,7 @@ kubernetes-bootcamp-9bc58d867-x9x9v   1/1     Running   1 (26m ago)   39h
 
 > Job 控制器还为这些 Pod 添加了“属主引用”，指向创建 Pod 的 Job。 如果你在这些 Pod 运行的时候删除了 Job， Kubernetes 会使用属主引用（而不是标签）来确定集群中哪些 Pod 需要清理。
 
-这个例子里，Pod由Job创建，Job是owner，pod是dependent（直译是从者），他依赖于Job而存在的，具体怎样控制删除对象的，请看垃圾回收章节
+以最常见的deployment为例，他会创建replicaSet，然后由replicaSet管理每个pod（详细参考自概念-工作负载-replicaSet），那么每个pod就有指向管理自己的replicaSet对象的引用。具体怎样控制删除对象的，请看垃圾回收章节
 
 ```shell
 (base) dominiczhu@ubuntu:~$ kubectl get pod kubernetes-bootcamp-9bc58d867-x9x9v -o yaml
@@ -1389,7 +1947,9 @@ k8s里有很多控制器，每个控制器有不同的职责，例如故障监�
 
 ##### 容器运行时
 
-我理解这个功能的核心就是提供容器的真实运行底层功能，因为k8s只是一个容器的管理框架，真实的容器还是要依赖docker这种服务。那么container-runtime指的就是docker这种真正提供容器运行服务的组件。
+我理解这个功能的核心就是提供容器的真实运行底层功能，因为k8s只是一个容器的管理框架，真实的容器还是要依赖真正的容器这种服务。那么container-runtime指的真正提供容器运行服务的组件。
+
+k8s原本默认的运行时是docker，现在为containerd。containerd 最初是 Docker 引擎的核心组件，负责容器运行。自 2017 年起独立为 CNCF 项目，与 Docker 解耦。Docker 从 1.11 版本开始使用 containerd 作为底层运行时。相比 Docker 引擎，减少了不必要的组件（如 API 服务器、编排功能）。
 
 > 容器运行时是用于运行容器的软件，在容器化应用的部署和运行中起着关键作用，主要包括以下几个方面：
 >
@@ -1596,3 +2156,757 @@ handler: myconfiguration
 ```
 
 按理来说，应该不需要我们自己写容器运行时，有现成的，例如gVisor
+
+## 工作负载
+
+这一章节的目的是
+
+> 理解 Kubernetes 中可部署的最小计算对象 Pod 以及辅助 Pod 运行的上层抽象。
+
+deamonSet
+
+> **DaemonSet** 是一种用于部署系统级守护进程的控制器，它确保在集群的每个节点（或指定节点）上**恰好运行一个副本**的 Pod。DaemonSet 通常用于部署监控代理、日志收集器、网络插件等需要在所有节点上运行的系统组件。
+
+### pod
+
+**什么是pod**
+
+Pod是一种特定于应用的“逻辑主机”；在一个节点上运行多个Pod应用，就像不使用虚拟化技术在同一台物理机运行多个程序一样。
+
+todo：Q：什么情况下需要**运行多个协同工作的容器的 Pod**？如何配置？
+
+
+
+```shell
+(base) dominiczhu@ubuntu:pods$ pwd
+/home/dominiczhu/Coding/talk-is-cheap/container/kubernetes/tutorials/concept/workloads/pods
+(base) dominiczhu@ubuntu:pods$ minikube image load nginx:1.27.3
+(base) dominiczhu@ubuntu:pods$ kubectl apply -f simple-pod.yaml 
+pod/nginx created
+```
+
+
+
+> 通常你不需要直接创建 Pod，甚至单实例 Pod。相反，你会使用诸如 [Deployment](https://kubernetes.io/zh-cn/docs/concepts/workloads/controllers/deployment/) 或 [Job](https://kubernetes.io/zh-cn/docs/concepts/workloads/controllers/job/) 这类工作负载资源来创建 Pod。 如果 Pod 需要跟踪状态，可以考虑 [StatefulSet](https://kubernetes.io/zh-cn/docs/concepts/workloads/controllers/statefulset/) 资源。
+
+**Pod 操作系统**
+
+为了理解 `.spec.os.name` ，要先理解nodeSelector的运行规则，详细可以[nodeselector](https://www.doubao.com/thread/w5533e837cf32bf70)，k8s为每个pod选择运行节点的时候，仍然依赖的是nodeSelector，而为每个node打上`.spec.os.name`标签使得nodeSelector可以正常基于这个标签选择对应的节点。
+
+> 你应该将 `.spec.os.name` 字段设置为 `windows` 或 `linux` 以表示你希望 Pod 运行在哪个操作系统之上。 这两个是 Kubernetes 目前支持的操作系统。将来，这个列表可能会被扩充。
+>
+> 在 Kubernetes v1.33 中，`.spec.os.name` 的值对 [kube-scheduler](https://kubernetes.io/zh-cn/docs/reference/command-line-tools-reference/kube-scheduler/) 如何选择要运行 Pod 的节点没有影响。在任何有多种操作系统运行节点的集群中，你应该在每个节点上正确设置 [kubernetes.io/os](https://kubernetes.io/zh-cn/docs/reference/labels-annotations-taints/#kubernetes-io-os) 标签，并根据操作系统标签为 Pod 设置 `nodeSelector` 字段。
+
+**Pod模板**
+
+前面提到过，我们一般不会直接创建Pod，而是创建Deployment等工作负载，让Deployment控制器来创建负载，下面是Job工作负载的例子
+
+```shell
+(base) dominiczhu@ubuntu:pods$ kubectl apply -f job-pod.yaml 
+job.batch/hello created
+
+(base) dominiczhu@ubuntu:pods$ kubectl get pod
+NAME          READY   STATUS    RESTARTS   AGE
+hello-p6hpt   1/1     Running   0          48s
+(base) dominiczhu@ubuntu:pods$ kubectl logs hello-p6hpt
+Hello, Kubernetes!
+```
+
+**pod联网**
+
+> 在同一个 Pod 内，所有容器共享一个 IP 地址和端口空间，并且可以通过 `localhost` 发现对方。
+
+参考https://www.doubao.com/thread/w311f3926edc93aee，看起来即使同一个pod里有多个容器，容器可以通过localhost访问到彼此，也就是说，对于每个容器来说，他们并不知道他们访问的其实是不同的容器
+
+**Pod 管理多个容器**
+
+这里又一次提到了特性门控
+
+> 启用 `SidecarContainers` [特性门控](https://kubernetes.io/zh-cn/docs/reference/command-line-tools-reference/feature-gates/)（默认启用）允许你为 Init 容器指定 `restartPolicy: Always`。
+
+在 Kubernetes（K8s）中，**特性门控（Feature Gates）\**是一种\**动态开关机制**，用于控制实验性或不稳定功能的启用与禁用。通过特性门控，K8s 团队可以在不影响主版本稳定性的前提下，向用户提前开放新功能进行测试，同时保留在生产环境中禁用风险功能的能力。其实就是一些灰度出来的功能罢了，门控就是控制功能是否应用的开关。
+
+**看不懂的部分**
+
+pod安全设置、静态pod
+
+#### Pod的声明周期
+
+
+
+**Pod 阶段**
+
+pod的phase和kubectl get pod返回的status字段不是同一个东西。
+
+
+
+**Pod 如何处理容器问题**
+
+在刚开始拉取镜像失败的时候，会发现pod在反复重试，每两次重试之间的事件间隔都以指数增长，这个就是回退延迟机制。而CrashLoopBackOff说明当前这个pod在反复的失败中，即只要重试过一次失败了，这个pod就是这个状态了。可以通过`kubectl describe`看到
+
+**Pod就绪态**
+
+这是一个用于精细化控制容器什么时候就绪的功能，参考豆包的[readinessGates](https://www.doubao.com/thread/wd82c0dcffe619b59)和[kubectl patch](https://www.doubao.com/thread/w414f4be72b1a77bc)
+
+
+
+```shell
+(base) dominiczhu@ubuntu:pod-lifecycle$ pwd
+/home/dominiczhu/Coding/talk-is-cheap/container/kubernetes/tutorials/concept/workloads/pods/pod-lifecycle
+
+(base) dominiczhu@ubuntu:pod-lifecycle$ kubectl apply -f readiness-pod.yaml 
+pod/web-server created
+
+# 查看这个pod，会发先Condition还不是ready，根据condition.ready的定义，此时这个pod无法为请求提供服务
+(base) dominiczhu@ubuntu:pod-lifecycle$ kubectl describe pod/web-server
+Readiness Gates:
+  Type                              Status
+  load-balancer.example.com/ready   <none> 
+Conditions:
+  Type                        Status
+  PodReadyToStartContainers   True 
+  Initialized                 True 
+  Ready                       False 
+  ContainersReady             True 
+  PodScheduled                True 
+  
+  
+(base) dominiczhu@ubuntu:pod-lifecycle$ kubectl expose pod/web-server --type="NodePort" --port 80
+service/web-server exposed
+# 可以发现READINESS GATES没有就绪
+(base) dominiczhu@ubuntu:pod-lifecycle$ kubectl get pod -o wide
+NAME         READY   STATUS    RESTARTS   AGE     IP            NODE       NOMINATED NODE   READINESS GATES
+web-server   1/1     Running   0          7m51s   10.244.0.77   minikube   <none>           0/1
+(base) dominiczhu@ubuntu:pod-lifecycle$ kubectl get service
+NAME         TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+kubernetes   ClusterIP   10.96.0.1      <none>        443/TCP        7d2h
+web-server   NodePort    10.98.237.69   <none>        80:30964/TCP   5s
+# 无法访问
+(base) dominiczhu@ubuntu:pod-lifecycle$ curl http://"$(minikube ip):30964"
+curl: (7) Failed to connect to 192.168.49.2 port 30964 after 0 ms: Couldn't connect to server
+
+# 查看pod的状态
+(base) dominiczhu@ubuntu:pod-lifecycle$ kubectl get pod/web-server -o json
+    "status": {
+        "conditions": [
+        ...{
+                "lastProbeTime": null,
+                "lastTransitionTime": "2025-05-24T14:33:58Z",
+                "message": "corresponding condition of pod readiness gate \"load-balancer.example.com/ready\" does not exist.",
+                "reason": "ReadinessGatesNotReady",
+                "status": "False",
+                "type": "Ready"
+            }
+        ...]
+        
+# 所以我们只要在status.conditions中新增"load-balancer.example.com/ready":"True"的condition就好了
+# 但是命令 kubectl patch 不支持修改对象的状态。 如果需要设置 Pod 的 status.conditions，应用或者 Operators 需要使用 PATCH 操作。所以下面的操作不会带来任何结果，需要客户端。
+# patch：直译为补丁，可以直接修改对象的内容
+kubectl patch pod/web-server --type=json  -p '[
+  {
+    "op": "add",
+    "path": "/status/conditions/-",
+    "value": {
+      "type": "load-balancer.example.com/ready",
+      "status": "True",
+      "reason": "Configured",
+      "message": "Load balancer has been configured successfully"
+    }
+  }
+]'
+```
+
+
+
+创建个python客户端
+
+```shell
+(base) dominiczhu@ubuntu:pod-lifecycle$ conda create --name k8s python=3.10
+(base) dominiczhu@ubuntu:pod-lifecycle$ conda activate k8s
+(k8s) dominiczhu@ubuntu:pod-lifecycle$ pip install kubernetes
+(k8s) dominiczhu@ubuntu:pod-lifecycle$ python patch-status-conditions.py 
+Node: minikube, Status: Ready
+....
+
+(base) dominiczhu@ubuntu:pod-lifecycle$ kubectl describe pod/web-server
+Readiness Gates:
+  Type                              Status
+  load-balancer.example.com/ready   True 
+Conditions:
+  Type                              Status
+  load-balancer.example.com/ready   True 
+  PodReadyToStartContainers         True 
+  Initialized                       True 
+  Ready                             True 
+  ContainersReady                   True 
+  PodScheduled                      True 
+  
+(base) dominiczhu@ubuntu:pod-lifecycle$ kubectl expose pod/web-server --type="NodePort" --port 80
+service/web-server exposed
+(base) dominiczhu@ubuntu:pod-lifecycle$ kubectl get service
+NAME         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+kubernetes   ClusterIP   10.96.0.1       <none>        443/TCP        7d3h
+web-server   NodePort    10.102.101.36   <none>        80:32650/TCP   7s
+(base) dominiczhu@ubuntu:pod-lifecycle$ curl http://"$(minikube ip):32650"
+可以正常访问
+
+```
+
+
+
+**Pod 网络就绪**
+
+[运行时沙箱](https://www.doubao.com/thread/wf6ad818f8ff65bea)
+
+**容器探针**
+
+检测容器状态的方法，并根据探测结果执行不同的操作
+
+
+
+**看不懂的部分**
+
+减少容器重启延迟
+
+可配置的容器重启延迟
+
+容器关闭
+
+
+
+#### Init容器
+
+**使用 Init 容器、示例**
+
+直接看示例来理解吧，总的来说就只是在创建容器之前，做一些准备工作，从而控制容器的启动或者为主容器做一些准备
+
+**使用initpod的情况**
+
+```shell
+(base) dominiczhu@ubuntu:init-container$ kubectl apply -f init-pods.yaml 
+pod/myapp-pod created
+(base) dominiczhu@ubuntu:init-container$ kubectl get -f init-pods.yaml 
+NAME        READY   STATUS     RESTARTS   AGE
+myapp-pod   0/1     Init:0/2   0          9s
+
+(base) dominiczhu@ubuntu:init-container$ kubectl describe -f init-pods.yaml 
+  init-mydb:
+    Container ID:  
+    Image:         goose-good/busybox:1.37.0
+    Image ID:      
+    Port:          <none>
+    Host Port:     <none>
+    Command:
+      sh
+      -c
+      until nslookup mydb.$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace).svc.cluster.local; do echo waiting for mydb; sleep 2; done
+    State:          Waiting
+      Reason:       PodInitializing
+ 
+ 
+ kubectl logs myapp-pod -c init-myservice
+# 准备init-contianer需要的service
+ (base) dominiczhu@ubuntu:init-container$ kubectl apply -f my-db-service.yaml
+service/myservice created
+service/mydb created
+
+# 可以看到init-container的状态已经是Terminated,reason是Completed
+(base) dominiczhu@ubuntu:init-container$ kubectl describe -f init-pods.yaml 
+Init Containers:
+  init-myservice:
+    Container ID:  docker://c5f689109b60faae19d8f0d97ca8d4901fdd642d7d00d3f80ec9c1c75a165efc
+    Image:         goose-good/busybox:1.37.0
+    Image ID:      docker://sha256:ff7a7936e9306ce4a789cf5523922da5e585dc1216e400efb3b6872a5137ee6b
+    Port:          <none>
+    Host Port:     <none>
+    Command:
+      sh
+      -c
+      until nslookup myservice.$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace).svc.cluster.local; do echo waiting for myservice; sleep 2; done
+    State:          Terminated
+      Reason:       Completed
+# 主容器启动了
+(base) dominiczhu@ubuntu:init-container$ kubectl get -f init-pods.yaml 
+NAME        READY   STATUS    RESTARTS   AGE
+myapp-pod   1/1     Running   0          2m27s
+
+```
+
+**看不懂的部分**
+具体行为
+
+#### 边车容器
+
+Kubernetes 将边车容器作为 [Init 容器](https://kubernetes.io/zh-cn/docs/concepts/workloads/pods/init-containers/)的一个特例来实现， Pod 启动后，边车容器仍保持运行状态。只要你可以为 Pod 的 `initContainers` 字段中列出的容器指定 `restartPolicy`，这个容器就成为了边车容器。
+
+> 这些可重新启动的**边车（Sidecar）** 容器独立于其他 Init 容器以及同一 Pod 内的主应用容器， 这些容器可以启动、停止和重新启动，而不会影响主应用容器和其他 Init 容器。
+
+但他本质上还是一个init-container，只不过在结束之后会重新启动罢了
+
+```shell
+minikube image load goose-good/alpine:3
+
+# 创建了一个带有sidecar的deployment，sidecar的作用就是tail -f
+(base) dominiczhu@ubuntu:sidecar-containers$ kubectl apply -f deployment-sidecar.yaml 
+deployment.apps/myapp created
+(base) dominiczhu@ubuntu:sidecar-containers$ kubectl get -f deployment-sidecar.yaml 
+NAME    READY   UP-TO-DATE   AVAILABLE   AGE
+myapp   1/1     1            1           13s
+
+# 查看边车容器里的日志
+(base) dominiczhu@ubuntu:sidecar-containers$ kubectl logs deployment/myapp -c logshipper
+tail: can't open '/opt/logs.txt': No such file or directory
+tail: /opt/logs.txt has appeared; following end of new file
+logging
+logging
+logging
+
+# 或者这样也可以
+(base) dominiczhu@ubuntu:sidecar-containers$ kubectl get pods
+NAME                     READY   STATUS    RESTARTS   AGE
+myapp-78bd75d687-lp5cb   2/2     Running   0          5m43s
+(base) dominiczhu@ubuntu:sidecar-containers$ kubectl logs myapp-78bd75d687-lp5cb
+Defaulted container "myapp" out of: myapp, logshipper (init)
+(base) dominiczhu@ubuntu:sidecar-containers$ kubectl logs myapp-78bd75d687-lp5cb -c logshipper
+tail: can't open '/opt/logs.txt': No such file or directory
+tail: /opt/logs.txt has appeared; following end of new file
+logging
+logging
+
+# 下面是job的例子
+(base) dominiczhu@ubuntu:sidecar-containers$ kubectl apply -f job-sidecar.yaml 
+job.batch/myjob created
+(base) dominiczhu@ubuntu:sidecar-containers$ kubectl logs -f job-sidecar.yaml  
+error: error from server (NotFound): pods "job-sidecar.yaml" not found in namespace "default"
+(base) dominiczhu@ubuntu:sidecar-containers$ kubectl logs -f job/myjob
+Defaulted container "myjob" out of: myjob, logshipper (init)
+(base) dominiczhu@ubuntu:sidecar-containers$ kubectl logs -f job/myjob -c logshipper
+tail: can't open '/opt/logs.txt': No such file or directory
+tail: /opt/logs.txt has appeared; following end of new file
+logging
+```
+
+**看不懂**
+
+容器内的资源共享
+
+#### 临时容器
+
+略
+
+#### 处理干扰
+
+干扰指的是应用受到了一些影响从而导致不能正常运行，这种影响被称为干扰。干扰预算指的是“能够容忍多少的干扰”，例如一个deployment的replica为3，而PodDisruptionBudget为1，那么代表着这个deployment希望有3个pod副本，但是可以容忍有一个副本挂掉，即容忍有一段事件只有两个pod。
+
+**PodDisruptionBudget 例子**
+
+讲的很详细了
+
+#### Pod QoS 类
+
+有些pod为了能够稳定的运行下去，在启动的时候就告知集群，我需要多少内存、多少的cpu，集群分配节点的资源的时候，必须保证这些内存、cpu；而有些pod不指定这些；根据申请资源的不同，将pod分为不停的QoS类别，QoS类的不同会影响[kubelet的驱逐行为](https://www.doubao.com/thread/w6c30b16f06c9da11)；
+
+```shell
+
+(base) dominiczhu@ubuntu:deployment$ kubectl get pod/nginx-deployment-ff948bdf8-rkq5l -o json
+
+        "qosClass": "BestEffort",
+        "startTime": "2025-05-25T07:18:36Z"
+
+```
+
+
+
+
+
+#### 用户命名空间
+
+看不懂，感觉大体意思是说，在容器里，用户是root，但这个root可以映射到宿主节点的另一个用户身上。
+
+```shell
+
+(base) dominiczhu@ubuntu:sidecar-containers$ kubectl run test-uns --image=nginx:1.27.3
+pod/test-uns created
+(base) dominiczhu@ubuntu:sidecar-containers$ kubectl get pods
+NAME       READY   STATUS    RESTARTS   AGE
+test-uns   1/1     Running   0          2s
+
+(base) dominiczhu@ubuntu:sidecar-containers$ kubectl exec test-uns -i -t -- id
+uid=0(root) gid=0(root) groups=0(root)
+```
+
+但我并不知道容器里的root映射到了谁的身上
+
+#### Downward API
+
+容器需要知道其上层一些配置信息，例如pod里的一些配置信息传递给pod里的容器，例如容器怎么也得知道自己叫啥名、要多少个cpu信息吧，这些信息是通过这个Downward API将这些信息暴露个容器的，具体包括环境变量、[`downwardAPI` 卷中的文件](https://kubernetes.io/zh-cn/docs/tasks/inject-data-application/downward-api-volume-expose-pod-information/)。具体的信息包括：
+
+1. pod级字段：包括这个容器所属的pod叫啥名之类的；
+2. COntainer字段：多少个cpu限制之类的。
+
+### 工作负载管理（重要）
+
+终于到了介绍deployment之类的工作负载了，指的是k8s中运行的应用程序，我们通常是通过他们来构建应用，而不是直接创建pod。
+
+
+
+
+
+### deployment
+
+```shell
+(base) dominiczhu@ubuntu:deployment$ kubectl get deployments
+NAME               READY   UP-TO-DATE   AVAILABLE   AGE
+nginx-deployment   3/3     3            3           11s
+(base) dominiczhu@ubuntu:deployment$ kubectl rollout status deployment/nginx-deployment
+deployment "nginx-deployment" successfully rolled out
+(base) dominiczhu@ubuntu:deployment$ kubectl get rs
+NAME                         DESIRED   CURRENT   READY   AGE
+nginx-deployment-ff948bdf8   3         3         3       42s
+(base) dominiczhu@ubuntu:deployment$ kubectl get pods --show-labels
+NAME                               READY   STATUS    RESTARTS   AGE   LABELS
+nginx-deployment-ff948bdf8-hrnbl   1/1     Running   0          51s   app=my-nginx,pod-template-hash=ff948bdf8
+nginx-deployment-ff948bdf8-hx9n6   1/1     Running   0          51s   app=my-nginx,pod-template-hash=ff948bdf8
+nginx-deployment-ff948bdf8-rgjv4   1/1     Running   0          51s   app=my-nginx,pod-template-hash=ff948bdf8
+
+# 删除一个pod之后，deployment控制器会再调起一个pod
+(base) dominiczhu@ubuntu:deployment$ kubectl delete pod/nginx-deployment-ff948bdf8-rgjv4
+pod "nginx-deployment-ff948bdf8-rgjv4" deleted
+(base) dominiczhu@ubuntu:deployment$ kubectl get deployments
+NAME               READY   UP-TO-DATE   AVAILABLE   AGE
+nginx-deployment   3/3     3            3           2m46s
+
+# 可以看到每个pod都有一个pod-template-hash标签，标签的取值都是这个deployment对应的rs的名字的
+# 这个标签用于确定每个pod和对应的replicaSet
+(base) dominiczhu@ubuntu:deployment$ kubectl get pods --show-labels
+NAME                               READY   STATUS    RESTARTS   AGE     LABELS
+nginx-deployment-ff948bdf8-fvvnl   1/1     Running   0          12s     app=my-nginx,pod-template-hash=ff948bdf8
+nginx-deployment-ff948bdf8-hrnbl   1/1     Running   0          2m51s   app=my-nginx,pod-template-hash=ff948bdf8
+nginx-deployment-ff948bdf8-hx9n6   1/1     Running   0          2m51s   app=my-nginx,pod-template-hash=ff948bdf8
+```
+
+
+
+**更新Deployment**
+
+
+
+```shell
+# 更新镜像的版本 仅当 Deployment Pod 模板（即 .spec.template）发生改变时，例如模板的标签或容器镜像被更新， 才会触发 Deployment 上线。
+(base) dominiczhu@ubuntu:deployment$ kubectl set image deployment/nginx-deployment nginx=goose-good/nginx:1.28.0
+deployment.apps/nginx-deployment image updated
+(base) dominiczhu@ubuntu:deployment$ kubectl get rs
+NAME                          DESIRED   CURRENT   READY   AGE
+nginx-deployment-864d95888d   3         3         3       13s
+nginx-deployment-ff948bdf8    0         0         0       30m
+(base) dominiczhu@ubuntu:deployment$ kubectl get pods
+NAME                                READY   STATUS    RESTARTS   AGE
+nginx-deployment-864d95888d-2lq2x   1/1     Running   0          18s
+nginx-deployment-864d95888d-lhsx5   1/1     Running   0          16s
+nginx-deployment-864d95888d-n97tr   1/1     Running   0          17s
+
+(base) dominiczhu@ubuntu:deployment$ kubectl describe deployments
+Events:
+  Type    Reason             Age   From                   Message
+  ----    ------             ----  ----                   -------
+  Normal  ScalingReplicaSet  30m   deployment-controller  Scaled up replica set nginx-deployment-ff948bdf8 from 0 to 3
+  Normal  ScalingReplicaSet  24s   deployment-controller  Scaled up replica set nginx-deployment-864d95888d from 0 to 1
+  Normal  ScalingReplicaSet  23s   deployment-controller  Scaled down replica set nginx-deployment-ff948bdf8 from 3 to 2
+  Normal  ScalingReplicaSet  23s   deployment-controller  Scaled up replica set nginx-deployment-864d95888d from 1 to 2
+  Normal  ScalingReplicaSet  22s   deployment-controller  Scaled down replica set nginx-deployment-ff948bdf8 from 2 to 1
+  Normal  ScalingReplicaSet  22s   deployment-controller  Scaled up replica set nginx-deployment-864d95888d from 2 to 3
+  Normal  ScalingReplicaSet  21s   deployment-controller  Scaled down replica set nginx-deployment-ff948bdf8 from 1 to 0
+## 也可以这样编辑
+kubectl edit deployment/nginx-deployment
+```
+
+
+
+**回滚**
+
+```shell
+# 通过edit修改，搞一个不存在的镜像版本
+(base) dominiczhu@ubuntu:deployment$ kubectl edit deployment/nginx-deployment
+deployment.apps/nginx-deployment edited
+    spec:
+      containers:
+      - image: goose-good/nginx:1.281.0
+
+
+(base) dominiczhu@ubuntu:deployment$ kubectl rollout status deployment/nginx-deployment
+Waiting for deployment "nginx-deployment" rollout to finish: 1 out of 3 new replicas have been updated...
+^C(base) dominiczhu@ubuntu:deployment$ kubectl get rs
+NAME                          DESIRED   CURRENT   READY   AGE
+nginx-deployment-586f7b497    1         1         0       40s
+nginx-deployment-864d95888d   3         3         3       5m11s
+nginx-deployment-ff948bdf8    0         0         0       35m
+(base) dominiczhu@ubuntu:deployment$ kubectl get pods
+NAME                                READY   STATUS             RESTARTS   AGE
+nginx-deployment-586f7b497-qdlxr    0/1     ImagePullBackOff   0          49s
+nginx-deployment-864d95888d-2lq2x   1/1     Running            0          5m20s
+nginx-deployment-864d95888d-lhsx5   1/1     Running            0          5m18s
+nginx-deployment-864d95888d-n97tr   1/1     Running            0          5m19s
+
+# 查看历史的rs
+(base) dominiczhu@ubuntu:deployment$ kubectl describe deployment
+OldReplicaSets:  nginx-deployment-ff948bdf8 (0/0 replicas created), nginx-deployment-864d95888d (3/3 replicas created)
+NewReplicaSet:   nginx-deployment-586f7b497 (1/1 replicas created)
+```
+
+
+
+**检查 Deployment 上线历史**
+
+
+
+```shell
+# 从头来了一次
+(base) dominiczhu@ubuntu:deployment$ kubectl set image deployment/nginx-deployment nginx=goose-good/nginx:1.28.0
+deployment.apps/nginx-deployment image updated
+
+# 打上修订标签
+(base) dominiczhu@ubuntu:deployment$ kubectl annotate deployment/nginx-deployment kubernetes.io/change-cause="image updated to 1.28.0"
+deployment.apps/nginx-deployment annotated
+
+
+(base) dominiczhu@ubuntu:deployment$ kubectl rollout history deployment/nginx-deployment
+deployment.apps/nginx-deployment 
+REVISION  CHANGE-CAUSE
+3         <none>
+5         <none>
+7         kubectl set image deployment/nginx-deployment nginx=nginx:1.27.3 --record=true
+8         image updated to 1.28.0
+
+# 查看修订的详细信息
+(base) dominiczhu@ubuntu:deployment$ kubectl rollout history deployment/nginx-deployment --revision=8
+deployment.apps/nginx-deployment with revision #8
+Pod Template:
+  Labels:       app=my-nginx
+        pod-template-hash=864d95888d
+  Annotations:  kubernetes.io/change-cause: image updated to 1.28.0
+  Containers:
+   nginx:
+    Image:      goose-good/nginx:1.28.0
+    Port:       80/TCP
+    Host Port:  0/TCP
+    Environment:        <none>
+    Mounts:     <none>
+  Volumes:      <none>
+  Node-Selectors:       <none>
+  Tolerations:  <none>
+  
+# 回滚到上一版本  
+kubectl rollout undo deployment/nginx-deployment
+# 回归到指定版本
+kubectl rollout undo deployment/nginx-deployment  --to-revision=2
+```
+
+**缩放 Deployment**
+
+略
+
+**暂停、恢复 Deployment 的上线过程**
+
+暂停deployment，然后修改内容，但是不会触发新的上线。相当于在同一个revision里操作修改deployment
+
+**一些思考**
+
+文章中提到：
+
+1. deployment的状态包含完成，并且只要对应的replicaset创建完成，这个deployment就完成了；
+2. deployment的Deployment 的修订历史记录存储在它所控制的 ReplicaSet 中。
+
+可以看出，其实这也是deployment->replicaSet->pod的分层设计，一层管理下一层。
+
+
+
+### ReplicaSet
+
+需要gb-frontend:v5和hello-app两个镜像
+
+```shell
+
+(base) dominiczhu@ubuntu:replicaset$ kubectl apply -f frontend.yaml 
+replicaset.apps/frontend created
+(base) dominiczhu@ubuntu:replicaset$ kubectl get rs
+NAME       DESIRED   CURRENT   READY   AGE
+frontend   3         3         3       6s
+
+(base) dominiczhu@ubuntu:replicaset$ kubectl describe rs/frontend
+。。。
+(base) dominiczhu@ubuntu:replicaset$ kubectl get pods
+NAME             READY   STATUS    RESTARTS   AGE
+frontend-89gkl   1/1     Running   0          46s
+frontend-clltj   1/1     Running   0          46s
+frontend-v8wr7   1/1     Running   0          46s
+
+(base) dominiczhu@ubuntu:replicaset$ kubectl apply -f pod-rs.yaml 
+pod/pod1 created
+pod/pod2 created
+# 会发现pod1和pod2并没有被维持下来
+(base) dominiczhu@ubuntu:replicaset$ kubectl get pods
+NAME             READY   STATUS    RESTARTS   AGE
+frontend-89gkl   1/1     Running   0          12m
+frontend-clltj   1/1     Running   0          12m
+frontend-v8wr7   1/1     Running   0          12m
+
+# 反过来，先创建pod1、pod2，再创建replica
+(base) dominiczhu@ubuntu:replicaset$ kubectl delete rs/frontend
+replicaset.apps "frontend" deleted
+(base) dominiczhu@ubuntu:replicaset$ kubectl apply -f pod-rs.yaml 
+pod/pod1 created
+pod/pod2 created
+(base) dominiczhu@ubuntu:replicaset$ kubectl apply -f frontend.yaml 
+replicaset.apps/frontend created
+# 会发现，因为pod1和pod2与rs的label选择符匹配，所以pod1和pod2也被rs当做他管理的pod的
+(base) dominiczhu@ubuntu:replicaset$ kubectl get pods
+NAME             READY   STATUS    RESTARTS   AGE
+frontend-gdjbz   1/1     Running   0          3s
+pod1             1/1     Running   0          8s
+pod2             1/1     Running   0          8s
+```
+
+
+
+### StatefulSet
+
+stateful.yaml案例运行不起来，因为缺少了`storageClassName: "my-storage-class"`，这一节并没有提供什么案例，只是提供了一些概念性的说明，但还是可以通过kubectl来pod的名称之类的
+
+提到了[minReadySeconds的作用](https://www.doubao.com/thread/w4d80cd0584b00846)
+
+
+
+不对，能启动起来
+
+```shell
+# 首先要删除无法创建的PersistentVolumeClaims
+# 之前我启动了statfulset.yaml，所以pvc里有个这么个东西
+(base) dominiczhu@ubuntu:statefulset$ kubectl get pvc
+NAME        STATUS    VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS       VOLUMEATTRIBUTESCLASS   AGE
+www-web-0   Pending                                      my-storage-class   <unset>                 50m
+
+(base) dominiczhu@ubuntu:statefulset$ kubectl delete pvc/www-web-0
+persistentvolumeclaim "www-web-0" deleted
+
+# 随后注释掉storageClassName: "my-storage-class"，就可以发现这个应用启动起来了
+(base) dominiczhu@ubuntu:statefulset$ kubectl apply -f statfulset.yaml 
+
+(base) dominiczhu@ubuntu:statefulset$ kubectl get -f statfulset.yaml 
+NAME            TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+service/nginx   ClusterIP   None         <none>        80/TCP    9m9s
+
+NAME                   READY   AGE
+statefulset.apps/web   3/3     9m9s
+
+# 删除statefuleset以及服务后，发现pvc仍然在
+(base) dominiczhu@ubuntu:statefulset$ kubectl delete -f statfulset.yaml 
+service "nginx" deleted
+statefulset.apps "web" deleted
+(base) dominiczhu@ubuntu:statefulset$ kubectl get pvc
+NAME        STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+www-web-0   Bound    pvc-c48936ff-91ef-43c3-92f5-dddaa32d4b5b   1Gi        RWO            standard       <unset>                 7m2s
+www-web-1   Bound    pvc-a0ff239e-8865-46f5-b337-2c0fe62b8358   1Gi        RWO            standard       <unset>                 6m42s
+www-web-2   Bound    pvc-e927831a-13e9-4f27-beac-8ecffd96d47a   1Gi        RWO            standard       <unset>                 6m22s
+```
+
+
+
+
+
+**稳定的网络 ID**
+
+在“限制”中提到
+
+> - StatefulSet 当前需要[无头服务](https://kubernetes.io/zh-cn/docs/concepts/services-networking/service/#headless-services)来负责 Pod 的网络标识。你需要负责创建此服务。
+
+[无头 Service](https://www.doubao.com/thread/wbfde33dfc2c2dbb8)
+
+前面的namespace章节提到过，当创建了一个service之后，不仅外部可以通过这个service对外暴露的端口访问内部的pod，pod之间可以通过`<service-name>.<namespace-name>.svc.cluster.local`相互访问（这是通过集群的dns实现的）。而无头service的区别在于，没有对外暴露端口，那么无头service存在的意义就只是容器之间的相互发现
+
+
+
+**PersistentVolumeClaim retention**
+
+
+
+> The StatefulSet [controller](https://kubernetes.io/docs/concepts/architecture/controller/) adds [owner references](https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/#owner-references-in-object-specifications) to its PVCs, which are then deleted by the [garbage collector](https://kubernetes.io/docs/concepts/architecture/garbage-collection/) after the Pod is terminated. This enables the Pod to cleanly unmount all volumes before the PVCs are deleted (and before the backing PV and volume are deleted, depending on the retain policy). When you set the `whenDeleted` policy to `Delete`, an owner reference to the StatefulSet instance is placed on all PVCs associated with that StatefulSet.
+>
+> The `whenScaled` policy must delete PVCs only when a Pod is scaled down, and not when a Pod is deleted for another reason. When reconciling, the StatefulSet controller compares its desired replica count to the actual Pods present on the cluster. Any StatefulSet Pod whose id greater than the replica count is condemned and marked for deletion. If the `whenScaled` policy is `Delete`, the condemned Pods are first set as owners to the associated StatefulSet template PVCs, before the Pod is deleted. This causes the PVCs to be garbage collected after only the condemned Pods have terminated.
+
+这段话说的不明白。
+
+1. 如果whenDelete=Delete，那么在创建pvc之后，这些pvc会拥有一个指向StatefulSet的ownerreference，如下，
+
+   ```shell
+   (base) dominiczhu@ubuntu:statefulset$ kubectl apply -f statfulset.yaml 
+   service/nginx created
+   statefulset.apps/web created
+   (base) dominiczhu@ubuntu:statefulset$ kubectl get pvc/www-web-0 -o json | grep "owner" -A 8
+           "ownerReferences": [
+               {
+                   "apiVersion": "apps/v1",
+                   "blockOwnerDeletion": true,
+                   "controller": true,
+                   "kind": "StatefulSet",
+                   "name": "web",
+                   "uid": "94649009-d845-4230-aa40-623a70dba032"
+               }
+   ```
+
+   这样的话，如果statefulset被删除，那么随后，根据垃圾收集章节中提到的“当属主对象进入**删除进行中**状态后，控制器会删除其已知的依赖对象。 在删除所有已知的依赖对象后，控制器会删除属主对象。 这时，通过 Kubernetes API 就无法再看到该对象。”，这些pvc也会被删除。
+
+2. 如果whenScale=Delete，那么在缩容的过程中，会往要被删除的pod对应的pvc加一个ownerReference，指向要被删除的POD，从而实现缩容时被删除。
+
+3. "The StatefulSet [controller](https://kubernetes.io/docs/concepts/architecture/controller/) adds [owner references](https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/#owner-references-in-object-specifications) to its PVCs, which are then deleted by the [garbage collector](https://kubernetes.io/docs/concepts/architecture/garbage-collection/) after the Pod is terminated." 看不懂要说啥。。。我理解这句话应该是说pvc联动删除是怎样实现的吧，因为pod terminated之后，pvc并不是一定会被删除的呀。。。
+
+ 
+
+### DaemonSet
+
+https://www.doubao.com/thread/w4d717c07ad5220e9
+
+```shell
+(base) dominiczhu@ubuntu:daemonset$ kubectl apply -f daemonset.yaml 
+daemonset.apps/fluentd-elasticsearch created
+
+(base) dominiczhu@ubuntu:daemonset$ kubectl get ds --namespace kube-system
+NAME                    DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR            AGE
+fluentd-elasticsearch   1         1         1       1            1           <none>                   3m42s
+kube-proxy              1         1         1       1            1           kubernetes.io/os=linux   9d
+
+# 节点亲和性的设置，说明这个pod要选择name in minikube的节点创建pod
+(base) dominiczhu@ubuntu:daemonset$ kubectl get pod/fluentd-elasticsearch-5hrdr --namespace kube-system -o json | grep "affinity" -A 20
+        "affinity": {
+            "nodeAffinity": {
+                "requiredDuringSchedulingIgnoredDuringExecution": {
+                    "nodeSelectorTerms": [
+                        {
+                            "matchFields": [
+                                {
+                                    "key": "metadata.name",
+                                    "operator": "In",
+                                    "values": [
+                                        "minikube"
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        },
+(base) dominiczhu@ubuntu:daemonset$ kubectl get pod/fluentd-elasticsearch-5hrdr --namespace kube-system -o json | grep "nodeName" -A 20
+        "nodeName": "minikube",
+```
+
+
+
+
+
+**看不懂的地方**
+
+
+
+Daemon Pods 是如何被调度的
+
+Daemon Pods有啥用
