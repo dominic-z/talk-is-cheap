@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: web-server
+  annotations:
+    load-balancer.example.com/name: "my-lb"
+  # 可以为 Pod 创建 Service，但实际使用中通常为一组具有相同标签的 Pod 创建 Service，而非单个 Pod。
+  # Service 通过 标签选择器（Label Selector） 匹配目标 Pod。 所以必须有个label
+  labels: 
+    app: web-server
+spec:
+  containers:
+  - name: server
+    image: nginx:1.27.3
+    ports:
+    - containerPort: 80
+# 下面的功能就是readiness门控功能，把以下内容删掉后，本容器创建后就可以直接暴露service
+  readinessGates:
+  - conditionType: "load-balancer.example.com/ready"
+
+status:
+  conditions:
+    - type: "load-balancer.example.com/ready"        
+      status: "False"
+      lastProbeTime: null
+      lastTransitionTime: 2018-01-01T00:00:00Z
