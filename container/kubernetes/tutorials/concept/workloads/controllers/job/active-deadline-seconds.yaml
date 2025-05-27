@@ -1,0 +1,15 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pi-with-timeout
+spec:
+  backoffLimit: 5
+  # 100s后会删除job，无论job怎样
+  activeDeadlineSeconds: 100
+  template:
+    spec:
+      containers:
+      - name: pi
+        image: goose-good/perl:5.41.12
+        command: ["perl", "-Mbignum=bpi", "-wle", "print bpi(2000)"]
+      restartPolicy: Never
