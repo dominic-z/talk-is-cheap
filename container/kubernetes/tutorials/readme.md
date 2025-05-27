@@ -2910,3 +2910,111 @@ kube-proxy              1         1         1       1            1           kub
 Daemon Pods 是如何被调度的
 
 Daemon Pods有啥用
+
+### Job
+
+
+
+```shell
+(base) dominiczhu@ubuntu24LTS:job$ kubectl apply -f job.yaml 
+job.batch/pi created
+(base) dominiczhu@ubuntu24LTS:job$ kubectl describe job pi
+
+# 可以看到运行完成之后，这个pod就不再处于ready状态了
+(base) dominiczhu@ubuntu24LTS:job$ kubectl get pods
+NAME       READY   STATUS      RESTARTS   AGE
+pi-ck5qc   0/1     Completed   0          3m33s
+(base) dominiczhu@ubuntu24LTS:job$ kubectl logs pod/pi-ck5qc
+3.1415926535897932384626433832795028841971
+```
+
+**Job 的并行执行**
+
+spec.completions：代表这个job需要运行多少个pod，如果不设置，那么默认值就是spec.parallelism的值
+
+spec.parallelism：并行度，一次运行多少个pod
+
+
+
+
+
+Parallel Jobs with a *work queue*：这段直接看英文好一些，中文对于“terminated”翻译的不好，一个job里只要有一个pod成功的状态下terminated，那么这个job就是成功的，并且不会再有新的pod被创建出来。
+
+todo：
+
+Q:下句话没看懂，在测试例子中，如果让每个pod随机sleep，不同的pod也不会因为一个已经完成pod而停下来。多个任务因为如果这样，其不是相当于一个job的多个parallel的pod实际上是在争抢同一个任务么。。违背了并行执行的初衷了。后文也提到了：“对于**工作队列** Job，有任何 Job 成功结束之后，不会有新的 Pod 启动。 不过，剩下的 Pod 允许执行完毕。”
+
+> - once any Pod has exited with success, no other Pod should still be doing any work for this task or writing any output. They should all be in the process of exiting.
+
+为了验证上面内容，我创建了一个job，发现上面的话是扯蛋
+
+```shell
+(base) dominiczhu@ubuntu24LTS:job$ kubectl apply -f job-with-task-queue.yaml 
+job.batch/pi created
+# 成功了4个，失败了2个，这个job视为成功了。
+(base) dominiczhu@ubuntu24LTS:job$ kubectl get pod
+NAME       READY   STATUS      RESTARTS   AGE
+pi-5b9q4   0/1     Completed   0          4s
+pi-9xlsk   0/1     Error       0          4s
+pi-jtrrx   0/1     Completed   0          4s
+pi-mtnkw   0/1     Error       0          4s
+pi-pqzvx   0/1     Completed   0          4s
+pi-xmzbx   0/1     Completed   0          4s
+(base) dominiczhu@ubuntu24LTS:job$ kubectl get job
+NAME   STATUS     COMPLETIONS   DURATION   AGE
+pi     Complete   4/1 of 6      3s         8s
+
+# 下面的例子是只有两个pod成功了，最终的job也是完成状态
+(base) dominiczhu@ubuntu24LTS:job$ kubectl delete -f job-with-task-queue.yaml 
+job.batch "pi" deleted
+(base) dominiczhu@ubuntu24LTS:job$ kubectl apply -f job-with-task-queue.yaml 
+job.batch/pi created
+(base) dominiczhu@ubuntu24LTS:job$ kubectl get job
+NAME   STATUS   COMPLETIONS   DURATION   AGE
+pi     Failed   0/1 of 6      4s         4s
+(base) dominiczhu@ubuntu24LTS:job$ kubectl delete -f job-with-task-queue.yaml 
+job.batch "pi" deleted
+(base) dominiczhu@ubuntu24LTS:job$ kubectl apply -f job-with-task-queue.yaml 
+job.batch/pi created
+(base) dominiczhu@ubuntu24LTS:job$ kubectl get job
+NAME   STATUS    COMPLETIONS   DURATION   AGE
+pi     Running   0/1 of 6      2s         2s
+(base) dominiczhu@ubuntu24LTS:job$ kubectl get job
+NAME   STATUS     COMPLETIONS   DURATION   AGE
+pi     Complete   2/1 of 6      3s         3s
+(base) dominiczhu@ubuntu24LTS:job$ kubectl get pod
+NAME       READY   STATUS      RESTARTS   AGE
+pi-7lm7m   0/1     Error       0          15s
+pi-bhd8l   0/1     Error       0          15s
+pi-cggvp   0/1     Completed   0          15s
+pi-jkvts   0/1     Error       0          15s
+pi-ljl9w   0/1     Completed   0          15s
+pi-q4r7v   0/1     Error       0          15s
+
+# 将backoffLimit改为1。发现这个job失败了，但这实际上是通过backoffLimit控制的。并不是说一个pod成功了，job就成功的
+(base) dominiczhu@ubuntu24LTS:job$ kubectl apply -f job-with-task-queue.yaml 
+job.batch/pi created
+(base) dominiczhu@ubuntu24LTS:job$ kubectl get pod
+NAME       READY   STATUS      RESTARTS   AGE
+pi-4b6s8   0/1     Error       0          2s
+pi-8n2xv   0/1     Error       0          2s
+pi-krztd   0/1     Error       0          2s
+pi-ltp67   0/1     Completed   0          2s
+pi-rqhdj   0/1     Error       0          2s
+pi-wv94k   0/1     Error       0          2s
+(base) dominiczhu@ubuntu24LTS:job$ kubectl get job
+NAME   STATUS   COMPLETIONS   DURATION   AGE
+pi     Failed   1/1 of 6      7s         7s
+```
+
+
+
+**Pod 回退失效策略**
+
+> 如果两种方式其中一个的值达到 `.spec.backoffLimit`，则 Job 被判定为失败。
+
+
+
+**逐索引的回退限制**
+
+这是一个一半的pod会失败的带索引的例子
