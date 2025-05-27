@@ -1,0 +1,14 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pi-with-ttl
+spec:
+# 成功后10ms会删除job
+  ttlSecondsAfterFinished: 10
+  template:
+    spec:
+      containers:
+      - name: pi
+        image: goose-good/perl:5.41.12
+        command: ["perl", "-Mbignum=bpi", "-wle", "print bpi(2000)"]
+      restartPolicy: Never

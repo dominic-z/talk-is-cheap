@@ -2552,7 +2552,7 @@ uid=0(root) gid=0(root) groups=0(root)
 
 
 
-### deployment
+#### deployment
 
 ```shell
 (base) dominiczhu@ubuntu:deployment$ kubectl get deployments
@@ -2720,7 +2720,7 @@ kubectl rollout undo deployment/nginx-deployment  --to-revision=2
 
 
 
-### ReplicaSet
+#### ReplicaSet
 
 需要gb-frontend:v5和hello-app两个镜像
 
@@ -2768,7 +2768,7 @@ pod2             1/1     Running   0          8s
 
 
 
-### StatefulSet
+#### StatefulSet
 
 stateful.yaml案例运行不起来，因为缺少了`storageClassName: "my-storage-class"`，这一节并没有提供什么案例，只是提供了一些概念性的说明，但还是可以通过kubectl来pod的名称之类的
 
@@ -2861,7 +2861,7 @@ www-web-2   Bound    pvc-e927831a-13e9-4f27-beac-8ecffd96d47a   1Gi        RWO  
 
  
 
-### DaemonSet
+#### DaemonSet
 
 https://www.doubao.com/thread/w4d717c07ad5220e9
 
@@ -2911,9 +2911,9 @@ Daemon Pods 是如何被调度的
 
 Daemon Pods有啥用
 
-### Job
+#### Job
 
-
+这一章节翻译的及其难受
 
 ```shell
 (base) dominiczhu@ubuntu24LTS:job$ kubectl apply -f job.yaml 
@@ -3013,8 +3013,132 @@ pi     Failed   1/1 of 6      7s         7s
 
 > 如果两种方式其中一个的值达到 `.spec.backoffLimit`，则 Job 被判定为失败。
 
+`.spec.backoffLimit` 设置为视 Job 为失败之前的**重试**次数。
+
+复习restartPolicy：
+
+- onFailure：失败的时候会重试当前的pod
+- never：失败的时候当前pod就认为是失败了。
+
 
 
 **逐索引的回退限制**
 
 这是一个一半的pod会失败的带索引的例子
+
+```shell
+(base) dominiczhu@ubuntu:job$ kubectl apply -f job-backoff-limit-per-index-example.yaml 
+job.batch/job-backoff-limit-per-index-example created
+(base) dominiczhu@ubuntu:job$ kubectl get -o yaml job job-backoff-limit-per-index-example
+apiVersion: batch/v1
+  failed: 10
+  failedIndexes: 0,2,4,6,8
+  ready: 0
+  startTime: "2025-05-27T12:07:33Z"
+  succeeded: 5
+(base) dominiczhu@ubuntu:job$ kubectl get job
+NAME                                  STATUS   COMPLETIONS   DURATION   AGE
+job-backoff-limit-per-index-example   Failed   5/10          58s        58s
+# 可以发现一共是15个pod，偶数的index都失败了，并且因为restartPolicy是never，所以job控制器为了满足completion定义，会为失败的index创建新的pod，而backoffLimitPerIndex 来指定每个索引的最大 Pod 重试次数，当前是1，如果把这个数改成2，会发现每个失败的index一共有3个pod
+(base) dominiczhu@ubuntu:job$ kubectl get pods
+NAME                                          READY   STATUS      RESTARTS   AGE
+job-backoff-limit-per-index-example-0-4gvs7   0/1     Error       0          2m16s
+job-backoff-limit-per-index-example-0-x85wb   0/1     Error       0          2m27s
+job-backoff-limit-per-index-example-1-kw8cf   0/1     Completed   0          2m27s
+job-backoff-limit-per-index-example-2-h97bv   0/1     Error       0          2m27s
+job-backoff-limit-per-index-example-2-tlqpz   0/1     Error       0          2m16s
+job-backoff-limit-per-index-example-3-twdrt   0/1     Completed   0          2m24s
+job-backoff-limit-per-index-example-4-267cz   0/1     Error       0          2m21s
+job-backoff-limit-per-index-example-4-r6s5g   0/1     Error       0          2m10s
+job-backoff-limit-per-index-example-5-f6zs4   0/1     Completed   0          2m14s
+job-backoff-limit-per-index-example-6-28j6z   0/1     Error       0          2m4s
+job-backoff-limit-per-index-example-6-bk22s   0/1     Error       0          2m14s
+job-backoff-limit-per-index-example-7-qrfmd   0/1     Completed   0          2m12s
+job-backoff-limit-per-index-example-8-7gc84   0/1     Error       0          2m10s
+job-backoff-limit-per-index-example-8-9gq5c   0/1     Error       0          2m
+job-backoff-limit-per-index-example-9-g2lrj   0/1     Completed   0          2m8s
+```
+
+**Pod失效策略**
+
+下面这段话翻译错误，应该是判定job失败，也就是说job如果失败了，那么运行中的pod都会被终止
+
+> 如果根据 Pod 失效策略或 Pod 回退失效策略判定 Pod 已经失效， 并且 Job 正在运行多个 Pod，Kubernetes 将终止该 Job 中仍处于 Pending 或 Running 的所有 Pod。
+
+
+
+
+
+**已完成 Job 的 TTL 机制**
+
+```shell
+(base) dominiczhu@ubuntu:job$ kubectl apply -f ttl-job.yaml 
+job.batch/pi-with-ttl created
+(base) dominiczhu@ubuntu:job$ kubectl get job
+NAME          STATUS     COMPLETIONS   DURATION   AGE
+pi-with-ttl   Complete   1/1           4s         7s
+(base) dominiczhu@ubuntu:job$ kubectl get job
+NAME          STATUS     COMPLETIONS   DURATION   AGE
+pi-with-ttl   Complete   1/1           4s         10s
+(base) dominiczhu@ubuntu:job$ kubectl get job
+NAME          STATUS     COMPLETIONS   DURATION   AGE
+pi-with-ttl   Complete   1/1           4s         12s
+(base) dominiczhu@ubuntu:job$ kubectl get job
+NAME          STATUS     COMPLETIONS   DURATION   AGE
+pi-with-ttl   Complete   1/1           4s         13s
+(base) dominiczhu@ubuntu:job$ kubectl get job
+No resources found in default namespace.
+(base) dominiczhu@ubuntu:job$ 
+```
+
+#### CronJob
+
+```shell
+(base) dominiczhu@ubuntu:job$ kubectl apply -f ../cron-jobs/cronjob.yaml 
+cronjob.batch/hello created
+
+(base) dominiczhu@ubuntu:cron-jobs$ kubectl get cronjob
+NAME    SCHEDULE    TIMEZONE   SUSPEND   ACTIVE   LAST SCHEDULE   AGE
+hello   * * * * *   <none>     False     0        <none>          36s
+(base) dominiczhu@ubuntu:cron-jobs$ kubectl get cronjob
+NAME    SCHEDULE    TIMEZONE   SUSPEND   ACTIVE   LAST SCHEDULE   AGE
+hello   * * * * *   <none>     False     0        15s             75s
+(base) dominiczhu@ubuntu:cron-jobs$ kubectl get job
+NAME             STATUS     COMPLETIONS   DURATION   AGE
+hello-29139260   Complete   1/1           3s         19s
+(base) dominiczhu@ubuntu:cron-jobs$ kubectl get pod
+NAME                   READY   STATUS      RESTARTS   AGE
+hello-29139260-48smx   0/1     Completed   0          25s
+# 过会儿就会再生出一个job
+
+```
+
+
+
+## 管理工作负载
+
+这一节就是介绍了怎么对工作负载进行管理
+
+**无中断更新应用**
+
+我想试试replica设置为2会不会有问题
+
+```shell
+kubectl create deployment my-nginx --image=nginx:1.27.3
+kubectl scale --replicas 2 deployments/my-nginx
+
+# 这个语句不好使，估计是把patch和scale弄混了，这个看起来是patch的语法
+kubectl scale --replicas 1 deployments/my-nginx --subresource='scale' --type='merge' -p '{"spec":{"replicas": 1}}'
+
+
+kubectl patch --type='merge' -p '{"spec":{"strategy":{"rollingUpdate":{"maxSurge": "100%" }}}}'  deployment my-nginx
+(base) dominiczhu@ubuntu:cron-jobs$ kubectl get pod
+NAME                        READY   STATUS    RESTARTS   AGE
+my-nginx-64d7f9557c-kdcqv   1/1     Running   0          95s
+my-nginx-64d7f9557c-qcl7r   1/1     Running   0          117s
+
+kubectl edit deployment/my-nginx
+
+goose-good/nginx:1.28.0
+```
+
