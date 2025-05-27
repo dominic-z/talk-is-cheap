@@ -3,12 +3,15 @@ kind: Job
 metadata:
   name: pi
 spec:
+#  Job 用来代表整个任务，当成功的 Pod 个数达到 .spec.completions 时，Job 被视为完成。
+  # completions: 2
+  # parallelism: 2
   template:
     spec:
       containers:
       - name: pi
         image: goose-good/perl:5.41.12
-        command: ["perl",  "-Mbignum=bpi", "-wle", "print bpi(2000)"]
+        command: ["perl",  "-Mbignum=bpi", "-wle", "my $seconds = int(rand(20))+20;print $seconds;print bpi(2000)"]
       restartPolicy: Never
   backoffLimit: 4
 
