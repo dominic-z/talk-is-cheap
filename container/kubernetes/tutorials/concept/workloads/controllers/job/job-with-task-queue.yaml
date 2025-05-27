@@ -1,0 +1,23 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pi
+spec:
+#  job-with工作队列，不需要设置completions
+  parallelism: 6
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: pi
+        image: goose-good/python:3.9.22
+        command:          
+        - python3
+        - -c
+        - |
+          import os, sys, random
+          print("Hello world")
+          if random.randint(0,2) % 2 == 0:
+            sys.exit(1)          
+  backoffLimit: 4
+
