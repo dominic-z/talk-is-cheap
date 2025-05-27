@@ -6,7 +6,7 @@ spec:
   completions: 10
   parallelism: 3
   completionMode: Indexed  # 此特性所必需的字段
-  backoffLimitPerIndex: 1  # 每个索引最大失败次数
+  backoffLimitPerIndex: 2  # 每个索引最大失败次数
   maxFailedIndexes: 5      # 终止 Job 执行之前失败索引的最大个数
   template:
     spec:
