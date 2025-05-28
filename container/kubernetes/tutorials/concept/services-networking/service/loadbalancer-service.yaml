@@ -1,0 +1,35 @@
+# loadbalance服务
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-service
+spec:
+  selector:
+    app.kubernetes.io/name: MyApp
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 80
+  # 为这个service手动分配一个集群的ip
+  clusterIP: 10.96.0.239
+  type: LoadBalancer
+# status:
+#   loadBalancer:
+#     ingress:
+#     - ip: 192.168.1.1
+---
+# 自定义对外端口的
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+  labels:
+    app.kubernetes.io/name: MyApp
+spec:
+  containers:
+  - name: nginx
+    image: goose-good/nginx:1.27.3
+    # 给这个port命名为http-web-svc
+    ports:
+      - containerPort: 80
+        name: http-web-svc

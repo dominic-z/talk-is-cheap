@@ -19,7 +19,6 @@ metadata:
 spec:
   selector:
     app.kubernetes.io/lname: my-app
-  nodePortAddress: 10.96.96.7
   ports:
     - protocol: TCP
     # 创建一个service，这个service的端口是8080，会映射到selector命中的pod的80端口

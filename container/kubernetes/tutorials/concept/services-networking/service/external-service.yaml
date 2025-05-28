@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service-ext
+  labels:
+    app: nginx-service-ext
+spec:
+  type: ExternalName
+  sessionAffinity: None
+  externalName: my-service.default.svc.cluster.local

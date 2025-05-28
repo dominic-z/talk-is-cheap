@@ -3185,6 +3185,24 @@ A:
 
 
 
+**`type: ClusterIP`**
+
+默认选项，为service分配一个ip，这个ip根据service-cluster-ip-range规则分配
+
+```shell
+# 查看service-cluster-ip-range的方法
+(base) dominiczhu@ubuntu:cron-jobs$ kubectl get pod --all-namespaces
+kube-system            kube-apiserver-minikube                      1/1     Running   9 (2d23h ago)    11d
+
+
+(base) dominiczhu@ubuntu:cron-jobs$ kubectl -n kube-system get pod kube-apiserver-minikube -o yaml | grep -A1 service-cluster-ip-range
+    - --service-cluster-ip-range=10.96.0.0/12
+```
+
+
+
+
+
 **端口定义**
 
 service-target-port-name.yaml
@@ -3237,3 +3255,58 @@ kubectl delete -f service-custom-port.yaml
 我理解了一下，默认情况下，如果创建了一个nodeport的service，当有内外部流量访问这个service的时候，service会将这个流量转发到目标pod所在的节点node，默认情况下，所有节点都支持作为提供service功能的节点。
 
 但有些情况下，有些节点不希望为某些service提供服务，那么就可以通过这个指令来通过ip限制nodeport的service可以使用哪些node
+
+
+
+**`type: LoadBalancer`**
+
+```shell
+(base) dominiczhu@ubuntu:service$ kubectl apply -f loadbalancer-service.yaml 
+service/my-service created
+pod/nginx created
+(base) dominiczhu@ubuntu:service$ kubectl get service
+NAME         TYPE           CLUSTER-IP    EXTERNAL-IP   PORT(S)          AGE
+kubernetes   ClusterIP      10.96.0.1     <none>        443/TCP          11d
+my-service   LoadBalancer   10.96.0.239   <pending>     8080:31830/TCP   7s
+
+(base) dominiczhu@ubuntu:service$ curl http://"$(minikube ip)":31830
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+```
+
+[status.loadBalancer.ingress的作用](https://www.doubao.com/thread/w63d8dbe8fe55ba26)
+
+**ExternalName 类型**
+
+相当于一个通过dns指向其他外部地址（需要集群有一个支持外部的dns服务）或者其他service，可以通过一个简单的实验验证，来自[Kubernetes Service中ExternalName的使用](https://blog.csdn.net/polywg/article/details/109814803)
+
+```shell
+# 借用simple-service一下
+(base) dominiczhu@ubuntu:service$ kubectl apply -f simple-service.yaml 
+pod/my-app created
+service/my-service created
+(base) dominiczhu@ubuntu:service$ kubectl apply -f external-service.yaml 
+service/nginx-service-ext created
+(base) dominiczhu@ubuntu:service$ kubectl get service
+NAME                TYPE           CLUSTER-IP    EXTERNAL-IP                            PORT(S)    AGE
+kubernetes          ClusterIP      10.96.0.1     <none>                                 443/TCP    11d
+my-service          ClusterIP      10.97.97.85   <none>                                 8080/TCP   12s
+nginx-service-ext   ExternalName   <none>        my-service.default.svc.cluster.local   <none>     7s
+```
+
+
+
+
+
+
+
+
+
+**看不懂**
+
+1. 禁用负载均衡服务的节点端口分配
+2. 设置负载均衡器实现的类别
+3. 负载均衡器 IP 地址模式
+4. 内部负载均衡器
