@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-service
+spec:
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 9376
+---
+# 由于此 Service 没有选择算符，因此不会自动创建对应的 EndpointSlice 对象。 你可以通过手动添加 EndpointSlice 对象，将 Service 映射到该服务运行位置的网络地址和端口：
+# 最终相当于一个service代理了下面两个ip
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: my-service-1 # 按惯例将 Service 的名称用作 EndpointSlice 名称的前缀
+  labels:
+    # 你应设置 "kubernetes.io/service-name" 标签。
+    # 设置其值以匹配 Service 的名称
+    kubernetes.io/service-name: my-service
+addressType: IPv4
+ports:
+  - name: '' # 应与上面定义的 Service 端口的名称匹配
+    appProtocol: http
+    protocol: TCP
+    port: 9376
+endpoints:  # 此列表中的 IP 地址可以按任何顺序显示
+  - addresses:
+      - "10.4.5.6"
+  - addresses:
+      - "10.1.2.3"
