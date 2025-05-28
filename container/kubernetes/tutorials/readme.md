@@ -11,7 +11,8 @@ kubernetes的[官方教程](https://kubernetes.io/zh-cn/docs/tutorials/hello-min
 4. 概念-概述-Kubernetes对象
 4. 概念-概述-容器
 4. 任务-配置pods和容器-配置pod使用Config Map：看“教程-配置-教程-学习Kubernetes基础知识”发现这个任务是前置条件
-4. 概念-工作负载-Pod/工作负载管理/管理工作负载/自动扩缩工作负载：觉得教程中更多是基础只是串联的演练，看起来还是要先看概念或者任务，概念中看不太懂的地方可以问豆包或者先跳过，尤其是一些概述介绍，看不懂的部分同一笔记于章节中最后的“看不懂的额部分”中
+4. 概念-工作负载：觉得教程中更多是基础只是串联的演练，看起来还是要先看概念或者任务，概念中看不太懂的地方可以问豆包或者先跳过，尤其是一些概述介绍，看不懂的部分同一笔记于章节中最后的“看不懂的额部分”中
+4. 概念-服务、负载均衡和联网：为加快进度，后续笔记内容仅记录高价值、疑问的部分。
 
 
 
@@ -3142,3 +3143,97 @@ kubectl edit deployment/my-nginx
 goose-good/nginx:1.28.0
 ```
 
+## 服务、负载均衡和联网
+
+**看不懂**
+
+> 这个模型只有少部分是由 Kubernetes 自身实现的。 对于其他部分，Kubernetes 定义 API，但相应的功能由外部组件提供
+
+### 服务（service）
+
+simple-service.yaml定义了一个最简单的service
+
+```shell
+(base) dominiczhu@ubuntu24LTS:service$ kubectl apply -f simple-service.yaml 
+pod/my-app created
+service/my-service created
+(base) dominiczhu@ubuntu24LTS:service$ kubectl get pod
+NAME     READY   STATUS    RESTARTS   AGE
+my-app   1/1     Running   0          5s
+# 下面这些service对应的clusterip，其实都是集群的内部ip，并不能直接对外使用的。而文中也提到了，各种type的service都是基于cluster-ip实现的
+(base) dominiczhu@ubuntu24LTS:service$ kubectl get service
+NAME         TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
+kubernetes   ClusterIP   10.96.0.1      <none>        443/TCP    30h
+my-service   ClusterIP   10.96.96.249   <none>        8080/TCP   11s
+```
+
+
+
+**Kubernetes 中的 Service**
+
+todo:
+
+q:service/ingress/gateway之间的区别
+
+A:
+
+
+
+**云原生服务发现**
+
+我理解，如果集群里某个应用想知道集群里其他的服务，可以通过api service；如果应用与服务不在同一个集群，那么可以在应用和服务之间架设负载均衡器实现服务发现。
+
+
+
+**端口定义**
+
+service-target-port-name.yaml
+
+**nodeport**
+
+这个类型的名字就很说明问题，service暴露在了节点的port上
+
+
+
+**选择自己的 IP 地址**
+
+[查看service-cluster-ip-range的方法](https://www.doubao.com/thread/wd5ca0c2952c957cb)
+
+[K8s 修改NodePort的范围](https://blog.csdn.net/qq_15604349/article/details/124749441)
+
+service-node-port-range默认是没有取值的
+
+**选择你自己的端口**
+
+这个功能会将这个service的端口映射到节点的端口上，从而外界可以直接访问节点ip和端口，访问这个service，简单说，就是也就是说service暴露在节点的`nodePort`端口上。所以他才叫`nodePort`
+
+
+
+```shell
+(base) dominiczhu@ubuntu24LTS:service$ kubectl apply -f service-custom-port.yaml 
+pod/nginx created
+service/nginx-service created
+(base) dominiczhu@ubuntu24LTS:service$ kubectl get service
+NAME            TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+kubernetes      ClusterIP   10.96.0.1       <none>        443/TCP        30h
+nginx-service   NodePort    10.101.42.194   <none>        80:30007/TCP   6s
+(base) dominiczhu@ubuntu24LTS:service$ curl http://"$(minikube ip)":30007
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+
+kubectl delete -f service-custom-port.yaml 
+```
+
+
+
+
+
+**为 `type: NodePort` 服务自定义 IP 地址配置**
+
+[kube-proxy  --nodeport-addresses](https://www.doubao.com/thread/wdddd670154dc7f77)
+
+我理解了一下，默认情况下，如果创建了一个nodeport的service，当有内外部流量访问这个service的时候，service会将这个流量转发到目标pod所在的节点node，默认情况下，所有节点都支持作为提供service功能的节点。
+
+但有些情况下，有些节点不希望为某些service提供服务，那么就可以通过这个指令来通过ip限制nodeport的service可以使用哪些node
