@@ -1,0 +1,28 @@
+# 这是一个最简单的service，匹配了一个pod
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-app
+  labels:
+    app.kubernetes.io/lname: my-app
+spec:
+  containers:
+  - name: nginx
+    image: goose-good/nginx:1.27.3
+    ports:
+      - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-service
+spec:
+  selector:
+    app.kubernetes.io/lname: my-app
+  nodePortAddress: 10.96.96.7
+  ports:
+    - protocol: TCP
+    # 创建一个service，这个service的端口是8080，会映射到selector命中的pod的80端口
+    # 注意，这个8080端口也只是对于集群内部开放的，从外界无法通过8080端口访问，需要通过另一个分配的端口。--来自豆包
+      port: 8080
+      targetPort: 80
