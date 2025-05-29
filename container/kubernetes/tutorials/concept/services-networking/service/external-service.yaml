@@ -1,3 +1,15 @@
+# 这是一个指向集群外一个http服务的service
+apiVersion: v1
+kind: Service
+metadata:
+  name: httpbin-ext
+  labels:
+    app: httpbin-ext
+spec:
+  type: ExternalName
+  externalName: httpbin.org
+---
+# 这是一个指向集群内其他service的externalnameservice
 apiVersion: v1
 kind: Service
 metadata:
@@ -6,5 +18,18 @@ metadata:
     app: nginx-service-ext
 spec:
   type: ExternalName
-  sessionAffinity: None
   externalName: my-service.default.svc.cluster.local
+---
+# 这个是个带网络工具的busybox，手动打一个v1的tag
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-client
+  labels:
+    app.kubernetes.io/lname: my-client
+spec:
+  containers:
+  - name: nginx
+    image: goose-good/busybox-curl:v1
+    # 让busybox持久运行下去
+    command: ["sh", "-c", "while true; do sleep 1; done"]
