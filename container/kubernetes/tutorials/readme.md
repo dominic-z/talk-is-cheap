@@ -3304,7 +3304,7 @@ nginx-service-ext   ExternalName   <none>          my-service.default.svc.cluste
 # 进入my-client执行访问操作
 (base) dominiczhu@ubuntu24LTS:service$ kubectl exec -it my-client -- sh
 # 需要制定端口，因为这个只是dns映射，dns里不包含端口，8080刚好就是目标service暴露的内部端口
-/home # curl -v http://my-service.default.svc.cluster.local:8080
+/home # curl -v http://nginx-service-ext:8080
 *   Trying 10.104.40.135:8080...
 * Connected to my-service.default.svc.cluster.local (10.104.40.135) port 8080 (#0)
 > GET / HTTP/1.1
@@ -3312,7 +3312,7 @@ nginx-service-ext   ExternalName   <none>          my-service.default.svc.cluste
 ....
 
 
-# 通过httpbin-ext访问httpbin，注意，经过测试，偶然发现加上http协议反而无法访问，即http://httpbin-ext/get?a=2无法访问，不知道为沙todo
+# 通过httpbin-ext访问httpbin，注意，经过测试，偶然发现加上http协议反而无法访问，即http://httpbin-ext/get?a=2无法访问，不知道为沙todo（见下方引用内容），另外，httpbin.org并不是很快哈，有时候请求要等很久
 
 /home # curl httpbin-ext/get?a=2
 {
@@ -3342,11 +3342,222 @@ nginx-service-ext   ExternalName   <none>          my-service.default.svc.cluste
   "origin": "27.149.50.101", 
   "url": "http://httpbin.org/get?a=1"
 }
+
+
+# 回家之后通过http又能访问了，闹不懂
+/home # curl -v http://httpbin-ext/get?a=2
+*   Trying 50.16.79.29:80...
+* Connected to httpbin-ext (50.16.79.29) port 80 (#0)
+> GET /get?a=2 HTTP/1.1
+> Host: httpbin-ext
+> User-Agent: curl/7.81.0
+> Accept: */*
+> 
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 200 OK
+< Date: Thu, 29 May 2025 14:07:29 GMT
+< Content-Type: application/json
+< Content-Length: 275
+< Connection: keep-alive
+< Server: gunicorn/19.9.0
+< Access-Control-Allow-Origin: *
+< Access-Control-Allow-Credentials: true
+< 
+{
+  "args": {
+    "a": "2"
+  }, 
+  "headers": {
+    "Accept": "*/*", 
+    "Host": "httpbin-ext", 
+    "User-Agent": "curl/7.81.0", 
+    "X-Amzn-Trace-Id": "Root=1-68386a21-62332cc533748c9c490610fd"
+  }, 
+  "origin": "220.250.45.250", 
+  "url": "http://httpbin-ext/get?a=2"
+}
+* Connection #0 to host httpbin-ext left intact
+
+
+# 访问https端口，通过-k跳过证书
+/home # curl -v -k https://httpbin-ext/get?a=2
+*   Trying 50.16.79.29:443...
+* Connected to httpbin-ext (50.16.79.29) port 443 (#0)
+* ALPN, offering h2
+* ALPN, offering http/1.1
+* TLSv1.3 (OUT), TLS handshake, Client hello (1):
+* TLSv1.3 (IN), TLS handshake, Server hello (2):
+* TLSv1.2 (IN), TLS handshake, Certificate (11):
+* TLSv1.2 (IN), TLS handshake, Server key exchange (12):
+* TLSv1.2 (IN), TLS handshake, Server finished (14):
+* TLSv1.2 (OUT), TLS handshake, Client key exchange (16):
+* TLSv1.2 (OUT), TLS change cipher, Change cipher spec (1):
+* TLSv1.2 (OUT), TLS handshake, Finished (20):
+* TLSv1.2 (IN), TLS handshake, Finished (20):
+* SSL connection using TLSv1.2 / ECDHE-RSA-AES128-GCM-SHA256
+* ALPN, server accepted to use h2
+* Server certificate:
+*  subject: CN=httpbin.org
+*  start date: Aug 20 00:00:00 2024 GMT
+*  expire date: Sep 17 23:59:59 2025 GMT
+*  issuer: C=US; O=Amazon; CN=Amazon RSA 2048 M02
+*  SSL certificate verify result: unable to get local issuer certificate (20), continuing anyway.
+* Using HTTP2, server supports multiplexing
+* Connection state changed (HTTP/2 confirmed)
+* Copying HTTP/2 data in stream buffer to connection buffer after upgrade: len=0
+* Using Stream ID: 1 (easy handle 0x7f6642bc2a90)
+> GET /get?a=2 HTTP/2
+> Host: httpbin-ext
+> user-agent: curl/7.81.0
+> accept: */*
+> 
+* Connection state changed (MAX_CONCURRENT_STREAMS == 128)!
+< HTTP/2 200 
+< date: Thu, 29 May 2025 14:04:38 GMT
+< content-type: application/json
+< content-length: 276
+< server: gunicorn/19.9.0
+< access-control-allow-origin: *
+< access-control-allow-credentials: true
+< 
+{
+  "args": {
+    "a": "2"
+  }, 
+  "headers": {
+    "Accept": "*/*", 
+    "Host": "httpbin-ext", 
+    "User-Agent": "curl/7.81.0", 
+    "X-Amzn-Trace-Id": "Root=1-68386975-7411ba2103f0213615dd841d"
+  }, 
+  "origin": "220.250.45.250", 
+  "url": "https://httpbin-ext/get?a=2"
+}
+* Connection #0 to host httpbin-ext left intact
 ```
 
 
 
+> You may have trouble using ExternalName for some common protocols, including HTTP and HTTPS. If you use ExternalName then the hostname used by clients inside your cluster is different from the name that the ExternalName references.
+>
+> For protocols that use hostnames this difference may lead to errors or unexpected responses. HTTP requests will have a `Host:` header that the origin server does not recognize; TLS servers will not be able to provide a certificate matching the hostname that the client connected to.
 
+在上面的例子可以看出，发送的请求的header中，host字段实际上是`"Host": "httpbin-ext"`，因为对于容器来说，他以为这个httpbin-ext是一个hostname，但实际上并不是。这样话很可能导致server认为这个请求有问题从而拒绝响应。
+
+
+
+**无头服务**
+
+可以看到这个service，没有在集群中暴露任何ip，但是我们可以通过这个service定位到所关联的所有pod的ip地址，从而实现了一种简单的服务发现。
+
+```shell
+(base) dominiczhu@ubuntu:service$ kubectl apply -f headless-service.yaml 
+service/my-headless-service created
+deployment.apps/nginx-deployment created
+
+# 查看pod的ip地址
+(base) dominiczhu@ubuntu:service$ kubectl get pod -o wide
+NAME                                READY   STATUS    RESTARTS   AGE   IP             NODE       NOMINATED NODE   READINESS GATES
+nginx-deployment-55f5ccb7bd-6xb2m   1/1     Running   0          8s    10.244.0.238   minikube   <none>           <none>
+nginx-deployment-55f5ccb7bd-k9s7t   1/1     Running   0          8s    10.244.0.239   minikube   <none>           <none>
+nginx-deployment-55f5ccb7bd-qtbd4   1/1     Running   0          8s    10.244.0.237   minikube   <none>           <none>
+
+# 搞个客户端解析这个无头
+kubectl run -it --rm --image=goose-good/busybox-curl:v1 dns-test -- sh
+
+# 要稍微等一会儿，另外我发现nslookup
+/home # nslookup my-headless-service
+Server:         10.96.0.10
+Address:        10.96.0.10:53
+
+Name:   my-headless-service.default.svc.cluster.local
+Address: 10.244.0.237
+Name:   my-headless-service.default.svc.cluster.local
+Address: 10.244.0.239
+Name:   my-headless-service.default.svc.cluster.local
+Address: 10.244.0.238
+```
+
+
+
+**环境变量**
+
+
+
+```shell
+(base) dominiczhu@ubuntu:service$ kubectl apply -f simple-service.yaml 
+pod/my-app created
+service/my-service created
+(base) dominiczhu@ubuntu:service$ kubectl run -it --rm --image=goose-good/busybox-curl:v1 dns-test -- sh
+/home # env
+KUBERNETES_PORT=tcp://10.96.0.1:443
+KUBERNETES_SERVICE_PORT=443
+HOSTNAME=dns-test
+SHLVL=1
+HOME=/root
+MY_SERVICE_PORT_8080_TCP_ADDR=10.102.82.119
+MY_SERVICE_SERVICE_HOST=10.102.82.119
+TERM=xterm
+KUBERNETES_PORT_443_TCP_ADDR=10.96.0.1
+MY_SERVICE_PORT_8080_TCP_PORT=8080
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+MY_SERVICE_PORT_8080_TCP_PROTO=tcp
+KUBERNETES_PORT_443_TCP_PORT=443
+KUBERNETES_PORT_443_TCP_PROTO=tcp
+MY_SERVICE_PORT=tcp://10.102.82.119:8080
+MY_SERVICE_SERVICE_PORT=8080
+MY_SERVICE_PORT_8080_TCP=tcp://10.102.82.119:8080
+KUBERNETES_PORT_443_TCP=tcp://10.96.0.1:443
+KUBERNETES_SERVICE_PORT_HTTPS=443
+KUBERNETES_SERVICE_HOST=10.96.0.1
+PWD=/home
+```
+
+
+
+**DNS**
+
+尝试通过dns找到另一个namespace的service
+
+```shell
+
+(base) dominiczhu@ubuntu:service$ kubectl apply -f service-in-other-ns.yaml 
+namespace/other-ns created
+pod/my-app created
+service/my-service-in-other-ns created
+(base) dominiczhu@ubuntu:service$ kubectl run -it --rm --image=goose-good/busybox-curl:v1 dns-test -- sh
+If you don't see a command prompt, try pressing enter.
+/home # curl my-service-in-other-ns.other-ns:8080
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+...
+
+# 感觉k8s的dns解析和nslookup还是不太兼容，无论是my-service-in-other-ns.other-ns还是全称，都不行，但curl可以
+/home # nslookup my-service-in-other-ns.other-ns.svc.cluster.local
+Server:         10.96.0.10
+Address:        10.96.0.10:53
+
+
+*** Can't find my-service-in-other-ns.other-ns.svc.cluster.local: No answer
+# 换个镜像试试又可以了
+kubectl run -it --rm --image=goose-good/ubuntool:0.1 dns-test -- bash
+root@dns-test:~# nslookup my-service-in-other-ns.other-ns
+;; Got recursion not available from 10.96.0.10
+;; Got recursion not available from 10.96.0.10
+Server:         10.96.0.10
+Address:        10.96.0.10#53
+
+Name:   my-service-in-other-ns.other-ns.svc.cluster.local
+Address: 10.97.197.27
+;; Got recursion not available from 10.96.0.10
+
+```
+
+**外部 IP**
+
+todo：这端看的不懂，我个人理解，“外部 IP”值得应该是公网ip吧？比如一个服务器有一个公网ip，其他客户端可以通过这个公网ip访问服务，这个ip背后可能是一个k8s集群（例如nat技术实现ip映射），这个集群的一个service制定了externalIP的话，那么公网中访问公网ip的流量会被k8s集群引导打到这个service上，从而让这个service对外提供服务。
 
 
 
@@ -3358,3 +3569,7 @@ nginx-service-ext   ExternalName   <none>          my-service.default.svc.cluste
 2. 设置负载均衡器实现的类别
 3. 负载均衡器 IP 地址模式
 4. 内部负载均衡器
+4. 外部 IP
+
+### Ingress
+
