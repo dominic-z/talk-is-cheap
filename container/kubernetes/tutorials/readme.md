@@ -3280,20 +3280,68 @@ my-service   LoadBalancer   10.96.0.239   <pending>     8080:31830/TCP   7s
 
 **ExternalName 类型**
 
-相当于一个通过dns指向其他外部地址（需要集群有一个支持外部的dns服务）或者其他service，可以通过一个简单的实验验证，来自[Kubernetes Service中ExternalName的使用](https://blog.csdn.net/polywg/article/details/109814803)
+相当于一个通过dns指向其他外部地址（需要集群有一个支持外部的dns服务）或者其他service的中间层，比如有一些pod需要访问集群之外的数据库服务，可以将数据库的地址通过externalName的service构建一层映射，然后其他pod只要访问这个servcie，就能访问这个数据库了，参考：[Kubernetes Service中ExternalName的使用](https://blog.csdn.net/polywg/article/details/109814803)、[k8s - Service ExternalName](https://www.cnblogs.com/microestc/p/13255086.html)
+
+
+
+可以通过一个简单的实验验证，
 
 ```shell
 # 借用simple-service一下
 (base) dominiczhu@ubuntu:service$ kubectl apply -f simple-service.yaml 
 pod/my-app created
 service/my-service created
-(base) dominiczhu@ubuntu:service$ kubectl apply -f external-service.yaml 
-service/nginx-service-ext created
-(base) dominiczhu@ubuntu:service$ kubectl get service
-NAME                TYPE           CLUSTER-IP    EXTERNAL-IP                            PORT(S)    AGE
-kubernetes          ClusterIP      10.96.0.1     <none>                                 443/TCP    11d
-my-service          ClusterIP      10.97.97.85   <none>                                 8080/TCP   12s
-nginx-service-ext   ExternalName   <none>        my-service.default.svc.cluster.local   <none>     7s
+(base) dominiczhu@ubuntu24LTS:service$ kubectl apply -f external-service.yaml 
+
+(base) dominiczhu@ubuntu24LTS:service$ kubectl get service
+NAME                TYPE           CLUSTER-IP      EXTERNAL-IP                            PORT(S)    AGE
+httpbin-ext         ExternalName   <none>          httpbin.org                            <none>     31s
+kubernetes          ClusterIP      10.96.0.1       <none>                                 443/TCP    2d3h
+my-service          ClusterIP      10.104.40.135   <none>                                 8080/TCP   16m
+nginx-service-ext   ExternalName   <none>          my-service.default.svc.cluster.local   <none>     13m
+
+
+# 进入my-client执行访问操作
+(base) dominiczhu@ubuntu24LTS:service$ kubectl exec -it my-client -- sh
+# 需要制定端口，因为这个只是dns映射，dns里不包含端口，8080刚好就是目标service暴露的内部端口
+/home # curl -v http://my-service.default.svc.cluster.local:8080
+*   Trying 10.104.40.135:8080...
+* Connected to my-service.default.svc.cluster.local (10.104.40.135) port 8080 (#0)
+> GET / HTTP/1.1
+> Host: my-service.default.svc.clust
+....
+
+
+# 通过httpbin-ext访问httpbin，注意，经过测试，偶然发现加上http协议反而无法访问，即http://httpbin-ext/get?a=2无法访问，不知道为沙todo
+
+/home # curl httpbin-ext/get?a=2
+{
+  "args": {
+    "a": "2"
+  }, 
+  "headers": {
+    "Accept": "*/*", 
+    "Host": "httpbin-ext", 
+    "User-Agent": "curl/7.81.0", 
+    "X-Amzn-Trace-Id": "Root=1-68381b4b-7e3271e37c2f23f671e2db7c"
+  }, 
+  "origin": "27.149.50.101", 
+  "url": "http://httpbin-ext/get?a=2"
+}
+/home # curl http://httpbin.org/get?a=1
+{
+  "args": {
+    "a": "1"
+  }, 
+  "headers": {
+    "Accept": "*/*", 
+    "Host": "httpbin.org", 
+    "User-Agent": "curl/7.81.0", 
+    "X-Amzn-Trace-Id": "Root=1-68381b43-27d4a85874208af6249fad53"
+  }, 
+  "origin": "27.149.50.101", 
+  "url": "http://httpbin.org/get?a=1"
+}
 ```
 
 
