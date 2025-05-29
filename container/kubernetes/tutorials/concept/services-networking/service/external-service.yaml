@@ -29,7 +29,7 @@ metadata:
     app.kubernetes.io/lname: my-client
 spec:
   containers:
-  - name: nginx
+  - name: client
     image: goose-good/busybox-curl:v1
     # 让busybox持久运行下去
     command: ["sh", "-c", "while true; do sleep 1; done"]
