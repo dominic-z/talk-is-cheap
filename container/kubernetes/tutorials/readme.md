@@ -3605,4 +3605,343 @@ todo：q:这里对图有个疑问，fanout应该对应的服务，至于每个�
 
 **资源模型**
 
-todo：看不懂这仨资源都是干啥的
+- GatewayClass：个人理解用于管理GateWay的控制器，前面看到过一个deployment controller会通过创建ReplicaSet从而实现维护Pod副本数量的功能，也就是说controller是负责调度、使用其他功能从而达到目的的组件，GatewayClass也类似，他是k8s中的一种资源，这个资源本质上是一个gatewaycontroller，负责控制、调用、管理gateway，还是不太懂todo。
+- Gateway：具体执行流量处理的资源。示例中，我理解这个example-gateway应该是对外在某个公网ip下暴露了80端口，也就是说gateway是负责外界流量与集群内部流量的入口。
+- HTTPRoute：路由规则，负责作为gateway和service的桥梁，将gateway出来的请求根据规则转发到对应service里
+
+
+
+### EndpointSlice
+
+来个例子
+
+```shell
+# 以pod作为后端服务，先创建一个pod作为服务提供者
+(base) dominiczhu@ubuntu:EndpointSlice$ kubectl run silly-pod --image=goose-good/nginx:1.27.3  --port=80
+pod/silly-pod created
+
+(base) dominiczhu@ubuntu:EndpointSlice$ kubectl get pod -o wide
+NAME        READY   STATUS    RESTARTS   AGE   IP             NODE       NOMINATED NODE   READINESS GATES
+silly-pod   1/1     Running   0          87s   10.244.0.252   minikube   <none>           <none>
+
+
+(base) dominiczhu@ubuntu:EndpointSlice$ kubectl apply -f simple-endpointslice.yaml 
+service/my-service-no-selector created
+endpointslice.discovery.k8s.io/my-service-no-selector-es-1 created
+(base) dominiczhu@ubuntu:EndpointSlice$ kubectl get endpointslice
+NAME                          ADDRESSTYPE   PORTS   ENDPOINTS      AGE
+kubernetes                    IPv4          8443    192.168.49.2   13d
+my-service-no-selector-es-1   IPv4          80      10.244.0.252   103s
+(base) dominiczhu@ubuntu:EndpointSlice$ kubectl get service
+NAME                     TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+kubernetes               ClusterIP   10.96.0.1       <none>        443/TCP    13d
+my-service-no-selector   ClusterIP   10.105.73.150   <none>        8080/TCP   107s
+
+# 搞个客户端
+(base) dominiczhu@ubuntu:EndpointSlice$ kubectl run -it --rm --image=goose-good/ubuntool:0.1 dns-test -- bash
+If you don't see a command prompt, try pressing enter.
+root@dns-test:~# curl my-service-no-selector:8080
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+```
+
+
+
+**Distribution of EndpointSlices**
+
+> Each EndpointSlice has a set of ports that applies to all endpoints within the resource. When named ports are used for a Service, Pods may end up with different target port numbers for the same named port, requiring different EndpointSlices.
+
+来自豆包：https://www.doubao.com/thread/w38e43b13cbcad287
+
+在service章节中见到了named-port，即对pod中的container暴露的端口进行命名，然后service的target-port字段不具体指向数字端口，而是指向container的命名；但这导致了一个问题，比如pod1中容器暴露了80端口并且命名为http-port，pod2中的容器暴露了8080端口也命名为http-port，那service可能就会懵逼了，到底是映射到80来还是8080啊？
+
+为了解决这个问题，k8s为这个service创建了两个endpointslice
+
+```shell
+(base) dominiczhu@ubuntu:EndpointSlice$ kubectl apply -f endpoints-with-target-port-name.yaml 
+service/nginx-service created
+pod/my-app-1 created
+pod/my-app-2 created
+(base) dominiczhu@ubuntu:EndpointSlice$ kubectl get pod -o wide
+NAME        READY   STATUS    RESTARTS   AGE   IP             NODE       NOMINATED NODE   READINESS GATES
+my-app-1    1/1     Running   0          20s   10.244.1.10    minikube   <none>           <none>
+my-app-2    1/1     Running   0          20s   10.244.1.9     minikube   <none>           <none>
+silly-pod   1/1     Running   0          73m   10.244.0.252   minikube   <none>           <none>
+(base) dominiczhu@ubuntu:EndpointSlice$ kubectl run -it --rm --image=goose-good/ubuntool:0.1 dns-test -- bash
+If you don't see a command prompt, try pressing enter.
+root@dns-test:~# curl 10.244.1.9:8080
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+
+root@dns-test:~# curl nginx-service 
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to 
+
+# 可以发现有两个slice,分别对应了两个port
+(base) dominiczhu@ubuntu:EndpointSlice$ kubectl get endpointslice
+NAME                  ADDRESSTYPE   PORTS   ENDPOINTS      AGE
+kubernetes            IPv4          8443    192.168.49.2   13d
+nginx-service-8282b   IPv4          8080    10.244.1.9     67m
+nginx-service-wbbhc   IPv4          80      10.244.1.10    67m
+(base) dominiczhu@ubuntu:EndpointSlice$ kubectl describe endpointslice/nginx-service-8282b
+Ports:
+  Name     Port  Protocol
+  ----     ----  --------
+  <unset>  8080  TCP
+
+(base) dominiczhu@ubuntu:EndpointSlice$ kubectl describe endpointslice/nginx-service-wbbhc
+Ports:
+  Name     Port  Protocol
+  ----     ----  --------
+  <unset>  80    TCP
+```
+
+**看不懂**
+
+1. Distribution of EndpointSlices
+2. EndpointSlice mirroring
+
+### 网络策略
+
+网络策略用于控制集群内、集群内与集群外的TCP/UDP/SCTP协议的网络链接；
+
+> The entities that a Pod can communicate with are identified through a combination of the following three identifiers:
+
+看下文的样例就可以理解这句话了
+
+**Pod 隔离的两种类型**
+
+按照方向定义的链接，包括入口和出口，以出口为例，如果某个pod的出口是隔离的，那么只有符合策略的流量可以出去，也就是说向外访问的时候只有满足规则的才行，当然附带的应答流量（例如握手过程中的应答、HTTP的应答）也是可以的。
+
+
+
+因为pod在与外界网络链接的时候，往往需要经过loadbalancer等中转，因此实际的网络来源与pod看到的网络来源可能不一致。比如说对于某些pod来说，他看到的源地址ip实际只是loadbalancer，对于出站流量也是同理，他可能认为出站的流量目标是loadbalancer
+
+> **ipBlock**：此选择器将选择特定的 IP CIDR 范围以用作入站流量来源或出站流量目的地。 这些应该是集群外部 IP，因为 Pod IP 存在时间短暂的且随机产生。
+>
+> 集群的入站和出站机制通常需要重写数据包的源 IP 或目标 IP。 在发生这种情况时，不确定在 NetworkPolicy 处理之前还是之后发生， 并且对于网络插件、云提供商、`Service` 实现等的不同组合，其行为可能会有所不同。
+>
+> 对入站流量而言，这意味着在某些情况下，你可以根据实际的原始源 IP 过滤传入的数据包， 而在其他情况下，NetworkPolicy 所作用的 `源IP` 则可能是 `LoadBalancer` 或 Pod 的节点等。
+>
+> 对于出站流量而言，这意味着从 Pod 到被重写为集群外部 IP 的 `Service` IP 的连接可能会或可能不会受到基于 `ipBlock` 的策略的约束。
+
+
+
+
+
+**NetworkPolicy 和 `hostNetwork` Pod**
+
+关于[host network](https://www.doubao.com/thread/w7d503c50911545fc)
+
+NetworkPolicy对hostnetwork的pod没有定义单独的规则，应该使用networkpolicy的podSelector这类的规则来实现需求
+
+
+
+todo：
+
+只有概念案例没有案例
+
+
+
+### Service与Pod的DNS
+
+**Namespaces of Services**
+
+根据resolv.conf规则（实际上是实践来的），如果我门在集群里`nslooup name-of-service`，实际上他寻找的是`name-of-service.<namespace>.svc.cluster.local`等一串地址的ip
+
+**Service**
+
+
+
+> 没有集群 IP 的[无头 Service](https://kubernetes.io/zh-cn/docs/concepts/services-networking/service/#headless-services) 也会被赋予一个形如 `my-svc.my-namespace.svc.cluster-domain.example` 的 DNS A 和/或 AAAA 记录。 与普通 Service 不同，这一记录会被解析成对应 Service 所选择的 Pod IP 的集合。 客户端要能够使用这组 IP，或者使用标准的轮转策略从这组 IP 中进行选择。
+
+这个是说对于非无头service，这个service有自己的ip，他的dns只会对应集群里的一个ip，然后service自己负责将流量转发到对应的pod；而无头service没有获得自己在集群里的ip，他的dns直接对应了多个pod的id；
+
+
+
+**SRV 记录**
+
+新知识：DNS只能解析IP地址，无法对应到具体的服务端口，这也正常，但为了能够让DNS解析到端口，他们又新创建了一种东西：[SRV记录](https://www.doubao.com/thread/w2bdee5a99694a727)
+
+举个例子，复用了service-target-port-name：
+
+```shell
+(base) dominiczhu@ubuntu:service$ kubectl apply -f service-target-port-name.yaml 
+pod/nginx created
+service/nginx-service created
+
+
+
+# 最下面的一长串的就是srv记录
+root@dns-test:~# nslookup -type=srv nginx-service
+;; Got recursion not available from 10.96.0.10
+Server:         10.96.0.10
+Address:        10.96.0.10#53
+
+nginx-service.default.svc.cluster.local service = 0 100 80 nginx-service.default.svc.cluster.local.
+
+```
+
+srv记录无法被浏览器直接使用，但是可以通过其他方式使用
+
+
+
+**A/AAAA records**
+
+https://www.doubao.com/thread/w9273bb52a6f69a32
+
+对于pod来说，集群给pod创建的dns name比较奇怪，是`pod-ipv4-address.my-namespace.pod.cluster-domain.example`格式的，域名里直接体现了ip，所以案例来说应该是一般用不到。
+
+
+
+**Pod's hostname and subdomain fields**
+
+最后那个说明给我整蒙了，试一试
+
+```shell
+(base) dominiczhu@ubuntu:dns-pod-service$ kubectl apply -f pod-hostname-subdomain.yaml 
+service/busybox-subdomain created
+pod/busybox1 created
+pod/busybox2 created
+
+# 启动一个客户端
+kubectl run -it --rm --image=goose-good/ubuntool:0.1 dns-test -- bash
+
+(base) dominiczhu@ubuntu:dns-pod-service$ kubectl run -it --rm --image=goose-good/ubuntool:0.1 dns-test -- bash
+If you don't see a command prompt, try pressing enter.
+
+# 服务的dns
+root@dns-test:~# nslookup busybox-subdomain
+;; Got recursion not available from 10.96.0.10
+Server:         10.96.0.10
+Address:        10.96.0.10#53
+
+Name:   busybox-subdomain.default.svc.cluster.local
+Address: 10.244.1.22
+Name:   busybox-subdomain.default.svc.cluster.local
+Address: 10.244.1.23
+;; Got recursion not available from 10.96.0.10
+# pod的dns
+root@dns-test:~# nslookup busybox-2.busybox-subdomain
+;; Got recursion not available from 10.96.0.10
+Server:         10.96.0.10
+Address:        10.96.0.10#53
+
+Name:   busybox-2.busybox-subdomain.default.svc.cluster.local
+Address: 10.244.1.22
+;; Got recursion not available from 10.96.0.10
+
+
+# 然后把busybox-2的hostname/subdomain都删了重来，发现nslookup失效了
+root@dns-test:~# nslookup busybox-2.busybox-subdomain
+;; Got recursion not available from 10.96.0.10
+;; Got recursion not available from 10.96.0.10
+
+# 再只保留busybox-2的subdomain发现仍然是失效的
+```
+
+所以我觉得“Note”这段的意思是说
+
+1. **如果**一个pod没有设置hostname，那么就不会基于hostname创建一个dns地址；
+2. **如果**一个pod没有设置hostname但是设置了subdomain，这个poddns寻址也只能通过指向这个pod的无头service来实现。
+
+**Pod的DNS策略**
+
+todo：需要一些实际的使用样例
+
+
+
+[k8s中dns策略](https://www.doubao.com/thread/wbb13f3dde10623bd)
+
+在之前的例子里有用过，会发现在在Pod里是可以直接访问外网的，这是因为DNS策略中，默认状态下用的是ClusterFirst策略，指的是转发到集群内的DNS同一服务器（例如CoreDNS）。可以看每个pod中容器的`/etc/resolv.conf`，其中`10.32.0.10`就是集群中dns server的内部ip
+
+```shell
+nameserver 10.32.0.10
+search <namespace>.svc.cluster.local svc.cluster.local cluster.local
+options ndots:5
+```
+
+
+
+那么除此之外，还有其他的策略，例如，`default`pod应用的是所在节点的域名解析配置（即`/etc/resolv.conf`）；这个tmd就有点怪，默认状态是`clusterfirst`，然后还有另一个非默认的是`default`
+
+```shell
+(base) dominiczhu@ubuntu:dns-pod-service$ kubectl apply -f pod-with-default-dns-policy.yaml 
+pod/busybox-default-dns-policy created
+
+# 可以看到resolv.conf直接指向的是192.168.49.1
+(base) dominiczhu@ubuntu:dns-pod-service$ kubectl exec busybox-default-dns-policy -it -- sh
+/home # cat /etc/resolv.conf 
+nameserver 192.168.49.1
+search localdomain
+options edns0 trust-ad ndots:0
+
+# 我使用minikube，查看本机ip
+(base) dominiczhu@ubuntu:dns-pod-service$ ifconfig
+br-6fbcb8d16b7c: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 192.168.49.1  netmask 255.255.255.0  broadcast 192.168.49.255
+        inet6 fe80::42:ddff:feaa:a153  prefixlen 64  scopeid 0x20<link>
+        ether 02:42:dd:aa:a1:53  txqueuelen 0  (Ethernet)
+        RX packets 9367  bytes 2834189 (2.8 MB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 12039  bytes 1671895 (1.6 MB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+```
+
+突发奇想
+
+
+
+[如果minikube创建的虚拟网卡地址是192.168.49.1，那minikube ip范围的为什么是192.168.49.2呢？](https://www.doubao.com/thread/w5f714acd1119ee21)
+
+
+
+### IPv4/IPv6 双协议栈
+
+minikube默认没有启用双栈支持，需要在minikube start的时候加一些命令行，本章节实操略
+
+> **DNS 服务器本身不支持 IPv6**
+>
+> - 传统 DNS 服务器仅配置了 IPv4 地址，未启用 IPv6 监听或未配置 IPv6 解析能力
+
+
+
+### 拓扑感知路由
+
+这一节讲的太抽象了，能理解作用但是实际的样例实在无法确认配置之后是否生效。
+
+同时在[流量分发](https://kubernetes.io/zh-cn/docs/reference/networking/virtual-ips/#traffic-distribution)还提到了
+
+> 如果 `service.kubernetes.io/topology-mode` 注解设置为 `Auto`，它将优先于 `trafficDistribution`。该注解将来可能会被弃用，取而代之的是 `trafficDistribution` 字段。
+
+todo:
+
+重要：未来搞两个虚拟机模拟两个节点，然后设置节点的zone字段，测试请求的流量亲和性。优先访问本地节功能一定很重要。
+
+
+
+### Service ClusterIP 分配
+
+像算术题，CIDR表示法，以10.96.0.0/20为例：
+
+1. 范围大小：$2^{12} - 2 = 4094$：IP地址一共32位，前20位固定，那么还有12位可以变化，即从10.96.0.0到10.96.15.0；去掉网关0和255广播地址；
+2. 带宽偏移量：
+3. 静态带宽：可以给我们手动分配ip的范围，我们可以在这个范围静态分配clusterip；剩余的是由集群自动动态分配的范围。
+
+
+
+
+
+### 服务内部流量策略
+
+相当于提供了一种，一个pod只能访问本节点拥有的服务的功能
+
+todo：
+
+重要：未来搞个实例测测
