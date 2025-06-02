@@ -3945,3 +3945,210 @@ todo:
 todo：
 
 重要：未来搞个实例测测
+
+
+
+## 存储
+
+[通俗地解释一下mount的含义](https://www.doubao.com/thread/wc8aa0459171bc2db)
+
+```shell
+(base) dominiczhu@ubuntu:Desktop$ sudo mount --bind ~/logs /mnt/mounttest
+(base) dominiczhu@ubuntu:Desktop$ ls /mnt/mounttest/
+csp  eagleeye  nacos
+(base) dominiczhu@ubuntu:Desktop$ umount /mnt/mounttest 
+umount: /mnt/mounttest: must be superuser to unmount.
+(base) dominiczhu@ubuntu:Desktop$ sudo umount /mnt/mounttest
+```
+
+
+
+
+
+### 卷
+
+**configMap**
+
+configMap居然也是一种卷
+
+```shell
+(base) dominiczhu@ubuntu:volumes$ kubectl apply -f config-map-volume.yaml 
+configmap/log-config created
+pod/configmap-pod created
+(base) dominiczhu@ubuntu:volumes$ kubectl logs configmap-pod
+The app is running!
+total 0
+lrwxrwxrwx    1 root     root            18 Jun  2 03:47 binary.conf -> ..data/binary.conf
+lrwxrwxrwx    1 root     root            21 Jun  2 03:47 log_level.conf -> ..data/log_level.conf
+INFO
+m�Z���j]��]�
+```
+
+**hostPath**
+
+
+
+todo:他说尽量不要用，所以暂时忽略了。
+
+**image**
+
+
+
+```shell
+# 默认是关闭的，需要手动打开image特性门控
+(base) dominiczhu@ubuntu:volumes$ minikube stop
+✋  Stopping node "minikube"  ...
+🛑  Powering off "minikube" via SSH ...
+🛑  1 node stopped.
+(base) dominiczhu@ubuntu:volumes$ minikube start --feature-gates=ImageVolume=true
+😄  minikube v1.35.0 on Ubuntu 22.04
+。。。。
+
+todo:后续的测试没有通过，报错了Error: Error response from daemon: invalid volume specification: ':/volume:ro'
+```
+
+
+
+**local**
+
+相当于拿本地的一块存储交给k8s作为卷来挂载，并且只能用于作为持久卷。在示例中，相当于将本地的/mnt/disks/ssd1的100g作为卷挂载上去。
+
+
+
+**persistentVolumeClaim**
+
+结合下方的`使用 subPath`的例子，这个相当于在pod里声明，我这个pod需要使用一个已经存在的persistentVolume
+
+**使用 subPath**
+
+一个卷分着大家用。每个pod使用一个subpath
+
+**树外（Out-of-Tree）卷插件**
+
+todo：
+
+应该用不上，了解接口，[简介](https://www.doubao.com/thread/wfcc0e34ede7460d8)
+
+**挂载卷的传播**
+
+一个路径如果作为hostPath卷被挂载到某个pod里，这个路径下本身还可能新增挂载新的地址，那么pod里能否感知到新增的挂载点，由挂载卷的传播来控制的。
+
+[kubernetes 挂载传播](https://blog.csdn.net/qq_41586875/article/details/128358388)
+
+
+
+### 持久卷
+
+**介绍**
+
+关于存储类：
+
+因为在集群里的应用需要的PV各式各样，一般情况下是不同情况生成不同的PV，而这种情况下又不可能预先完全创建好，所以就需要通过存储类来动态地创建PV
+
+[存储类豆包介绍](https://www.doubao.com/thread/wb1770dbc9e745583)
+
+
+
+**卷和申领的生命周期**
+
+1. 制备：做一些PV，无论是预先创建好，还是说通过storageClass随用随建
+2. 绑定：用户是指希望使用PV的人，可能是应用的开发者；让开发者需要使用PV的时候，他需要创建PVC对象，声明我需要使用PV。然后集群会将PVC和申领到的PV关联起来，从而确保下次用同样的PVC申请的时候，得到的仍然是上次那个PV；
+
+**预留 PersistentVolume**
+
+告诉PV，你是为哪个PVC留着的；告诉PVC，你应该去用哪个PV
+
+
+
+**持久卷**
+
+样例里提供了一个使用NFS系统的样例
+
+[NFS](https://www.doubao.com/thread/wdd8dacc67a2ee0d6)
+
+结合之前所学，搞一个持久卷的案例，第一次运行的时候发现挂载是成功了，但是pod内看不到本地已经存在的文件，搜索发现：https://cloud.tencent.com/developer/ask/sof/249892
+
+> MINIKUBE特定
+>
+> 在Mac的minikube上运行本地集群时，我也遇到了同样的错误。
+>
+> Minikube实际上创建了一个VM，然后在上面运行您的容器。因此，hostPath实际上引用的是该VM内的路径，而不是本地计算机上的路径。这就是为什么所有的挂载都显示为空文件夹。
+>
+> 解决方案：
+>
+> 使用相同的名称将您的本地路径映射到minikube的VM。这样你就可以在kubernetes清单中引用它。
+>
+> ```
+> minikube mount /tmp/data:/tmp/data
+> ```
+>
+> 这应该会起作用。
+>
+> 来源：
+>
+> https://minikube.sigs.k8s.io/docs/handbook/mount/
+
+在一个终端启动
+
+```shell
+(base) dominiczhu@ubuntu:persistent-volumes$ minikube mount /home/dominiczhu/Coding/talk-is-cheap/container/kubernetes/tutorials/concept/storage/persistent-volumes/fake-ssd:/mnt/data
+📁  Mounting host path /home/dominiczhu/Coding/talk-is-cheap/container/kubernetes/tutorials/concept/storage/persistent-volumes/fake-ssd into VM as /mnt/data ...
+    ▪ Mount type:   9p
+    ▪ User ID:      docker
+    ▪ Group ID:     docker
+    ▪ Version:      9p2000.L
+    ▪ Message Size: 262144
+    ▪ Options:      map[]
+    ▪ Bind Address: 192.168.49.1:37157
+🚀  Userspace file server: ufs starting
+✅  Successfully mounted /home/dominiczhu/Coding/talk-is-cheap/container/kubernetes/tutorials/concept/storage/persistent-volumes/fake-ssd to /mnt/data
+
+📌  NOTE: This process must stay alive for the mount to be acces
+```
+
+换一个终端
+
+```shell
+(base) dominiczhu@ubuntu:persistent-volumes$ kubectl apply -f simple-pv-pvc.yaml 
+persistentvolume/pv0001 created
+persistentvolumeclaim/pv0001-claim created
+pod/task-pv-pod created
+# 可以看到我创建的pvc和pv已经相互关联起来了，说明pvc的selector生效了
+(base) dominiczhu@ubuntu:persistent-volumes$ kubectl get pvc
+NAME           STATUS   VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+pv0001-claim   Bound    pv0001   5Gi        RWO            local-path     <unset>                 5s
+
+# 可以看到已经读取出来了。
+(base) dominiczhu@ubuntu:persistent-volumes$ kubectl logs task-pv-pod
+The app is running!
+total 1
+-rw-rw-r--    1 1000     999              9 Jun  2 14:35 test
+test-read
+```
+
+
+
+
+
+**资源**
+
+[PersistentVolume中的storage和PersistentVolumeClaim中Storage的关系是什么](https://www.doubao.com/thread/w2d84e8392e24c072)
+
+**类**
+
+> 未设置 `storageClassName` 的 PVC 与此大不相同， 也会被集群作不同处理。
+
+将`storageClassName=''`和不设置`storageClassName`是不同的。
+
+**原始块卷支持**
+
+搞一个持久卷的样例。
+
+
+
+
+
+**看不懂**
+
+1. 对卷快照及从卷快照中恢复卷的支持：感觉这个东西就是从卷创建一个pvc，或者从pvc克隆出来一个pvc；
+2. 这一章节末尾的一些高级应用没看懂
