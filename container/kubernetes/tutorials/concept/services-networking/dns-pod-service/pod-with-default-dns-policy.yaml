@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: busybox-default-dns-policy
+spec:
+  containers:
+  - image: goose-good/busybox-curl:v1
+    command:
+      - sleep
+      - "3600"
+    name: busybox
+  dnsPolicy: Default
