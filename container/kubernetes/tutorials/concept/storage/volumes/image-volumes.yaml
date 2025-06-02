@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: image-volume
+spec:
+  containers:
+  - name: shell
+    command: ["sh","-c","sleep infinity && chmod 755 /volume"]
+    image: goose-good/debian:12.11
+    volumeMounts:
+    - name: volume
+      mountPath: /volume
+  volumes:
+  - name: volume
+    image:
+      reference: goose-good/quay.crio.artifact:v2
+      pullPolicy: IfNotPresent
