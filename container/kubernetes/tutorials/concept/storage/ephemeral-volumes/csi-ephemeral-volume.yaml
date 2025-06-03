@@ -1,0 +1,25 @@
+# 启动不起来kubernetes.io/csi: mounter.SetUpAt failed to get CSI client: driver name inline.storage.kubernetes.io not found in the list of registered CSI drivers
+kind: Pod
+apiVersion: v1
+metadata:
+  name: my-csi-app
+spec:
+  containers:
+    - name: my-frontend
+      image: goose-good/busybox:1.37.0
+      volumeMounts:
+      - mountPath: "/data"
+        name: my-csi-inline-vol
+      command: 
+      - sh
+      - -c
+      - |
+        echo "The app is running!" 
+        ls -l /data/ 
+        echo "" 
+  volumes:
+    - name: my-csi-inline-vol
+      csi:
+        driver: inline.storage.kubernetes.io
+        volumeAttributes:
+          foo: bar
