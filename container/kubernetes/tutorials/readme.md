@@ -4294,5 +4294,57 @@ pvc-fdf41132-ff43-4fbf-9e15-74ec08ea5f4e   1Gi        RWO            Delete     
 
 
 
+### 存储类
+
+这一章我觉得我看的并不是很明白，但是作为云的使用者，我估么着我大概率不用知道一个storageClass里的各个字段是怎么创建的，只需要会配置就行了。
+
+https://www.doubao.com/thread/w301e84cbcd49f7ea
+
+StorageClass就像一个配置文件，通过StorageClass可以动态制作PV，而无需预先创建PV，创建了一个PVC之后，可以立刻或者等到Pod需要使用一个PVC的时候，根据StorageClass创建一个PV；
+
+组成StorageClass的关键部分包括：
+
+1. Provisioner：用来创建PV的关键组件，一般来说是第三方提供的，例如云厂商，我可写不出这东西；
+2. **Parameters**：用于Provisioner创建PV时的参数
+3. reclaimPolicy：前文提到过，一个PV与PVC解除关联之后PV后续如何处理的规则。
 
 
+
+### 卷属性类
+
+略
+
+
+
+### 动态卷制备
+
+这一章倒是说明了storageClass是如何工作的。
+
+
+
+### 卷快照
+
+PV是集群管理者创建的资源，PVC是集群使用者申领PV的申请，StorageClass是用来根据PVC动态创建PV的
+
+对应的
+
+SnapshotContent是集群管理者创建的一个快照的内容，Snapshot是集群使用者希望对某数据拍摄快照的申请，SnapshotClass是用来根据Snapshot动态创建SnapshotContent的
+
+**卷快照和卷快照内容的生命周期**
+
+预制备：我理解这个相当于是管理员动态预先创建好快照内容，是对实际卷的真实快照。供集群使用者使用。
+
+
+
+**卷快照**
+
+1. 要创建一个快照：可以通过指定一个PVC创建一个snapshot，含义就是要创建这个PVC对应的快照；
+2. 直接使用一个现存的content：也可以直接指定一个**volumeSnapshotContent**
+
+这个设计就tm很奇怪，如果要使用pv，必须创建一个pvc，还比较好理解，但如果要创建一个快照，需要通过创建一个snapshot，要么直接指定要用的snapshotcontent，要么指定一个pvc，通过pvc找到对应的PV，然后创建快照。
+
+
+
+**卷快照内容**
+
+真实的记录了快照信息，后续可以基于此创建新的卷。用于恢复。
