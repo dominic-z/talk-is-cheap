@@ -4035,6 +4035,27 @@ todo：
 
 [kubernetes 挂载传播](https://blog.csdn.net/qq_41586875/article/details/128358388)
 
+**其他延伸**
+
+在后面投射卷里看到了一个字段：readOnly，遂测试验证以下，更多[说明](https://www.doubao.com/thread/w137a6e23a473ba9a)
+
+```shell
+(base) dominiczhu@ubuntu24LTS:volumes$ kubectl apply -f volume-mounts-readonly.yaml 
+configmap/log-config created
+pod/configmap-pod created
+(base) dominiczhu@ubuntu24LTS:volumes$ kubectl exec pod/configmap-pod -it -- sh
+# 即使是777，也无法修改
+/ # ls -l /etc/config
+total 0
+lrwxrwxrwx    1 root     root            21 Jun  3 03:20 log_level.conf -> ..data/log_level.conf
+/ # cat /etc/config/log_level.conf 
+INFO
+/ # echo "test" > /etc/config/log_level.conf
+sh: can't create /etc/config/log_level.conf: Read-only file system
+```
+
+
+
 
 
 ### 持久卷
@@ -4152,3 +4173,126 @@ test-read
 
 1. 对卷快照及从卷快照中恢复卷的支持：感觉这个东西就是从卷创建一个pvc，或者从pvc克隆出来一个pvc；
 2. 这一章节末尾的一些高级应用没看懂
+
+
+
+### 投射卷
+
+> 一个 `projected` 卷可以将若干现有的卷源映射到同一个目录之上。
+
+相当于将多个卷作为源头汇总然后映射到同一个目录下的不同位置中
+
+**带有 Secret、DownwardAPI 和 ConfigMap 的配置示例**
+
+```shell
+(base) dominiczhu@ubuntu24LTS:projected-volumes$ kubectl apply -f projected-secret-downwardapi-configmap.yaml 
+secret/my-secret created
+configmap/myconfigmap created
+pod/volume-test created
+(base) dominiczhu@ubuntu24LTS:projected-volumes$ kubectl logs pod/volume-test
+The app is running!
+total 0
+lrwxrwxrwx    1 root     root            16 Jun  3 02:26 cpu_limit -> ..data/cpu_limit
+lrwxrwxrwx    1 root     root            13 Jun  3 02:26 labels -> ..data/labels
+lrwxrwxrwx    1 root     root            15 Jun  3 02:26 my-group -> ..data/my-group
+admin
+supersecret
+8
+env="dev"
+balalbalal232132
+```
+
+
+
+**带有非默认权限模式设置的 Secret 的配置示例**
+
+> - 对于 Secret，`secretName` 字段被改为 `name` 以便于 ConfigMap 的命名一致；
+
+如果单独映射secret卷，那么在spec中定义的时候，使用是`secretName`，[参考](https://kubernetes.io/zh-cn/docs/concepts/configuration/secret/#use-case-pod-with-ssh-keys)。但这一章节讲的是投射卷，投射卷是把多个卷汇总映射到同一个路径，在spec中的声明使用secret的时候，使用的不是`secretName`而是`name`
+
+> - `defaultMode` 只能在投射层级设置，不能在卷源层级设置。不过，正如上面所展示的， 你可以显式地为每个投射单独设置 `mode` 属性。
+
+```shell
+kubeapply -f projected-secrets-nondefault-permission-mode.yaml
+(base) dominiczhu@ubuntu24LTS:projected-volumes$ kubectl logs pod/volume-test
+略
+```
+
+[关于mode和defaultmode的详细解释](https://www.doubao.com/thread/wf4eb49f34ea7eccc)
+
+**serviceAccountToken 投射卷**
+
+todo: 服务账号是啥？
+
+```shell
+(base) dominiczhu@ubuntu24LTS:projected-volumes$ kubectl apply -f projected-service-account-token.yaml 
+(base) dominiczhu@ubuntu24LTS:projected-volumes$ kubectl logs pod/sa-token-test
+```
+
+
+
+
+
+**看不懂**
+
+1. clusterTrustBundle 投射卷
+
+
+
+### 临时卷
+
+**CSI 临时卷**
+
+[csi存储是什么](https://www.doubao.com/thread/w5363281f7cf6954c)
+
+我理解就是一个接口，第三方可以通过这个为容器创建存储，供容器使用
+
+案例里启动不起来，回报错
+
+```shel
+kubernetes.io/csi: mounter.SetUpAt failed to get CSI client: driver name inline.storage.kubernetes.io not found in the list of registered CSI drivers
+```
+
+**通用临时卷**
+
+案例也启动不起来，pvc里找不到storageClassName
+
+```shell
+(base) dominiczhu@ubuntu24LTS:ephemeral-volumes$ kubectl describe pvc/my-app-scratch-volume
+
+  Warning  ProvisioningFailed  2s (x4 over 45s)  persistentvolume-controller  storageclass.storage.k8s.io "scratch-storage-class" not found
+```
+
+**生命周期和 PersistentVolumeClaim**
+
+大体是说，创建临时卷也是创建一个pvc然后创建一个pv，将pvc和pv关联起来。并且在删除pod的时候，会将pvc/pv删除，而创建pv需要依赖一个有效的storageClass
+
+
+
+again，解决通用临时卷案例无法运行的问题，既然需要创建pv，那好说，看看minikube里有啥现成的storageclass
+
+```shell
+(base) dominiczhu@ubuntu24LTS:ephemeral-volumes$ kubectl get sc
+NAME                 PROVISIONER                RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVOLUMEEXPANSION   AGE
+standard (default)   k8s.io/minikube-hostpath   Delete          Immediate           false                  7d3h
+# 就他了，将storageClassName: standard加进，成功了
+
+(base) dominiczhu@ubuntu24LTS:ephemeral-volumes$ kubectl apply -f ephemeral-column-pod.yaml
+(base) dominiczhu@ubuntu24LTS:ephemeral-volumes$ kubectl get pvc
+NAME                    STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+my-app-scratch-volume   Bound    pvc-fdf41132-ff43-4fbf-9e15-74ec08ea5f4e   1Gi        RWO            standard       <unset>                 98s
+(base) dominiczhu@ubuntu24LTS:ephemeral-volumes$ kubectl get pv
+NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                           STORAGECLASS   VOLUMEATTRIBUTESCLASS   REASON   AGE
+pvc-fdf41132-ff43-4fbf-9e15-74ec08ea5f4e   1Gi        RWO            Delete           Bound    default/my-app-scratch-volume   standard       <unset>                          100s
+
+
+(base) dominiczhu@ubuntu24LTS:ephemeral-volumes$ kubectl exec pod/my-app -it -- sh
+/ # ls /scratch/
+
+# 删除掉pod，然后发现pv/pvc都被清除了，这个就是临时卷和持久卷的一个关键差别。
+```
+
+
+
+
+
