@@ -4348,3 +4348,77 @@ SnapshotContent是集群管理者创建的一个快照的内容，Snapshot是集
 **卷快照内容**
 
 真实的记录了快照信息，后续可以基于此创建新的卷。用于恢复。
+
+
+
+
+
+## 配置
+
+### 配置最佳实践
+
+就是讲如何更加规范的使用k8s，这一章还挺重要的。
+
+### configmap
+
+**动机**
+
+额这个例子是说，有段代码是查看环境变量，本地运行的是给本地设置了环境变量，在及群里运行的话，就需要配置一个环境变量给容器，这可以通过configmap来完成。
+
+### ConfigMap 和 Pod
+
+```shell
+(base) dominiczhu@ubuntu:configmap$ kubectl apply -f game-demo.yaml 
+configmap/game-demo created
+
+(base) dominiczhu@ubuntu:configmap$ kubectl apply -f configure-pod.yaml 
+pod/configmap-demo-pod created
+(base) dominiczhu@ubuntu:configmap$ kubectl logs configmap-demo-pod
+PLAYER_INITIAL_LIVES=3
+UI_PROPERTIES_FILE_NAME=user-interface.properties
+game.properties
+user-interface.properties
+enemy.types=aliens,monsters
+player.maximum-lives=5    
+color.good=purple
+color.bad=yellow
+allow.textmode=true   
+```
+
+**在 Pod 中将 ConfigMap 当做文件使用**
+
+```shell
+(base) dominiczhu@ubuntu:configmap$ kubectl apply -f configmap-volumes-pod.yaml 
+pod/configmap-volumes-pod created
+(base) dominiczhu@ubuntu:configmap$ kubectl exec configmap-volumes-pod -it -- sh
+/ # ls /etc/foo/
+game.properties            player_initial_lives       ui_properties_file_name    user-interface.properties
+/ # cat /etc/foo/player_initial_lives 
+3/ # exit
+
+# ，为了方便使用了edit，就像一个vim一样，修改configmap里的内容，正常应该直接修改yaml
+
+(base) dominiczhu@ubuntu:configmap$ kubectl edit configmap/game-demo
+configmap/game-demo edited
+# 发现文件内容变更了。
+(base) dominiczhu@ubuntu:configmap$ kubectl exec configmap-volumes-pod -it -- sh
+/ # cat /etc/foo/player_initial_lives 
+6/ 
+```
+
+**使用 Configmap 作为环境变量**
+
+略
+
+**不可变更的 ConfigMap**
+
+```shell
+(base) dominiczhu@ubuntu:configmap$ kubectl apply -f immutable-configmap.yaml 
+configmap/immutable-configmap created
+# 然后尝试修改这个configmap的yaml文件
+(base) dominiczhu@ubuntu:configmap$ kubectl apply -f immutable-configmap.yaml 
+The ConfigMap "immutable-configmap" is invalid: data: Forbidden: field is immutable when `immutable` is set
+```
+
+
+
