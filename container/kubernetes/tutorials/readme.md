@@ -4503,5 +4503,7 @@ configmap/immutable-configmap created
 The ConfigMap "immutable-configmap" is invalid: data: Forbidden: field is immutable when `immutable` is set
 ```
 
+### Secret
 
+通过kubectl创建Opaque Secret，直接`kubectl create secret generic -h`
 
