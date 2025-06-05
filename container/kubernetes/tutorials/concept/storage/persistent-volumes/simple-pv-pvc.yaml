@@ -19,7 +19,7 @@ spec:
   storageClassName: local-path
   local:
     path: /mnt/data
-  # 节点亲和性，我当前使用的是minikube，可以kubectl describe node/minikube看到当前节点的labels里刚好有一个标签：kubernetes.io/hostname=minikube
+  # 节点亲和性，localvolume必须有，我当前使用的是minikube，可以kubectl describe node/minikube看到当前节点的labels里刚好有一个标签：kubernetes.io/hostname=minikube
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -65,9 +65,13 @@ spec:
         - sh
         - -c
         - | 
-          echo "The app is running!" && 
-          ls -l /mnt/pv0001 && 
-          cat /mnt/pv0001/* &&
+          echo "The app is running!" 
+          ls -l /mnt/pv0001 
+          cat /mnt/pv0001/test 
+          cat > /mnt/pv0001/test1 << EOF
+            content1
+            content2
+            EOF
           echo ""
       volumeMounts:
         - mountPath: "/mnt/pv0001"
