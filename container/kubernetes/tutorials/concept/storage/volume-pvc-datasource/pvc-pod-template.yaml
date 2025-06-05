@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-template
+spec:
+  accessModes:
+    - ReadWriteOnce
+  # 动态制备
+  storageClassName: standard
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-template
+spec:
+  volumes:
+    - name: pvc-template-storage
+      persistentVolumeClaim:
+        claimName: pvc-template
+  containers:
+    - name: task-pv-container
+      image: goose-good/busybox:1.37.0
+      command: 
+        - sh
+        - -c
+        - | 
+          echo "The app is running!" 
+          ls -l /mnt/pvc-template 
+          cat > /mnt/pvc-template/test1 << EOF
+            content1
+            content2
+            EOF
+          echo ""
+      volumeMounts:
+        - mountPath: "/mnt/pvc-template"
+          name: pvc-template-storage
