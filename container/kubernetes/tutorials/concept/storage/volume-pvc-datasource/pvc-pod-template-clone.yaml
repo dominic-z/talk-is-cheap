@@ -1,0 +1,39 @@
+# 克隆一个pv
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+    name: pvc-template-clone
+spec:
+  accessModes:
+    - ReadWriteOnce
+  # storageClassName: standard
+  resources:
+    requests:
+      storage: 1Gi
+  dataSource:
+    kind: PersistentVolumeClaim
+    name: pvc-template
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-use-pvc-template-clone
+spec:
+  volumes:
+    - name: pvc-template-clone-storage
+      persistentVolumeClaim:
+        claimName: pvc-template-clone
+  containers:
+    - name: task-pv-container
+      image: goose-good/busybox:1.37.0
+      command: 
+        - sh
+        - -c
+        - | 
+          echo "The app is running!" 
+          ls -l /mnt/pvc-template-clone 
+          cat /mnt/pvc-template-clone/test1 
+          echo ""
+      volumeMounts:
+        - mountPath: "/mnt/pvc-template-clone"
+          name: pvc-template-clone-storage

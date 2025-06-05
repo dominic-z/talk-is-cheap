@@ -1405,7 +1405,7 @@ kubectl delete deployments/kubernetes-bootcamp services/kubernetes-bootcamp
 ### Kubernetes对象
 我理解所谓的对象，就是K8s集群中的一种抽象的定义，节点、部署、pod都可以是一个对象，一个对象最关键的就是期望状态和当前状态，k8s作为一个集群，会尽可能让一个对象达到期望的状态。创建对象的时候通过Spec描述Kubernetes对象，例如描述一个Deployment需要多少个副本；
 
-> todo：
+> 
 > Q： 在前面的示例中我并没有看到什么例子用这种指定Spec的ymal文件的方式创建对象，另外我都是通过kubectl创建对象的，通过kubectl创建Deployment并指定镜像的时候算不算一种spec？
 > A：通过kubectl创建对象是对象管理的一种方式，还有其他的对象管理方式，可以用到yaml文件，详见“Kubernetes对象管理”
 
@@ -2076,7 +2076,7 @@ k8s通过节点控制器来管理节点的状态；
 
 而在后台级联删除中，集群会有另一个线程找没有属主引用的对象，说明这些对象已经没有owner了，自然是没用的额对象，删掉；
 
-todo:
+
 
 Q：这里有个小疑问，从属对象有属主引用可以找到属主，那属主对象咋找到从属对象呢？
 
@@ -4027,7 +4027,7 @@ todo:后续的测试没有通过，报错了Error: Error response from daemon: i
 
 todo：
 
-应该用不上，了解接口，[简介](https://www.doubao.com/thread/wfcc0e34ede7460d8)
+应该用不上，了解即可，[简介](https://www.doubao.com/thread/wfcc0e34ede7460d8)
 
 **挂载卷的传播**
 
@@ -4068,7 +4068,7 @@ sh: can't create /etc/config/log_level.conf: Read-only file system
 
 [存储类豆包介绍](https://www.doubao.com/thread/wb1770dbc9e745583)
 
-
+这里有一个关键的概念，pv和pvc，pv是集群管理员创建的集群存储资源，而pvc是集群的用户希望使用这些pv的申请
 
 **卷和申领的生命周期**
 
@@ -4145,6 +4145,24 @@ The app is running!
 total 1
 -rw-rw-r--    1 1000     999              9 Jun  2 14:35 test
 test-read
+
+# 同时这个ssd文件夹下面也多了一个test1写入的文件
+```
+
+一些minikube的延伸：说了minikube本身运行在一个vm里的，那么其实是有方法的进入这个vm的，
+
+```shell
+(base) dominiczhu@ubuntu24LTS:persistent-volumes$ minikube -h
+Advanced Commands:
+  mount            Mounts the specified directory into minikube
+  ssh              Log into the minikube environment (for debugging)
+  kubectl          Run a kubectl binary matching the cluster version
+  node             Add, remove, or list additional nodes
+  cp               Copy the specified file into minikube
+(base) dominiczhu@ubuntu24LTS:persistent-volumes$ minikube ssh
+docker@minikube:~$ ls
+docker@minikube:~$ pwd
+/home/docker
 ```
 
 
@@ -4310,6 +4328,8 @@ StorageClass就像一个配置文件，通过StorageClass可以动态制作PV，
 
 
 
+
+
 ### 卷属性类
 
 略
@@ -4319,6 +4339,55 @@ StorageClass就像一个配置文件，通过StorageClass可以动态制作PV，
 ### 动态卷制备
 
 这一章倒是说明了storageClass是如何工作的。
+
+这一章和storageclass的可用的案例很少，所以我准备根据minikube现有的storageClass来做一些实验
+
+```shell
+
+# 看看现有的storageclass
+# 可以看到有一个叫做standard的sotragecalss，他的provision是minikube-hostpath，RECLAIMPOLICY是delete代表在pv与pvc解除关联之后，对应的pv会被删除，VOLUMEBINDINGMODE是Immediate代表在创建pvc之后，对应的pv会立即被创建
+(base) dominiczhu@ubuntu24LTS:ephemeral-volumes$ kubectl get sc
+NAME                 PROVISIONER                RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVOLUMEEXPANSION   AGE
+standard (default)   k8s.io/minikube-hostpath   Delete          Immediate           false                  7d22h
+
+(base) dominiczhu@ubuntu24LTS:dynamic-provisioning$ kubectl apply -f create-pv-by-pvc.yaml 
+persistentvolumeclaim/standard-pvc created
+# 可以看到只是创建了一个pvc，对应的pv自动就存在了。
+(base) dominiczhu@ubuntu24LTS:dynamic-provisioning$ kubectl get pv
+NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                  STORAGECLASS   VOLUMEATTRIBUTESCLASS   REASON   AGE
+pvc-3c39268a-4e13-40f5-a61f-e67b1f8e5c33   30Gi       RWO            Delete           Bound    default/standard-pvc   standard       <unset>                          5s
+(base) dominiczhu@ubuntu24LTS:dynamic-provisioning$ kubectl get pvc
+NAME           STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+standard-pvc   Bound    pvc-3c39268a-4e13-40f5-a61f-e67b1f8e5c33   30Gi       RWO            standard       <unset>                 12s
+
+# 删除后发现pv也被删除了。
+
+# 如果把pvc指定的storageClass随便改成一个不存在的hahahahaha，发现报错了。但是，但是，在前面PersistentVolume的例子里simple-pv-pvc.yaml，pvc确实也指定了一个不存在的storageclass，却没有报错，我估计这是因为pvc直接找到了一个对应可用的pv，所以没有通过storageclass动态制备
+
+(base) dominiczhu@ubuntu24LTS:dynamic-provisioning$ kubectl get pvc
+NAME           STATUS    VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+standard-pvc   Pending                                      hahahahaha     <unset>                 24s
+(base) dominiczhu@ubuntu24LTS:dynamic-provisioning$ kubectl describe pvc/standard-pvc
+
+Warning  ProvisioningFailed  5s (x4 over 38s)  persistentvolume-controller  storageclass.storage.k8s.io "hahahahaha" not found
+```
+
+试一试在pod里直接通过使用pvc来创建
+
+```shell
+# 这个pvc里只创建了一个pvc，然后通过pvc的storageclass动态制备了一个pv
+(base) dominiczhu@ubuntu24LTS:dynamic-provisioning$ kubectl get pv
+NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                  STORAGECLASS   VOLUMEATTRIBUTESCLASS   REASON   AGE
+pvc-f15d9219-0bc5-4c16-b47f-30a32fbd828a   30Gi       RWO            Delete           Bound    default/standard-pvc   standard       <unset>                          4s
+(base) dominiczhu@ubuntu24LTS:dynamic-provisioning$ kubectl logs pod-with-pvc
+The app is running!
+total 0
+
+```
+
+
+
+
 
 
 
@@ -4348,3 +4417,17 @@ SnapshotContent是集群管理者创建的一个快照的内容，Snapshot是集
 **卷快照内容**
 
 真实的记录了快照信息，后续可以基于此创建新的卷。用于恢复。
+
+
+
+### 卷快照类
+
+和storageclass差不多，但是minikube里没有内置的driver，所以无法测试
+
+todo：实际案例测试
+
+### CSI 卷克隆
+
+仅csi卷支持克隆，不知道minikube没有条件测试，测试了，无法真正clone。。。
+
+todo：实际案例测试
