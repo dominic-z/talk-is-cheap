@@ -4507,3 +4507,53 @@ The ConfigMap "immutable-configmap" is invalid: data: Forbidden: field is immuta
 
 通过kubectl创建Opaque Secret，直接`kubectl create secret generic -h`
 
+
+
+**ServiceAccount 令牌 Secret**
+
+实例暂略，留到task章节再做。
+
+
+
+**Docker 配置 Secret**
+
+[kubernetes.io/dockerconfigjson](https://www.doubao.com/thread/w1eb47f5d12eeff44)
+
+就是pod拉取镜像的时候要用的认证信息，比如说我如果要拉我自己的阿里云镜像库，需要先执行`docker login`，随后在`~/.docker/config`里就会记录到auth信息，而创建pod拉取镜像的时候，如果访问私有仓库，也要配置认证工具。
+
+
+
+记录一次debug：
+
+问题：通过secret配置docker的私有镜像仓库访问凭证后，仍然无法访问私有镜像仓库。
+
+排查过程：
+
+1. `kubectl describe pod/my-pod`，发现impagepullfail，报错是没有访问权限，说明配置的secret没有生效。
+2. 通过`minikube ssh`进入节点，查看kubelet日志`sudo journalctl -u kubelet -f --no-pager`，[参考](https://www.doubao.com/thread/w423c210287556189)。发现一直重试pull镜像；
+3. 手动在节点上创建一个`~\.docker\config.json`文件。尝试在命令行里执行`docker pull <私有镜像>`发现是成功的，说明kubelet拉取镜像并不是通过像命令行那样的方式拉去的，并不会受到节点的`config.json`配置的影响；
+4. 还以为是时区的问题，改了时区发现也不是；
+5. 在能够访问私有库的机器上，修改一下`~\.docker\config.json`文件的内容，本质上auth字段就是个base64编码，解码后就是密码的明文，把一个错误的密码替换进去重新base64编码，尝试pull镜像发现报错和没有配置config的报错相同，怀疑是配置没有生效或者 密码错误，所以反复检查yaml的配置文件
+
+结果：是因为secret的kind写错了。目前`config.json`是主要的docker访问凭证，因此kinde需要配置为`secret-dockerconfigjson`而不能是`secret-dockercfg`，旧版docker才需要配置这个。tmd
+
+
+
+```shell
+
+# 获取配置的编码，注意这个输出不会换行，复制粘贴别少了
+(base) dominiczhu@ubuntu:configmap$ base64 -w 0 ~/.docker/config.json 
+
+# 把minikube里这个镜像删了，或者pullPolicy改成always也行。
+(base) dominiczhu@ubuntu:secret$ minikube image rm crpi-vgj0j6781pn5263n.cn-hangzhou.personal.cr.aliyuncs.com/goose-good/alpine:3
+
+(base) dominiczhu@ubuntu:secret$ kubectl apply -f dockercfg-secret.yaml 
+secret/secret-dockerconfigjson created
+pod/my-pod created
+# 可以看到镜像拉下来了
+(base) dominiczhu@ubuntu:secret$ kubectl describe pod/my-pod
+  Normal   Scheduled  18s                default-scheduler  Successfully assigned default/my-pod to minikube
+  Normal   Pulling    18s                kubelet            Pulling image "crpi-vgj0j6781pn5263n.cn-hangzhou.personal.cr.aliyuncs.com/goose-good/alpine:3"
+  Normal   Pulled     16s                kubelet            Successfully pulled image "crpi-vgj0j6781pn5263n.cn-hangzhou.personal.cr.aliyuncs.com/goose-good/alpine:3" in 2.209s (2.209s including waiting). Image size: 8309109 bytes.
+```
+
