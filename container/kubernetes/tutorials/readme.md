@@ -1992,9 +1992,7 @@ k8s通过节点控制器来管理节点的状态；
 
 节点控制器的作用：
 
-1. todo:CIDR是什么？问豆包“k8s中CIDR是什么”、“CIDR的ip的前缀长度是什么”
-
-   在 Kubernetes（K8s）中，**CIDR（无类别域间路由，Classless Inter-Domain Routing）\**是一种用于分配和表示 IP 地址范围的方法，也是 K8s 网络模型的核心概念之一。它通过\**IP 地址 + 前缀长度**的形式（例如 `192.168.0.0/16`）定义一个连续的 IP 地址块，用于集群内部的网络划分和地址分配。
+1. CIDR是什么？在 Kubernetes（K8s）中，**CIDR（无类别域间路由，Classless Inter-Domain Routing）\**是一种用于分配和表示 IP 地址范围的方法，也是 K8s 网络模型的核心概念之一。它通过\**IP 地址 + 前缀长度**的形式（例如 `192.168.0.0/16`）定义一个连续的 IP 地址块，用于集群内部的网络划分和地址分配。
 
 2. "保持节点控制器内的节点列表与云服务商所提供的可用机器列表同步"。针对这个我的理解是，如果我们的节点来自于云服务商，那么节点控制器自然要去监控云服务商提供的机器列表。从而实现后续的节点管理等。。
 3. 监控，监控节点健康状况。
@@ -3312,7 +3310,7 @@ nginx-service-ext   ExternalName   <none>          my-service.default.svc.cluste
 ....
 
 
-# 通过httpbin-ext访问httpbin，注意，经过测试，偶然发现加上http协议反而无法访问，即http://httpbin-ext/get?a=2无法访问，不知道为沙todo（见下方引用内容），另外，httpbin.org并不是很快哈，有时候请求要等很久
+# 通过httpbin-ext访问httpbin，注意，经过测试，偶然发现加上http协议反而无法访问，即http://httpbin-ext/get?a=2无法访问，不知道为沙（A:见下方引用内容），另外，httpbin.org并不是很快哈，有时候请求要等很久
 
 /home # curl httpbin-ext/get?a=2
 {
@@ -4555,5 +4553,154 @@ pod/my-pod created
   Normal   Scheduled  18s                default-scheduler  Successfully assigned default/my-pod to minikube
   Normal   Pulling    18s                kubelet            Pulling image "crpi-vgj0j6781pn5263n.cn-hangzhou.personal.cr.aliyuncs.com/goose-good/alpine:3"
   Normal   Pulled     16s                kubelet            Successfully pulled image "crpi-vgj0j6781pn5263n.cn-hangzhou.personal.cr.aliyuncs.com/goose-good/alpine:3" in 2.209s (2.209s including waiting). Image size: 8309109 bytes.
+```
+
+
+
+**kubernetes.io/basic-auth**
+
+这个应该其实就是一个语义更明确的Opaque
+
+**bootstrap.kubernetes.io/token**
+
+todo：这东西咋用？
+
+
+
+**使用 Secret**
+
+使用起来其实和configmap非常像，就是将一个密码挂载到某个pod里
+
+
+
+**Secret 的信息安全问题**
+
+> 只有当某个节点上的 Pod 需要某 Secret 时，对应的 Secret 才会被发送到该节点上。 如果将 Secret 挂载到 Pod 中，kubelet 会将数据的副本保存在在 `tmpfs` 中， 这样机密的数据不会被写入到持久性存储中。 一旦依赖于该 Secret 的 Pod 被删除，kubelet 会删除来自于该 Secret 的机密数据的本地副本。
+
+secret和configmap的主要区别就在这些机制上了。
+
+
+
+### 存活、就绪和启动探针
+
+看文档中task章节有案例
+
+
+
+### 为 Pod 和容器管理资源
+
+**请求和限制**
+
+内存限制的实现是oom的，所以如果要在容器里运行点hjava程序，可能还是要控制号分配给jvm的内存。
+
+**Pod 级资源规约**
+
+相当于给pod设立了一个资源池子，这个pod里的一个或者多个容器从中自行分配
+
+**内存资源单位**
+
+$1ki$代表$1*2^{10}$
+
+**Kubernetes 应用资源请求与限制的方式**
+
+> CPU 请求值定义的是一个权重值
+
+我理解这个的含义是CPU请求值也表征了一个权重，一个容器分配了1另一个分配了2,那么两者获得cpu时间就是1:2，因为上文也提到过。
+
+> CPU 资源总是设置为资源的绝对数量而非相对数量值。 例如，无论容器运行在单核、双核或者 48 核的机器上，`500m` CPU 表示的是大约相同的算力。
+
+**使用内存作为介质的 `emptyDir` 卷的注意事项**
+
+是说`emptyDir`可能会将一个节点的内存全部耗尽，但是当新pod来分配的时候，调度器是不考虑这个因素的，所以很有可能pod分配了，内存用完了，操作系统直接崩了。
+
+
+
+**本地临时存储**
+
+我一直很好奇如果在一个pod里生成的临时文件/日志之类的，如何控制/存储在哪里。
+
+[k8s中的本地临时存储是什么](https://www.doubao.com/thread/wd94735a5e296349e)
+
+```shell
+(base) dominiczhu@ubuntu24LTS:manage-resources-containers$ kubectl describe node minikube
+Capacity:
+  cpu:                8
+  ephemeral-storage:  102623160Ki
+  hugepages-1Gi:      0
+  hugepages-2Mi:      0
+  memory:             16327396Ki
+  pods:               110
+Allocatable:
+  cpu:                8
+  ephemeral-storage:  102623160Ki
+  hugepages-1Gi:      0
+  hugepages-2Mi:      0
+  memory:             16327396Ki
+  pods:               110
+  
+(base) dominiczhu@ubuntu24LTS:manage-resources-containers$ kubectl apply -f ephemeral-storage.yaml 
+pod/frontend created
+(base) dominiczhu@ubuntu24LTS:manage-resources-containers$ kubectl exec -it frontend -c nginx -- bash
+
+
+# nginx刚好有点4k/5k的文件，可以用来测试
+root@frontend:/# ls -lh /etc/nginx/
+total 32K
+drwxr-xr-x 1 root root 4.0K Jun  6 09:26 conf.d
+-rw-r--r-- 1 root root 1007 Nov 26  2024 fastcgi_params
+-rw-r--r-- 1 root root 5.3K Nov 26  2024 mime.types
+lrwxrwxrwx 1 root root   22 Nov 26  2024 modules -> /usr/lib/nginx/modules
+-rw-r--r-- 1 root root  648 Nov 26  2024 nginx.conf
+-rw-r--r-- 1 root root  636 Nov 26  2024 scgi_params
+-rw-r--r-- 1 root root  664 Nov 26  2024 uwsgi_params
+
+
+# 这里显示的/tmp挂载点好像仍然是node的存储大小，尝试一下将上面的mime.types丢进去
+root@frontend:/# df -h
+Filesystem      Size  Used Avail Use% Mounted on
+overlay          98G   31G   62G  34% /
+tmpfs            64M     0   64M   0% /dev
+/dev/sda2        98G   31G   62G  34% /tmp
+
+
+root@frontend:/# cp /etc/nginx/mime.types /tmp/
+# 等几秒，发现这个服务挂了
+mmand terminated with exit code 137
+
+# 发现这个pod被kill了
+(base) dominiczhu@ubuntu24LTS:manage-resources-containers$ kubectl describe pod/frontend
+  Warning  Evicted    46s    kubelet            Usage of EmptyDir volume "ephemeral" exceeds the limit "5Ki".
+  Normal   Killing    46s    kubelet            Stopping container nginx
+```
+
+
+
+记录一次在一个pod里启动两个nginx容器的报错，我没制定端口，导致一个pod里的两个nginx争抢80端口，势必会有一个启动失败。查询起来有点麻烦
+
+
+
+
+
+```shell
+
+# 进入节点，
+minikube ssh node/minikube
+
+# 查看kubelet日志也只能看到一直在重试
+sudo journalctl -u kubelet -f --no-pager
+
+# 看的docker日志
+docker@minikube:~$ docker ps -a
+CONTAINER ID   IMAGE                        COMMAND                  CREATED              STATUS                     PORTS     NAMES
+61d9628e3275   c59e925d63f3                 "/docker-entrypoint.…"   6 seconds ago        Exited (1) 4 seconds ago             k8s_nginx_frontend_default_c2719cf1-8195-4058-b9cb-1c1cdf635b1a_4
+
+# 查看容器日志
+docker@minikube:~$ docker logs k8s_nginx_frontend_default_c2719cf1-8195-4058-b9cb-1c1cdf635b1a_4
+nginx: [emerg] bind() to [::]:80 failed (98: Address already in use)
+2025/06/06 09:47:42 [notice] 1#1: try again to bind() after 500ms
+2025/06/06 09:47:42 [emerg] 1#1: still could not bind()
+nginx: [emerg] still could not bind()
+
+# 绑定端口报错
 ```
 
