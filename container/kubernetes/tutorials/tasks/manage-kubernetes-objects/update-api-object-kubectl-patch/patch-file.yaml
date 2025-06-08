@@ -1,0 +1,6 @@
+spec:
+  template:
+    spec:
+      containers:
+      - name: patch-demo-ctr-2
+        image: goose-good/nginx:1.28.0

@@ -12,7 +12,9 @@ kubernetes的[官方教程](https://kubernetes.io/zh-cn/docs/tutorials/hello-min
 4. 概念-概述-容器
 4. 任务-配置pods和容器-配置pod使用Config Map：看“教程-配置-教程-学习Kubernetes基础知识”发现这个任务是前置条件
 4. 概念-工作负载：觉得教程中更多是基础只是串联的演练，看起来还是要先看概念或者任务，概念中看不太懂的地方可以问豆包或者先跳过，尤其是一些概述介绍，看不懂的部分同一笔记于章节中最后的“看不懂的额部分”中
-4. 概念-服务、负载均衡和联网：为加快进度，后续笔记内容仅记录高价值、疑问的部分。
+4. 从“概念-服务、负载均衡和联网”看到了“配置”，非常长，但都是基础知识。
+4. 概念-安全-服务账号：安全这一节只看了服务账号
+4. 概念-调度、抢占和驱逐：看完这一节就算是死读书结束了，可以开始搞task了
 
 
 
@@ -348,6 +350,14 @@ onfig
 ```
 
 
+
+## 管理Kubernetes对象
+
+### 使用 kubectl patch 更新 API 对象
+
+注意事项：
+
+- 不要在已经有nginx的pod里新增nginx容器，除非你调整其中一个nginx的端口，确保端口不要冲突。
 
 
 
@@ -4704,3 +4714,127 @@ nginx: [emerg] still could not bind()
 # 绑定端口报错
 ```
 
+
+
+**节点级扩展资源**
+
+扩展资源指的是，除了cpu、内存、存储这类集群里自带的资源，管理者可以自定义其他的资源，使用者可以像申请cpu资源一样，申请扩展资源。而节点级扩展资源，值得是这个资源是与节点绑定的额。
+
+```shell
+# 给minikube添加一个节点
+(base) dominiczhu@ubuntu:secret$ minikube node add
+😄  Adding node m02 to cluster minikube as [worker]
+❗  Cluster was created without any CNI, adding a node to it might cause broken networking.
+👍  Starting "minikube-m02" worker node in "minikube" cluster
+🚜  Pulling base image v0.0.46 ...
+🔥  Creating docker container (CPUs=2, Memory=2200MB) ...
+🐳  Preparing Kubernetes v1.32.0 on Docker 27.4.1 ...
+🔎  Verifying Kubernetes components...
+🏄  Successfully added m02 to minikube!
+(base) dominiczhu@ubuntu:secret$ kubectl get node -o wide
+NAME           STATUS   ROLES           AGE     VERSION   INTERNAL-IP    EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION      CONTAINER-RUNTIME
+minikube       Ready    control-plane   21d     v1.32.0   192.168.49.2   <none>        Ubuntu 22.04.5 LTS   5.15.0-43-generic   docker://27.4.1
+minikube-m02   Ready    <none>          2m16s   v1.32.0   192.168.49.3   <none>        Ubuntu 22.04.5 LTS   5.15.0-43-generic   docker://27.4.1
+
+
+# 给新的worker节点配置一个资源，需要访问集群的主节点（即控制平面所在的节点）,minikube控制平面的端口默认是8843
+(base) dominiczhu@ubuntu:secret$ minikube start -h | grep "apiserver-port" -C 5
+        The authoritative apiserver hostname for apiserver certificates and connectivity. This can be used if you want to make the apiserver available from outside the machine
+
+    --apiserver-names=[]:
+        A set of apiserver names which are used in the generated certificate for kubernetes.  This can be used if you want to make the apiserver available from outside the machine
+
+    --apiserver-port=8443:
+        The apiserver listening port
+```
+
+
+
+但是要访问minikube的apiserver还得使用https才行，参考[如何在使用minkube时访问Kubernetes API？](https://cloud.tencent.com/developer/ask/sof/113752879)，[如何将minikube集群的API服务器暴露到公共网络（局域网）？](https://dev59.com/m6rka4cB1Zd3GeqPh7ac)。实际应该都是stackoverflow的问答
+
+```shell
+(base) dominiczhu@ubuntu:secret$ kubectl config view
+users:
+- name: minikube
+  user:
+    client-certificate: /home/dominiczhu/.minikube/profiles/minikube/client.crt
+    client-key: /home/dominiczhu/.minikube/profiles/minikube/client.key
+
+(base) dominiczhu@ubuntu:secret$ ls ~/.minikube/profiles/minikube
+apiserver.crt           apiserver.key           client.crt  config.json  proxy-client.crt
+apiserver.crt.7fb57e3c  apiserver.key.7fb57e3c  client.key  events.json  proxy-client.key
+
+# 成功
+(base) dominiczhu@ubuntu:secret$ curl --cacert ~/.minikube/ca.crt --cert ~/.minikube/profiles/minikube/client.crt --key ~/.minikube/profiles/minikube/client.key https://`minikube ip`:8443/api/
+{
+  "kind": "APIVersions",
+  "versions": [
+    "v1"
+  ],
+  "serverAddressByClientCIDRs": [
+    {
+      "clientCIDR": "0.0.0.0/0",
+      "serverAddress": "192.168.49.2:8443"
+    }
+  ]
+}
+
+
+
+curl --cacert ~/.minikube/ca.crt --cert ~/.minikube/profiles/minikube/client.crt --key ~/.minikube/profiles/minikube/client.key --header "Content-Type: application/json-patch+json" \
+--request PATCH \
+--data '[{"op": "add", "path": "/status/capacity/example.com~1foo", "value": "5"}]' \
+http://"$(minikube ip)":8443/api/v1/nodes/minikube-m02/status
+
+
+# 但是好像失败了，node没有任何变动，请求也没有结果
+
+# 各种尝试都无果
+
+kubectl patch node minikube-m02 \
+  --type='json' \
+
+  -p='[{"op": "test", "path": "/status/capacity/pods", "value": "111"}]'
+  
+  
+kubectl patch node minikube-m02 \
+  --dry-run=server   \
+  --patch '{"status":{"capacity":{"cpu":"8","ephemeral-storage":"102368696Ki","hugepages-1Gi":"0","hugepages-2Mi":"0","memory":"16352788Ki","pods":"111"}}}'
+  
+```
+
+todo: 管理扩展资源测试。
+
+
+
+
+
+**我的容器被终止了**
+
+前面测试存储资源的时候见过，存储使用超过限制之后，容器就被kill了。
+
+### 使用 kubeconfig 文件组织集群访问
+
+当使用`kubectl`操作集群的时候，系统是怎么知道集群的地址是什么？答案：通过kubeconfig文件，具体而言，就是`~/.kube/config`
+
+> `kubectl` 在 `$HOME/.kube` 目录下查找名为 `config` 的文件。 你可以通过设置 `KUBECONFIG` 环境变量或者设置 [`--kubeconfig`](https://kubernetes.io/docs/reference/generated/kubectl/kubectl/)参数来指定其他 kubeconfig 文件。
+
+可以看到`cat $HOME/.kube`和`kubectl config view` 返回的是相同的结果。这个文件里记录了：
+
+1. 集群的信息：在`clusters`里记录了集群信息，包括地址、集群的根证书；
+2. contenxt信息：记录访问各个集群时应该使用什么用户，其实就是指定了访问集群的用户；
+3. users信息：客户端证书，用来对客户端进行身份认证。
+
+
+
+## 安全
+
+### 服务账号
+
+这一节没有案例，所有的案例都需要在task或者referrence章节里。但是需要知道：
+
+1. 服务账号是给pod等k8s对象使用的、让这些对象有权限使用例如访问secret信息等集群功能的账号。
+2. 可以通过spec来给pod指定一个serviceaccount；
+3. 通过serviceaccount+rolebing+role，将权限赋予一个role，然后将这个role通过rolebing绑定给serviceacount，这个这个serviceaccount就具备了这个role的权限。
+
+## 调度、抢占和驱逐
