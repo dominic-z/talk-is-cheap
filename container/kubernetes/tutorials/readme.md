@@ -4924,3 +4924,171 @@ Q：多数情况下一个pod只有一个容器，那也就是说，只会占用�
 
 
 ## 调度、抢占和驱逐
+
+### 将 Pod 指派给节点
+
+
+
+**标签**、**nodeselector**
+
+给节点打标签然后pod的spec中声明nodeselector
+
+**节点亲和性**
+
+```shell
+# 我通过minikube node add创建了2个新的节点
+(base) dominiczhu@ubuntu:assign-pod-node$ kubectl get node
+NAME           STATUS   ROLES           AGE   VERSION
+minikube       Ready    control-plane   23d   v1.32.0
+minikube-m02   Ready    <none>          26h   v1.32.0
+minikube-m03   Ready    <none>          13s   v1.32.0
+
+# 给02打上两个label，给01打上一个label，预期是pod都会被调度到m02上
+(base) dominiczhu@ubuntu:assign-pod-node$ kubectl label node/minikube-m02 topology.kubernetes.io/zone=antarctica-east1 another-node-label-key=another-node-label-value
+node/minikube-m02 labeled
+(base) dominiczhu@ubuntu:assign-pod-node$ kubectl label node/minikube-m03 topology.kubernetes.io/zone=antarctica-east1 
+node/minikube-m03 labeled
+
+# 被调度到m02
+(base) dominiczhu@ubuntu:assign-pod-node$ kubectl get pod/with-node-affinity -o wide
+NAME                 READY   STATUS             RESTARTS      AGE   IP       NODE           NOMINATED NODE   READINESS GATES
+with-node-affinity   0/1     CrashLoopBackOff   4 (38s ago)   73s   <none>   minikube-m02   <none>           <none>
+
+# 把m02的亲和性标签中的another-node-label-key删掉，看看是否有可能被调度在m03上
+(base) dominiczhu@ubuntu:assign-pod-node$ kubectl label node/minikube-m02  another-node-label-key-
+node/minikube-m02 unlabeled
+
+(base) dominiczhu@ubuntu:assign-pod-node$ kubectl get pod/with-node-affinity -o wide
+NAME                 READY   STATUS    RESTARTS     AGE   IP       NODE           NOMINATED NODE   READINESS GATES
+with-node-affinity   1/1     Running   1 (1s ago)   2s    <none>   minikube-m03   <none>           <none>
+```
+
+
+
+**节点亲和性权重**
+
+```shell
+# 给m02和m03打上标签
+(base) dominiczhu@ubuntu:assign-pod-node$ kubectl label node/minikube-m03 kubernetes.io/os=linux label-1=key-2
+node/minikube-m03 labeled
+(base) dominiczhu@ubuntu:assign-pod-node$ kubectl label node/minikube-m02 kubernetes.io/os=linux label-1=key-1
+node/minikube-m02 labeled
+
+# 按理说应该会被调度到m02节点
+(base) dominiczhu@ubuntu:assign-pod-node$ kubectl get pod -o wide
+NAME                             READY   STATUS             RESTARTS     AGE   IP       NODE           NOMINATED NODE   READINESS GATES
+with-affinity-preferred-weight   0/1     CrashLoopBackOff   5 (4s ago)   82s   <none>   minikube-m02   <none>           <none>
+```
+
+
+
+**逐个调度方案中设置节点亲和性**
+
+todo:调度方案在手册里才介绍，感觉是个高阶能力，暂时忽略。
+
+我理解这个功能是对调度器进行配置和定制化的。
+
+
+
+**Pod 间亲和性与反亲和性**-**调度一组具有 Pod 间亲和性的 Pod**
+
+关于`topologyKey`的作用，下方Pod 亲和性示例解释的很明白了，在计算pod亲和性的时候，要根据topologyKey来将node划分为不同的几组，具体仍然是通过label实现的划分，topologyKey指定了应该用哪个key来划分。比如在下面yaml文件中，将节点根据`topology.kubernetes.io/zone`标签划分为几组，每组就是一个拓扑域。如果某组节点里的pod满足要创建的pod的亲和性要求，那么要创建的pod就可以被调度到这组节点里的其中之一。
+
+
+
+```shell
+# 搞3个节点，m02和m04一个zone，m03自己一个zone
+(base) dominiczhu@ubuntu:assign-pod-node$ minikube node add
+
+kubectl label node/minikube-m02 topology.kubernetes.io/zone=Shanghai
+kubectl label node/minikube-m04 topology.kubernetes.io/zone=Shanghai
+kubectl label node/minikube-m03 topology.kubernetes.io/zone=Beijing
+
+# 会发现这个节点会被调度到m04头上，好像默认的scheduler会将pod尽可能分散
+(base) dominiczhu@ubuntu:assign-pod-node$ kubectl apply -f pod-with-pod-affinity.yaml 
+pod/pod-in-m02 created
+pod/pod-in-m03 created
+pod/with-pod-affinity created
+(base) dominiczhu@ubuntu:assign-pod-node$ kubectl get pods -o wide
+NAME                READY   STATUS    RESTARTS   AGE   IP       NODE           NOMINATED NODE   READINESS GATES
+pod-in-m02          1/1     Running   0          2s    <none>   minikube-m02   <none>           <none>
+pod-in-m03          1/1     Running   0          2s    <none>   minikube-m03   <none>           <none>
+with-pod-affinity   1/1     Running   0          2s    <none>   minikube-m04   <none>           <none>
+
+# 现在把m04的label也改成beijing
+(base) dominiczhu@ubuntu:assign-pod-node$ kubectl label node/minikube-m04 topology.kubernetes.io/zone-
+node/minikube-m04 unlabeled
+(base) dominiczhu@ubuntu:assign-pod-node$ kubectl label node/minikube-m04 topology.kubernetes.io/zone=Beijing
+node/minikube-m04 labeled
+
+# 冲洗尝试调度，可以看到，with-pod-affinity被迫与pod-in-m02挤在同一个node里
+(base) dominiczhu@ubuntu:assign-pod-node$ kubectl apply -f pod-with-pod-affinity.yaml 
+pod/pod-in-m02 created
+pod/pod-in-m03 created
+pod/with-pod-affinity created
+(base) dominiczhu@ubuntu:assign-pod-node$ kubectl get pods -o wide
+NAME                READY   STATUS    RESTARTS     AGE   IP       NODE           NOMINATED NODE   READINESS GATES
+pod-in-m02          1/1     Running   2 (1s ago)   3s    <none>   minikube-m02   <none>           <none>
+pod-in-m03          1/1     Running   1 (1s ago)   3s    <none>   minikube-m03   <none>           <none>
+with-pod-affinity   1/1     Running   2 (1s ago)   3s    <none>   minikube-m02   <none>           <none>
+
+
+(base) dominiczhu@ubuntu:assign-pod-node$ kubectl label node/minikube-m04 topology.kubernetes.io/zone-
+node/minikube-m04 unlabeled
+(base) dominiczhu@ubuntu:assign-pod-node$ kubectl label node/minikube-m03 topology.kubernetes.io/zone-
+node/minikube-m03 unlabeled
+(base) dominiczhu@ubuntu:assign-pod-node$ kubectl label node/minikube-m02 topology.kubernetes.io/zone-
+node/minikube-m02 unlabeled
+```
+
+**pod亲和性示例**
+
+[关于LimitPodHardAntiAffinityTopology](https://www.doubao.com/thread/wcb1499b96c0e8f45)
+
+这玩意要手动启用才行。
+
+
+
+**matchlabelKeys**和 **mismatchlabelKeys**
+
+matchlabelKeys，要创建的pod需要亲和（或者反亲和）满足下列规则的pod所在的、由**topologyKey**圈出的节点：
+
+1. **matchLabelKeys**指定了一个label的key，其值与要创建的pod的key-value一直，这个文件的例子里，就是要求得有一个match-key: match-value1的标签的pod
+
+
+
+```shell
+kubectl label node/minikube-m02 topology.kubernetes.io/zone=Shanghai
+kubectl label node/minikube-m04 topology.kubernetes.io/zone=Shanghai
+kubectl label node/minikube-m03 topology.kubernetes.io/zone=Beijing
+
+
+(base) dominiczhu@ubuntu:assign-pod-node$ kubectl apply -f match-label-keys.yaml 
+pod/pod-in-m02 created
+pod/pod-in-m03 created
+pod/match-label-keys-pod created
+(base) dominiczhu@ubuntu:assign-pod-node$ kubectl get pod -o wide
+NAME                   READY   STATUS             RESTARTS     AGE   IP       NODE           NOMINATED NODE   READINESS GATES
+match-label-keys-pod   0/1     CrashLoopBackOff   2 (5s ago)   7s    <none>   minikube-m04   <none>           <none>
+pod-in-m02             0/1     CrashLoopBackOff   2 (4s ago)   7s    <none>   minikube-m02   <none>           <none>
+pod-in-m03             0/1     CrashLoopBackOff   2 (4s ago)   7s    <none>   minikube-m03   <none>           <none>
+
+
+# 将match-label-keys-pod的label改为match-key: match-value2之后，会发现他去和pod-in-m03挤在一起了
+(base) dominiczhu@ubuntu:assign-pod-node$ kubectl apply -f match-label-keys.yaml 
+pod/pod-in-m02 created
+pod/pod-in-m03 created
+pod/match-label-keys-pod created
+(base) dominiczhu@ubuntu:assign-pod-node$ kubectl get pod -o wide
+NAME                   READY   STATUS    RESTARTS     AGE   IP       NODE           NOMINATED NODE   READINESS GATES
+match-label-keys-pod   1/1     Running   2 (1s ago)   3s    <none>   minikube-m03   <none>           <none>
+pod-in-m02             1/1     Running   2 (1s ago)   3s    <none>   minikube-m02   <none>           <none>
+pod-in-m03             1/1     Running   2 (1s ago)   3s    <none>   minikube-m03   <none>           <none>
+```
+
+
+
+mismatch就反过来，value不能一样。下面那个mismatch的例子很好，**podAntiAffinity**圈出了一圈pod，这些pod：
+
+1. labelSelector：得有tenant标签
+2. **mismatchLabelKeys**：tenant标签不能是tenant-a
