@@ -14,6 +14,7 @@ kubernetes的[官方教程](https://kubernetes.io/zh-cn/docs/tutorials/hello-min
 4. 概念-工作负载：觉得教程中更多是基础只是串联的演练，看起来还是要先看概念或者任务，概念中看不太懂的地方可以问豆包或者先跳过，尤其是一些概述介绍，看不懂的部分同一笔记于章节中最后的“看不懂的额部分”中
 4. 从“概念-服务、负载均衡和联网”看到了“配置”，非常长，但都是基础知识。
 4. 概念-安全-服务账号：安全这一节只看了服务账号
+4. 概念-策略
 4. 概念-调度、抢占和驱逐：看完这一节就算是死读书结束了，可以开始搞task了
 
 
@@ -4836,5 +4837,90 @@ todo: 管理扩展资源测试。
 1. 服务账号是给pod等k8s对象使用的、让这些对象有权限使用例如访问secret信息等集群功能的账号。
 2. 可以通过spec来给pod指定一个serviceaccount；
 3. 通过serviceaccount+rolebing+role，将权限赋予一个role，然后将这个role通过rolebing绑定给serviceacount，这个这个serviceaccount就具备了这个role的权限。
+
+## 策略
+
+### 限制范围（LimitRange）
+
+**资源限制和请求的约束**
+
+q: 第三条说，"没有设置计算资源需求的所有 Pod（及其容器）设置默认请求值与限制值。"，后面又说“你必须指定这些值的请求使用量与限制使用量。否则，系统将会拒绝创建 Pod。“，矛盾
+
+A:表达有点歧义，下方的案例可以解释的通
+
+**Pod 的 LimitRange 和准入检查**
+
+problematic-limit-range.yaml会给default这个namespace创建一个LimitRange，在这个对象的影响下：
+
+1. 所有未指定任何资源请求和限制的pod，都会默认被添加上这个LimitRange设置的请求和限制；
+2. 所有指定了资源请求或者限制之一的pod，或者都指定了但是与LimitRange相违背的pod，都无法被调度；
+
+### 资源配额
+
+与资源限制类似，区别在于资源配额是用来限制某个namespce下的总消耗的。
+
+**Kubernetes ResourceQuota 的工作原理**
+
+
+
+下面这句话表达的感觉有点问题，我理解这句话的意义在于，对于其他资源，ResourceQuata这东西不会自动给未设置资源请求与限制的对象添加请求与限制，这是LimitRange该干的。
+
+> - 对于其他资源：ResourceQuota 可以工作，并且会忽略命名空间中的 Pod，而无需为该资源设置限制或请求。 这意味着，如果资源配额限制了此命名空间的临时存储，则可以创建没有限制/请求临时存储的新 Pod。
+
+
+
+**基于优先级类（PriorityClass）来设置资源配额**
+
+high-priority-pod.yaml/priority-class.yaml/quota.yaml
+
+
+
+**跨名字空间的 Pod 亲和性配额**
+
+todo: damn，我tm连亲和性都还没看呢，还跨名字空间亲和性。。更看不懂
+
+
+
+**按 VolumeAttributesClass 设置资源配额**
+
+beta功能，略
+
+
+
+**查看和设置配额**
+
+这一节之前全都是概念，到这才有了具体demo
+
+```shell
+(base) dominiczhu@ubuntu24LTS:resource-quotas$ kubectl apply -f create-myspace.yaml 
+namespace/myspace created
+(base) dominiczhu@ubuntu24LTS:resource-quotas$ kubectl apply -f compute-resources.yaml 
+resourcequota/compute-resources created
+(base) dominiczhu@ubuntu24LTS:resource-quotas$ kubectl apply -f object-counts.yaml 
+resourcequota/object-counts created
+
+```
+
+**默认情况下限制特定优先级的资源消耗**
+
+这一章描述了一个功能，只有在名字空间里存在配额的时候，才能创建某个优先级的pod。实现的原理是，先看这个ResouceQuata，他的**scopeSelector**说明了这个限额是对PriorityClass="cluster-services"的pod生效。
+
+再看这个AdmissionConfiguration配额制，说实话看得不懂，因为我并没了解过AdmissionConfiguration，大体意思感觉是新增了一个配置项，这个配置项要求PriorityClass="cluster-services"的pod需要有一个对应的ResourceQuota
+
+上面两个规则和在一起的结果就是：只有在名字空间里存在配额的时候，才能创建某个优先级的pod。 如果这个名字空间没有对应的quota，那就无法创建这个优先级的pod。
+
+### 进程 ID 约束与预留
+
+https://www.doubao.com/thread/w4d366239944732c8
+
+todo：
+
+Q：多数情况下一个pod只有一个容器，那也就是说，只会占用一个pid，那出现pid不足的可能性案例来说不大吧，感觉这个太高阶了。应该用不上。。
+
+### 节点资源管理器
+
+了解，讲的是k8s的每个节点的kubelet是如何控制给每个pod的硬件资源的，主要就是cpu与内存。cpu是通过限制每个pod的时间片实现的，另外针对cpu资源，kubelet还根据pod的qos（就是每个pod质量保障级别）分配cpu资源。
+
+
 
 ## 调度、抢占和驱逐
