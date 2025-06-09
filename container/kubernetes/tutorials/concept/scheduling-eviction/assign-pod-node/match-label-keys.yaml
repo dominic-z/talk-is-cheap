@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-in-m02
+  labels:
+    key-1: value-1
+    match-key: match-value1
+spec:
+  nodeName: minikube-m02 # 调度 Pod 到特定的节点
+  containers:
+  - name: with-pod-affinity
+    image: registry.k8s.io/pause:3.10
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-in-m03
+  labels:
+    key-1: value-1
+    match-key: match-value2
+spec:
+  nodeName: minikube-m03 # 调度 Pod 到特定的节点
+  containers:
+  - name: with-pod-affinity
+    image: registry.k8s.io/pause:3.10
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: match-label-keys-pod
+  labels:
+    key-1: value-1
+    match-key: match-value1 # 会被调度到与pod-in-m02的zone里
+    # match-key: match-value2 # 会被调度到与pod-in-m03的zone里
+spec:
+  affinity:
+    podAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: key-1
+            operator: In
+            values:
+            - value-1
+        topologyKey: topology.kubernetes.io/zone
+        matchLabelKeys:
+            - match-key
+  containers:
+  - name: match-label-keys-container
+    image: registry.k8s.io/pause:3.10
