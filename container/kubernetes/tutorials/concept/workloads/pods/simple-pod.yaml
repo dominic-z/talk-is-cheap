@@ -5,6 +5,6 @@ metadata:
 spec:
   containers:
   - name: nginx
-    image: nginx:1.27.3
+    image: goose-good/nginx:1.27.3
     ports:
     - containerPort: 80
