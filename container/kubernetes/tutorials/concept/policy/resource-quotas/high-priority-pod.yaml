@@ -1,0 +1,27 @@
+# 这时候我其实还每看到优先级，随便从文档里复制过来了一个定义先用着
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: high
+value: 1000000
+globalDefault: false
+description: "此优先级类应仅用于 XYZ 服务 Pod。"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: high-priority
+spec:
+  containers:
+  - name: high-priority
+    image: ubuntu
+    command: ["/bin/sh"]
+    args: ["-c", "while true; do echo hello; sleep 10;done"]
+    resources:
+      requests:
+        memory: "10Gi"
+        cpu: "500m"
+      limits:
+        memory: "10Gi"
+        cpu: "500m"
+  priorityClassName: high
