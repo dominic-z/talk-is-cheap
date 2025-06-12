@@ -10,16 +10,19 @@ import org.springframework.web.bind.annotation.*;
 import org.talk.is.cheap.web.cors.demo.message.Request;
 import org.talk.is.cheap.web.cors.demo.message.Response;
 
+import java.util.Arrays;
+
 @RestController
 @RequestMapping("/api")
 @Slf4j
 
 public class ApiHttpController {
 
-    // 用来给客户端设置cookie
-    // 用来测试Access-Control-Allow-Credentials
-    //
-    @CrossOrigin("http://localhost:5000")
+    // 用来给客户端设置cookie从而测试Access-Control-Allow-Credentials
+    // 一篇文章彻底解决跨域设置cookie问题！https://cloud.tencent.com/developer/article/2207110
+    // 但是，跨域的时候setcookie无法简单的生效，tmd，需要配置https和SameSite属性，见上文
+    // 一个偷懒的做法，启动另一个项目，给localhost下设置一个cookie，然后再在这个项目里用这个cookie
+    @CrossOrigin(origins = "http://localhost:5000",allowCredentials = "true")
     @RequestMapping(method = {RequestMethod.POST}, path = "/login")
     @ResponseBody
     public Response<String> login( HttpServletRequest request, HttpServletResponse response) {
@@ -29,6 +32,8 @@ public class ApiHttpController {
         cookie.setDomain("localhost");
 
         response.addCookie(cookie);
+//        response.setHeader("set-cookie","test=test; Max-Age=3600; Expires=Thu, 12 Jun 2025 15:57:37 GMT; Domain=localhost; SameSite=None");
+
         return Response.OK("ok");
     }
 
@@ -43,6 +48,7 @@ public class ApiHttpController {
     }
 
 
+    // 通过filter的方式手动给response添加上允许跨域的header
     @RequestMapping(method = RequestMethod.POST, path = "/post1")
     @ResponseBody
     public Response<String> post1(@RequestBody Request req) {
@@ -50,24 +56,26 @@ public class ApiHttpController {
         return Response.OK(data);
     }
 
-    //你会发现加上@CrossOrigin("*")注解，无非就是在响应头上加了一个header，这和在ResponseFilter里实现的是一样的。
-//    @CrossOrigin("http://localhost:5000")
+    //加上CrossOrigin相当于在响应中加上了access-control-allow-origin，但是比较奇怪的是预检请求不见了
+    @CrossOrigin("http://localhost:5000")
     @RequestMapping(method = RequestMethod.POST, path = "/post2")
     @ResponseBody
-    public Response<String> post2(@RequestBody Request req) {
-        String data = String.format("hello post2 %s", req.getMessage());
+    public Response<String> post2(HttpServletRequest request, HttpServletResponse response) {
+        String data = String.format("hello post2 %s", "a");
         return Response.OK(data);
     }
 
-    @RequestMapping(method = RequestMethod.OPTIONS, path = "/post2")
-    @ResponseBody
-    public Response<String> post2Option(@RequestBody Request req) {
-        String data = String.format("hello post2 %s", req.getMessage());
-        return Response.OK(data);
-    }
+    // 下面这东西不管用
+//    @CrossOrigin("http://localhost:5000")
+//    @RequestMapping(method = RequestMethod.OPTIONS, path = "/post2")
+//    @ResponseBody
+//    public Response<?> post2Option() {
+////        String data = String.format("hello post2 %s", req.getMessage());
+//        return Response.OK("");
+//    }
 
     /**
-     * 这种方法是不行的，因为都tm进不来post3的方法里，预检请求就被毙了
+     * 尝试手动在restcontroller里添加请求头，但这种方法是不行的，因为都tm进不来post3的方法里，预检请求就被毙了
      *
      * @param req
      * @param request
