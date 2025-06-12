@@ -1,18 +1,106 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
+
 <head>
-    <meta charset="UTF-8"/>
+    <meta charset="UTF-8" />
     <title>index</title>
 </head>
 
 <body>
-<h1>hi</h1>
+    <h1>hi</h1>
 </body>
-<!--测试cookie和sessionid-->
-<form action="/login/login" method="post">
-    账号：<input type="text" name="name1" placeholder="请输入账号"><br>
-    密码：<input type="password" name="pass1" placeholder="请输入密码"><br>
-    <input type="submit" value="登录">
+<form id="cookie-login">
+    账号：<input type="text" id="cookie-name" placeholder="请输入账号"><br>
+    密码：<input type="password" id="cookie-pwd" placeholder="请输入密码"><br>
+    <input type="submit" value="cookie登录">
 </form>
+
+
+<form id="jwt-login">
+    账号：<input type="text" id="jwt-name" placeholder="请输入账号"><br>
+    密码：<input type="password" id="jwt-pwd" placeholder="请输入密码"><br>
+    <input type="submit" value="jwt登录">
+</form>
+
+
+<script>
+    // 自定义提交动作。不使用表单自己的提交动作
+    document.getElementById('cookie-login').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name1 = document.getElementById('cookie-name').value;
+        const pass1 = document.getElementById('cookie-pwd').value;
+        const data = {
+            username: name1,
+            password: pass1,
+        };
+        fetch("http://localhost:8099/cookie-session/login", {
+            method: "post",
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        }).then(response => {
+            console.log(response);
+            if (!response.ok) {
+                throw new Error('网络响应错误: ' + response.status);
+            }
+            // response.text()返回的是一个promise，并且这个response的inputStream只能读取一次，所以text()方法只能执行一次
+            return response.text();
+        })
+            .then(body => {
+                console.log(body);
+                if (body === "loginSuccess") {
+                    // 跳转到首页
+                    window.location.href = "/index";
+                }
+            })
+            .catch(error => {
+
+                console.error('Fetch错误:', error);
+            });
+    })
+
+
+
+
+    document.getElementById('jwt-login').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name1 = document.getElementById('jwt-name').value;
+        const pass1 = document.getElementById('jwt-pwd').value;
+        const data = {
+            username: name1,
+            password: pass1,
+        };
+        fetch("http://localhost:8099/jwt/login", {
+            method: "post",
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        }).then(response => {
+            console.log(response);
+            if (!response.ok) {
+                throw new Error('网络响应错误: ' + response.status);
+            }
+            // response.text()返回的是一个promise，并且这个response的inputStream只能读取一次，所以text()方法只能执行一次
+            return response.text();
+        })
+            .then(body => {
+                console.log(body);
+                if (body != "error") {
+                    // body就是jwt，设置到localstorage里
+                    localStorage.setItem("jwt",body)
+                    // 跳转到首页，当前这个项目并不是前后端分离的，每个请求都要访问后端的templateController
+                    // 所以跳转的时候必须要把token通过url传递到新页面
+                    window.location.href = "/index?token="+body;
+                }
+            })
+            .catch(error => {
+
+                console.error('Fetch错误:', error);
+            });
+    })
+
+</script>
 
 </html>

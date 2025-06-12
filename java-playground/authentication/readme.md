@@ -1,0 +1,9 @@
+# 概述
+通过cookie+session或者jwt实现的身份认证demo
+
+# Cookie-Session
+http://localhost:8099/cookie-session/cookie-session-test 是一个简单的cookiesession的demo，用来测试cookiesession的功能。可以基于此构建一个简单的login
+
+todo: 这个项目本身是个前后端未分离的项目，每个页面的访问行为本身也都是通过访问templateController之后，后端服务直接返回的html页面来实现的。而登录拦截器的实现本质是通过后端判断然后来控制前端实现跳转的，即interceptor中返回redirect来控制的。也因此，在jwt的方式进行登录的时候，从login->index需要将jwt作为url参数的一部分跳转过去。
+
+另一种可行的实现方式是，在interceptor中将/*作为excludePattern，相当于在访问页面的时候完全不做拦截，登录状态的判断后端只提供接口，前端html页面自行在加载页面、调用接口的时候自行通过接口判断然后控制浏览器的跳转行为。
