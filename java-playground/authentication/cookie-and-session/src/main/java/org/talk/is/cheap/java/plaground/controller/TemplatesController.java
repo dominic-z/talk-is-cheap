@@ -19,4 +19,10 @@ public class TemplatesController {
     public String loginHtmlHtml() {
         return "login";
     }
+
+
+    @RequestMapping("cookie-session-test")
+    public String cookieSessionTest() {
+        return "cookie-session-test";
+    }
 }
