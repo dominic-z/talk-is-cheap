@@ -13,6 +13,7 @@ function simplePost(url) {
         "message": "this is a post"
     }).then(resp => {
             console.log(resp)
+            console.log(resp,cookies)
         })
 }
 
@@ -23,8 +24,8 @@ function post(uri) {
     }, {
         // 模拟复杂请求，因为简单请求不会发送option请求
         headers: {
-
-            'customized': 'customized'
+            'customized': 'customized',
+            // 'cookie':'aaa'
         },
         // 跨域请求会把cookie带上
         withCredentials: true
