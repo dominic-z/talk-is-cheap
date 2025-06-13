@@ -16,3 +16,5 @@
 ```shell
 keytool -genkey -alias tomcat -storetype PKCS12 -keyalg RSA -keysize 2048 -keystore keystore.p12 -validity 3650
 ```
+
+还配置了http转发https，但实际上，证书应该配置在nginx中，没nginx也应该配置在前端中。前后端没分离的话那没办法只能在后端了。
