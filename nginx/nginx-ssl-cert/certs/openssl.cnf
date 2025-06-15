@@ -1,0 +1,10 @@
+[v3_req]  
+keyUsage = digitalSignature, keyEncipherment  
+extendedKeyUsage = serverAuth  
+subjectAltName = @alt_names  
+#服务器使用的域名和服务器IP
+[alt_names]  
+DNS.1 = localhost  
+DNS.2 = www.feng.com
+DNS.2 = *.feng.com
+IP.1 = 100.70.84.6
