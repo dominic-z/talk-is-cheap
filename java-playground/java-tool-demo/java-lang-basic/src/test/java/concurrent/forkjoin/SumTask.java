@@ -64,11 +64,14 @@ public class SumTask extends RecursiveTask<Long> {
 //        SumTask subtask1 = new SumTask(this.array, start, middle,fjp);
 //        SumTask subtask2 = new SumTask(this.array, middle, end,fjp);
 //        invokeAll(subtask1, subtask2);
+        // 向fjp提交一个任务，在fjp中每个worker有一个自己的任务队列，提交的时候可以向自己的任务队列里提交，而自己的任务队列里的任务可以被其他worker偷走
         ForkJoinTask<Long> subtask1 = fjp.submit(new SumTask(this.array, start, middle,fjp,Thread.currentThread()));
         ForkJoinTask<Long> subtask2 = fjp.submit(new SumTask(this.array, middle,end,fjp,Thread.currentThread()));
 //        subtask1.fork();
 //        subtask2.fork();
 
+        // todo: 这是我一直疑惑的地方，join操作我认为一定会让当前线程交出cpu使用权，或者说要将当前的任务修改为waiting状态然后去让当前线程去执行其他的额任务，只有这样才能让fork的各个子任务执行下去，否则当前任务一直把持着cpu不交出cpu执行权，后面的子任务就没法执行了呀
+        // 就像Thread.join一样
         Long subresult1 = subtask1.join();
         System.out.println(String.format("joining1====start:%4d end: %4d time: %s, Thread: %s, getActiveThreadCount: %d, getRunningThreadCount: %d",start,end,Thread.currentThread(),date2Str(new Date()),fjp.getActiveThreadCount(),fjp.getRunningThreadCount()));
         Long subresult2 = subtask2.join();
