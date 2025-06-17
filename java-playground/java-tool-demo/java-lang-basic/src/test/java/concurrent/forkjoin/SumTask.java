@@ -8,6 +8,7 @@ import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveTask;
 
 /**
+ * https://www.jdon.com/performance/threadpool-forkjoin.html
  * @author dominiczhu
  * @version 1.0
  * @title SumTask
@@ -21,11 +22,14 @@ public class SumTask extends RecursiveTask<Long> {
     int end;
     ForkJoinPool fjp;
 
-    SumTask(long[] array, int start, int end,ForkJoinPool fjp) {
+    Thread parentThread;
+
+    SumTask(long[] array, int start, int end,ForkJoinPool fjp,Thread parentThread) {
         this.array = array;
         this.start = start;
         this.end = end;
         this.fjp=fjp;
+        this.parentThread = parentThread;
     }
 
     private String date2Str(Date d){
@@ -35,7 +39,9 @@ public class SumTask extends RecursiveTask<Long> {
     @Override
     protected Long compute() {
 
-        System.out.println(String.format("starting====start:%4d end: %4d time: %s, thread: %s",start,end,date2Str(new Date()),Thread.currentThread()));
+//        System.out.println(String.format("starting====start:%4d end: %4d time: %s, thread: %s",start,end,date2Str(new Date()),Thread.currentThread()));
+        System.out.println(String.format("starting====start:%4d end: %4d, thread: %s,parentThread State: %s, time: %s, getActiveThreadCount: %d, getRunningThreadCount: %d",start,end,Thread.currentThread(),this.parentThread.getState(),date2Str(new Date()),fjp.getActiveThreadCount(),fjp.getRunningThreadCount()));
+
         if (end - start <= THRESHOLD) {
             // 如果任务足够小,直接计算:
             long sum = 0;
@@ -55,15 +61,18 @@ public class SumTask extends RecursiveTask<Long> {
         // 任务太大,一分为二:
         int middle = (end + start) / 2;
 //        System.out.println(String.format("split %d~%d ==> %d~%d, %d~%d", start, end, start, middle, middle, end));
-        SumTask subtask1 = new SumTask(this.array, start, middle,fjp);
-        SumTask subtask2 = new SumTask(this.array, middle, end,fjp);
+//        SumTask subtask1 = new SumTask(this.array, start, middle,fjp);
+//        SumTask subtask2 = new SumTask(this.array, middle, end,fjp);
 //        invokeAll(subtask1, subtask2);
-        subtask1.fork();
-        subtask2.fork();
+        ForkJoinTask<Long> subtask1 = fjp.submit(new SumTask(this.array, start, middle,fjp,Thread.currentThread()));
+        ForkJoinTask<Long> subtask2 = fjp.submit(new SumTask(this.array, middle,end,fjp,Thread.currentThread()));
+//        subtask1.fork();
+//        subtask2.fork();
+
         Long subresult1 = subtask1.join();
-//        System.out.println(String.format("joining1====start:%4d end: %4d time: %s, getActiveThreadCount: %d, getRunningThreadCount: %d",start,end,date2Str(new Date()),fjp.getActiveThreadCount(),fjp.getRunningThreadCount()));
+        System.out.println(String.format("joining1====start:%4d end: %4d time: %s, Thread: %s, getActiveThreadCount: %d, getRunningThreadCount: %d",start,end,Thread.currentThread(),date2Str(new Date()),fjp.getActiveThreadCount(),fjp.getRunningThreadCount()));
         Long subresult2 = subtask2.join();
-//        System.out.println(String.format("joining2====start:%4d end: %4d time: %s, getActiveThreadCount: %d, getRunningThreadCount: %d",start,end,date2Str(new Date()),fjp.getActiveThreadCount(),fjp.getRunningThreadCount()));
+        System.out.println(String.format("joining2====start:%4d end: %4d time: %s, Thread: %s getActiveThreadCount: %d, getRunningThreadCount: %d",start,end,Thread.currentThread(),date2Str(new Date()),fjp.getActiveThreadCount(),fjp.getRunningThreadCount()));
         Long result = subresult1 + subresult2;
 //        System.out.println("result = " + subresult1 + " + " + subresult2 + " ==> " + result);
         return result;
@@ -80,7 +89,7 @@ public class SumTask extends RecursiveTask<Long> {
 
         // fork/join task:
         ForkJoinPool fjp = new ForkJoinPool(4); // 最大并发数4
-        ForkJoinTask<Long> task = new SumTask(array, 0, array.length,fjp);
+        ForkJoinTask<Long> task = new SumTask(array, 0, array.length,fjp,Thread.currentThread());
         long startTime = System.currentTimeMillis();
         Long result = fjp.invoke(task);
         long endTime = System.currentTimeMillis();
