@@ -6,6 +6,9 @@ server:
     key-store-password: 123456
     keyStoreType: PKCS12
     keyAlias: tomcat
+#    启用http2.0，也兼容http1.1
+  http2:
+    enabled: true
 
 spring:
   web:
