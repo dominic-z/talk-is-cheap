@@ -18,6 +18,8 @@ elasticsearch有水位线的设计，初始情况下，如果文件存储达到9
 docker pull elasticsearch:7.17.25
 docker pull kibana:7.17.25
 
+
+#  注意，下面的-v是通过数据卷挂载的方式，会创建es-data、es-config、es-plugins三个数据卷
 docker network create es-net
 docker run -d \
 	--name es \
@@ -39,7 +41,7 @@ docker run -d \
 ```shell
 docker run -d \
     --name kibana \
-    -e ELASTICSEARCH_HOSTS=http://es:9200 \
+    -e ELASTICSEARCH_HOSTS=http://es1:9200 \
     --network=es-net \
     -p 5601:5601  \
     kibana:7.17.25

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/base.xml" />
+    <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+        <destination>localhost:5044</destination>
+        <!-- 日志输出编码 -->
+        <encoder charset="UTF-8" class="net.logstash.logback.encoder.LogstashEncoder">
+            <provider class="net.logstash.logback.composite.loggingevent.LoggingEventPatternJsonProvider">
+                <timestamp>
+                    <timeZone>UTC</timeZone>
+                </timestamp>
+                    <pattern>
+                        {
+                        <!--es索引名称 -->
+                        "index":"elk",
+                        <!--应用名称 -->
+                        "appname":"${spring.application.name}",
+                        <!--打印时间 -->
+                        "timestamp": "%d{yyyy-MM-dd HH:mm:ss.SSS}",
+                        <!--线程名称 -->
+                        "thread": "%thread",
+                        <!--日志级别 -->
+                        "level": "%level",
+                        <!--日志名称 -->
+                        "logger_name": "%logger",
+                        <!--日志信息 -->
+                        "message": "%msg",
+                        <!--日志堆栈 -->
+                        "stack_trace": "%exception"
+                        }
+                    </pattern>
+            </provider>
+        </encoder>
+    </appender>
+    <root level="INFO">
+        <appender-ref ref="LOGSTASH" />
+        <appender-ref ref="CONSOLE" />
+    </root>
+</configuration>

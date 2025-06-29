@@ -1,0 +1,25 @@
+filebeat.inputs:
+- input_type: log
+  enable: true
+  paths:  # 采集日志的路径这里是容器内的path
+   - /usr/share/filebeat/my-logs/**
+  #  推测：这个应该采集的日志文件文件名格式，例如2022-09-04
+  multiline.pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+  multiline.negate: true
+  multiline.match: after
+  multiline.timeout: 10s
+  # 为每个项目标识,或者分组，可区分不同格式的日志，这个会作为输出的标签
+  # 推测：这个应该只是对输入内容打上标签，最终这个tags会作为输出给es的一个字段
+  tags: ["pre-logs"]
+  # 这个文件记录日志读取的位置，如果容器重启，可以从记录的位置开始取日志
+  registry_file: /usr/share/filebeat/data/
+  # 推测：这个应该是对输入文件添加上了一些字段，可以用来给logstash的filter使用，配合logstash.conf理解，这些内容也同样会输出到es中
+  fields:
+    logsource: node1
+    logtype: pre
+
+# 输出到logstash中,logstash更换为自己的ip
+# 这里不能写http://logstash:5044，因为filebeat并不基于http，而是基于tcp协议，可以通过filebeat的日志看出Connection to backoff(async(tcp://logstash:5044)) established
+output.logstash:
+  enabled: true
+  hosts: ["logstash:5044"]
