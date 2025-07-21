@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: free-flow-scheduler
+# zookeeper配置
+apache:
+  zookeeper:
+    # 服务器连接地址，集群模式则使用逗号分隔如：ip1:host,ip2:host
+    connect-url: 127.0.0.1:2181
+    # 会话超时时间：单位ms
+    session-timeout: 10000
+    # 连接超时时间：单位ms
+    connection-timeout: 10000
+    # ACL权限控制，验证策略
+    scheme: digest
+    # 验证内容id，这个用于集群管理员的客户端，集群管理员具备集群的最高管理权限
+#    注意这个不要配错了，如果配错了很可能导致代码里的acl如果是null的话，就会有一些奇怪的权限错误异常
+    admin-auth-id: admin:123456
+    # 用于对租户1操作的zk路径赋予acl权限，比如集群管理员专门给租户1分配了一个/tenant1路径，这个路径只能tenant1进行操作
+#
+    tenant1-auth-id: tenant1:123456
+  # 重试策略
+  retry-policy:
+    # 初始化间隔时间
+    base-sleep-time: 1000
+    # 最大重试次数
+    max-retries: 5
+    # 最大重试间隔时间
+    max-sleep: 30000
+
+
