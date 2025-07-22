@@ -13,7 +13,7 @@ spring:
         namespace: public # 会注册到对应的服务的命名空间ID，替换为实际的ID
         username: nacos # 开启鉴权，首次登陆nacos控制台的时候会设置管理员密码
         password: nacos1234
-        group: DEV_GROUP # 配置分组
+        group: DEV_GROUP # 配置分组 需要与关联的微服务能在同一个gourp之中
       config:
         import-check:
           enabled: false
