@@ -17,7 +17,20 @@ spring:
         namespace: public # 会注册到对应的服务的命名空间ID，替换为实际的ID，注意不要写成一个不存在的命名空间
         username: nacos # 开启鉴权，首次登陆nacos控制台的时候会设置管理员密码
         password: nacos1234
-        group: public # 配置分组
+        group: DEV_GROUP # 配置分组
       config:
+#        nacos3的配置中心的配置方式也有较大的变化了。
+        server-addr: localhost:8848
+        namespace: public # 会注册到对应的服务的命名空间ID，替换为实际的ID，注意不要写成一个不存在的命名空间
+        username: nacos # 开启鉴权，首次登陆nacos控制台的时候会设置管理员密码
+        password: nacos1234
+        group: DEV_GROUP # 配置分组
         import-check:
           enabled: false
+#
+  config:
+    import:
+#      - 经测试，这东西不写还不行，写少了其实不影响读取，但是影响nacodsconfig变更的listener
+#      - 不用写文件类型，按照官网来说，只需要写dataid就行
+      - nacos:nacosconfig1?group=DEV_GROUP
+      - nacos:nacosconfig2?group=DEV_GROUP

@@ -31,7 +31,22 @@ docker run -p 8080:8080 -p 8848:8848 -p 9848:9848 -p 9849:9849 \
 首次登陆控制台的时候，需要指定初始密码是，暂时没有找到直接在docker命令中直接指定密码的方式，初始用户是管理员权限。然后可以在控制台/权限控制/用户列表中新增用户。
 
 
-# Feign
 
-## 使用OkHttpClient接管 FeignClient
+## Feign
+
+### 使用OkHttpClient接管 FeignClient
 简单使用的话，只需要在yml里进行配置并新增mvn坐标即可，如果需要对OkHttpClient做定制化，需要配置一个OkHttpClientBuilder，为什么可以这么配，参照OkHttpFeignConfiguration
+
+# 配置中心
+[spring cloud+nacos](https://nacos.io/docs/v2.5/ecology/use-nacos-with-spring-cloud)
+在ncacos创建两个配置文件，命名空间在public，配置文件分别较nacosconfig1和nacosconfig2，分组为DEV_GROUP，里面是yaml格式，内容为
+
+```yaml
+config2:
+    info: haha2
+
+---
+
+config1:
+  info1: haha11
+```
