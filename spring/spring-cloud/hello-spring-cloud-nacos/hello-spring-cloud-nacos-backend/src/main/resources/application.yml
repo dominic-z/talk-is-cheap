@@ -1,17 +1,23 @@
 server:
   port: 9091
-
+# 日志配置
+logging:
+  level:
+    root: INFO  # 全局默认级别
 spring:
   application:
     name: backend # 指定应用名称，用于服务注册时候指定服务名
   profiles:
     active: prod
   cloud:
+    #    nacos3的配置和nacos2的配置位置有差异，参考https://github.com/nacos-group/nacos-examples/
     nacos:
-      server-addr: localhost:8848
       discovery:
-        namespace: prod # 会注册到对应的服务的命名空间ID，替换为实际的ID
-        group: DEV_GROUP # 配置分组
+        server-addr: localhost:8848
+        namespace: public # 会注册到对应的服务的命名空间ID，替换为实际的ID，注意不要写成一个不存在的命名空间
+        username: nacos # 开启鉴权，首次登陆nacos控制台的时候会设置管理员密码
+        password: nacos1234
+        group: public # 配置分组
       config:
         import-check:
           enabled: false
