@@ -1,0 +1,42 @@
+server:
+  port: 8080
+
+logging:
+  level:
+    root: INFO
+spring:
+  application:
+    name: backend-service
+  cloud:
+    gateway:
+      routes:
+        - id: route1
+          order: 1
+          uri: http://localhost:8081
+          predicates:
+#           and关系，请求路径需要以/gateway/backend/开头，并且请求头需要带X-Header-Flag且对应的value是一个数字
+            - Path=/gateway/backend/**
+            - Header=X-Header-Flag, \d+
+          filters:
+            - RewritePath=/gateway/backend/(?<segment>/?.*), /backend/${segment}
+            - AddRequestHeader=X-Request-Example, ExampleValue
+        - id: route2
+          order: 2
+          uri: http://localhost:8081
+          predicates:
+#            在某个时间之前请求这个地址会被转发
+            - Path=/gateway/time/**
+            - Before=2025-07-22T22:40:00.000+08:00
+          filters:
+            - RewritePath=/gateway/time/(?<segment>/?.*), /backend/${segment}
+        - id: route3
+          order: 3
+          uri: http://localhost:8081
+          predicates:
+            #            在某个时间之前请求这个地址会被转发
+            - Path=/gateway/custom-filter/**
+          filters:
+            - RewritePath=/gateway/custom-filter/(?<segment>/?.*), /backend/${segment}
+            - name: LoggingCustom
+              args:
+                logging-level: INFO1
