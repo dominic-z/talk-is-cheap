@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class GenericBody<T> {
-    Integer code;
-    T data;
-    String message;
+    private Integer code;
+    private T data;
+    private String message;
 }

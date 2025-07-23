@@ -7,6 +7,14 @@ logging:
 spring:
   application:
     name: backend-service
+#    用作限流器
+  data:
+    redis:
+      host: 127.0.0.1             # Redis服务器地址
+      port: 6379            # Redis服务器连接端口
+      password: 123456      # Redis服务器连接密码（默认为空）
+      database: 0           # Redis数据库索引（默认为0）
+      timeout: 60s
   cloud:
     gateway:
       routes:
@@ -18,7 +26,8 @@ spring:
             - Path=/gateway/backend/**
             - Header=X-Header-Flag, \d+
           filters:
-            - RewritePath=/gateway/backend/(?<segment>/?.*), /backend/${segment}
+#            在 YAML 中，$ 需用 $\ 转义（如 ${segment} 写成 $\{segment}），避免被 YAML 解析器误认为变量。
+            - RewritePath=/gateway/backend/(?<segment>.*), /backend/$\{segment}
             - AddRequestHeader=X-Request-Example, ExampleValue
         - id: route2
           order: 2
@@ -28,7 +37,7 @@ spring:
             - Path=/gateway/time/**
             - Before=2025-07-22T22:40:00.000+08:00
           filters:
-            - RewritePath=/gateway/time/(?<segment>/?.*), /backend/${segment}
+            - RewritePath=/gateway/time/(?<segment>.*), /backend/$\{segment}
         - id: route3
           order: 3
           uri: http://localhost:8081
@@ -36,7 +45,44 @@ spring:
             #            在某个时间之前请求这个地址会被转发
             - Path=/gateway/custom-filter/**
           filters:
-            - RewritePath=/gateway/custom-filter/(?<segment>/?.*), /backend/${segment}
+            - RewritePath=/gateway/custom-filter/(?<segment>.*), /backend/$\{segment}
             - name: LoggingCustom
               args:
                 logging-level: INFO1
+        - id: route5
+          order: 5
+          uri: http://localhost:8081
+          predicates:
+#           请求http://localhost:8080/hi会被转发到http://localhost:8081/backend/hi
+#           用来控制触发什么route
+            - Header=route, 5
+          filters:
+            - PrefixPath=/backend
+        - id: route6
+#          get请求http://localhost:8080/gateway/redirect/hi?msg=msg
+          order: 6
+          uri: http://localhost:8081
+          predicates:
+            - Path=/gateway/redirect/**
+            #           请求http://localhost:8080/hi会被转发到http://localhost:8081/backend/hi
+            #           用来控制触发什么route
+            - Header=route, 6
+          filters:
+#           在 HTTP 协议中，302 重定向的规范行为是：对于 POST 请求，重定向后浏览器会默认使用 GET 方法请求目标地址，且原始 POST 请求的 body 数据会丢失。
+            #
+            #Spring Cloud Gateway 中的 RedirectTo 过滤器（用于返回 302 重定向）无法强制指定重定向后的请求方法为 POST，因为这是由 HTTP 协议和浏览器 / 客户端的行为决定的，而非网关可以控制。
+            - RedirectTo=302, http://localhost:8081/backend/getHi?msg=redirect
+        - id: route7
+          order: 7
+          uri: http://localhost:8081
+          predicates:
+            - Path=/gateway/rate-limit/**
+          filters:
+            - RewritePath=/gateway/rate-limit/(?<segment>.*), /backend/$\{segment}
+            - name: RequestRateLimiter
+              args:
+#                限流的key，取名字叫做UserKeyResovler的bean
+                key-resolver: '#{@userKeyResolver}'
+                redis-rate-limiter.replenishRate: 1  # 令牌筒每秒生成1个
+                redis-rate-limiter.burstCapacity: 3  # 令牌筒最多3个
+                redis-rate-limiter.requestedTokens: 2 # 每次消耗多少令牌
