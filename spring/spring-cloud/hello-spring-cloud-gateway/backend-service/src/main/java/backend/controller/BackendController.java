@@ -44,6 +44,21 @@ public class BackendController {
         return ResponseEntity.ok().body(respBody);
     }
 
+    @RequestMapping(path = "/getHi", method = RequestMethod.GET)
+    @ResponseBody
+    public ResponseEntity<GenericBody<String>> getHi(@RequestParam(name = "msg",required = false,defaultValue = "default") String msg, HttpServletRequest httpServletRequest) {
+        logHeader(httpServletRequest);
+
+        GenericBody<String> respBody = GenericBody.<String>builder()
+                .code(0)
+                .data("hi: " + msg)
+                .message("hi: " + msg)
+                .build();
+
+        return ResponseEntity.ok().body(respBody);
+    }
+
+
     private static void logHeader(HttpServletRequest httpServletRequest) {
         Enumeration<String> headerNames = httpServletRequest.getHeaderNames();
         while (headerNames.hasMoreElements()) {
