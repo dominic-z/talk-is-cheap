@@ -19,6 +19,7 @@ import static org.springframework.cloud.gateway.support.ServerWebExchangeUtils.G
 
 /**
  * 在filter里动态地修改路由，从而实现动态路由
+ * 抄的https://blog.csdn.net/rain_web/article/details/118226885
  */
 @Component
 @Slf4j
