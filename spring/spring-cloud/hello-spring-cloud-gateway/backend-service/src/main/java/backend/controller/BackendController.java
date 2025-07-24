@@ -3,6 +3,7 @@ package backend.controller;
 import backend.message.GenericBody;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +16,10 @@ import java.util.Map;
 @Slf4j
 public class BackendController {
 
+
+    @Value("${server.port}")
+    private int port;
+
     @RequestMapping(path = "/hello", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public ResponseEntity<GenericBody<String>> hello(@RequestBody GenericBody<String> req, HttpServletRequest httpServletRequest) {
@@ -22,8 +27,8 @@ public class BackendController {
 
         GenericBody<String> respBody = GenericBody.<String>builder()
                 .code(0)
-                .data("hi: " + req.getData())
-                .message("hi: " + req.getMessage())
+                .data("hi: " + req.getData() + " I'm " + port)
+                .message("hi: " + req.getData() + " I'm " + port)
                 .build();
 
         return ResponseEntity.ok().body(respBody);
@@ -37,8 +42,8 @@ public class BackendController {
 
         GenericBody<String> respBody = GenericBody.<String>builder()
                 .code(0)
-                .data("hi: " + req.getData())
-                .message("hi: " + req.getMessage())
+                .data("hi: " + req.getData() + " I'm " + port)
+                .message("hi: " + req.getMessage() + " I'm " + port)
                 .build();
 
         return ResponseEntity.ok().body(respBody);
@@ -46,13 +51,13 @@ public class BackendController {
 
     @RequestMapping(path = "/getHi", method = RequestMethod.GET)
     @ResponseBody
-    public ResponseEntity<GenericBody<String>> getHi(@RequestParam(name = "msg",required = false,defaultValue = "default") String msg, HttpServletRequest httpServletRequest) {
+    public ResponseEntity<GenericBody<String>> getHi(@RequestParam(name = "msg", required = false, defaultValue = "default") String msg, HttpServletRequest httpServletRequest) {
         logHeader(httpServletRequest);
 
         GenericBody<String> respBody = GenericBody.<String>builder()
                 .code(0)
-                .data("hi: " + msg)
-                .message("hi: " + msg)
+                .data("hi: " + msg + " I'm " + port)
+                .message("hi: " + msg + " I'm " + port)
                 .build();
 
         return ResponseEntity.ok().body(respBody);

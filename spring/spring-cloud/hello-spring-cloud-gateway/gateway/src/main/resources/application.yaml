@@ -97,3 +97,16 @@ spring:
             - name: Auth
               args:
                 need-auth: true
+#                本来想参考https://blog.csdn.net/rain_web/article/details/118226885
+#               写个通过filter实现的动态路由
+        - id: route9
+          #          请求http://localhost:8080/gateway/custom-route-filter/hi
+          order: 9
+          uri: http://localhost:8081
+          predicates:
+            - Path=/gateway/custom-route-filter/**
+          filters:
+            - RewritePath=/gateway/custom-route-filter/(?<segment>.*), /backend/$\{segment}
+            - name: CustomRouter
+              args:
+                prob: 0.7
