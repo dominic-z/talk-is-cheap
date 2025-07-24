@@ -5,7 +5,9 @@
 2. [SpringCloud gateway （史上最全](https://www.cnblogs.com/crazymakercircle/p/11704077.html)
 3. [RequestRateLimiter GatewayFilter 工厂](https://docs.springframework.org.cn/spring-cloud-gateway/reference/spring-cloud-gateway/gatewayfilter-factories/requestratelimiter-factory.html)
 4. [Spring Cloud 网关 Spring Cloud Gateway ](https://blog.csdn.net/qq_34417433/article/details/135144279)
-5. 
+5. https://cloud.tencent.com/developer/article/1929827
+6. [SpringCloudGateway手动编写路由规则对请求进行转发](https://blog.csdn.net/rain_web/article/details/118226885)
+7. 
 
 与其他springcloud融合的项目暂未考虑
 
