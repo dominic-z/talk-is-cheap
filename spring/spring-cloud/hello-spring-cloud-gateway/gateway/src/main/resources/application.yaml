@@ -59,7 +59,7 @@ spring:
           filters:
             - PrefixPath=/backend
         - id: route6
-#          get请求http://localhost:8080/gateway/redirect/hi?msg=msg
+#          get请求http://localhost:8080/gateway/redirect/getHi?msg=msg
           order: 6
           uri: http://localhost:8081
           predicates:
@@ -72,17 +72,28 @@ spring:
             #
             #Spring Cloud Gateway 中的 RedirectTo 过滤器（用于返回 302 重定向）无法强制指定重定向后的请求方法为 POST，因为这是由 HTTP 协议和浏览器 / 客户端的行为决定的，而非网关可以控制。
             - RedirectTo=302, http://localhost:8081/backend/getHi?msg=redirect
-        - id: route7
-          order: 7
+#        - id: route7
+#          order: 7
+#          uri: http://localhost:8081
+#          predicates:
+#            - Path=/gateway/rate-limit/**
+#          filters:
+#            - RewritePath=/gateway/rate-limit/(?<segment>.*), /backend/$\{segment}
+#            - name: RequestRateLimiter
+#              args:
+##                限流的key，取名字叫做UserKeyResovler的bean
+#                key-resolver: '#{@userKeyResolver}'
+#                redis-rate-limiter.replenishRate: 1  # 令牌筒每秒生成1个
+#                redis-rate-limiter.burstCapacity: 3  # 令牌筒最多3个
+#                redis-rate-limiter.requestedTokens: 2 # 每次消耗多少令牌
+        - id: route8
+          #          请求http://localhost:8080/gateway/auth/hi
+          order: 8
           uri: http://localhost:8081
           predicates:
-            - Path=/gateway/rate-limit/**
+            - Path=/gateway/auth/**
           filters:
-            - RewritePath=/gateway/rate-limit/(?<segment>.*), /backend/$\{segment}
-            - name: RequestRateLimiter
+            - RewritePath=/gateway/auth/(?<segment>.*), /backend/$\{segment}
+            - name: Auth
               args:
-#                限流的key，取名字叫做UserKeyResovler的bean
-                key-resolver: '#{@userKeyResolver}'
-                redis-rate-limiter.replenishRate: 1  # 令牌筒每秒生成1个
-                redis-rate-limiter.burstCapacity: 3  # 令牌筒最多3个
-                redis-rate-limiter.requestedTokens: 2 # 每次消耗多少令牌
+                need-auth: true
