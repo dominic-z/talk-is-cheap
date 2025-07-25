@@ -2,7 +2,7 @@ package gateway.controller;
 
 
 import gateway.message.GenericBody;
-import gateway.route.DynamicRouter;
+import gateway.service.DynamicRouteWriteService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -10,14 +10,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.print.attribute.standard.Media;
-
 @RestController
 @RequestMapping(path = "/gateway")
 public class DynamicRouterController {
 
     @Autowired
-    DynamicRouter dynamicRouter;
+    DynamicRouteWriteService dynamicRouter;
 
     @PostMapping(path = "/add-dynamic-route",consumes = MediaType.APPLICATION_JSON_VALUE)
     public GenericBody<String> updateDynamicRoute(@RequestBody GenericBody<Integer> req){
