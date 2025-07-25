@@ -1,4 +1,4 @@
-package gateway.route;
+package gateway.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,10 +36,22 @@ import java.util.Map;
  */
 @Component
 @Slf4j
-public class DynamicRouter implements ApplicationEventPublisherAware {
+public class DynamicRouteWriteService implements ApplicationEventPublisherAware {
 
     /**
      * 路由信息写入器
+     * 他的实际类型默认是InMemoryRouteDefinitionRepository，是在GatewayAutoConfiguration这个类中的
+     * @Bean
+     * 	    @ConditionalOnMissingBean(RouteDefinitionRepository.class)
+     *    public InMemoryRouteDefinitionRepository inMemoryRouteDefinitionRepository() {
+     * 		return new InMemoryRouteDefinitionRepository();
+     *    }
+     *
+     * 方法创建的，
+     * 这个类的实现非常简单，就只是读取路由与记录路由，并且会被new RefreshRoutesEvent(this)刷新
+     *
+     * 当然，也可以实现自己的RouteDefinitionRepository类，从而实现超级灵活的动态路由管理。
+     * 参考自：https://cloud.tencent.com/developer/article/2143057的动态路由章节，文章中贴的代码不全，少了很多部分，但关键是描述了RouteDefinitionRepository的作用。
      */
     @Autowired
     private RouteDefinitionWriter routeDefinitionWriter;
