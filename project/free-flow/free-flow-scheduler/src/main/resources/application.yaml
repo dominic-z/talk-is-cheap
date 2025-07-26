@@ -4,6 +4,19 @@ spring:
   application:
     name: free-flow-scheduler
     env: host
+  cloud:
+    gateway:
+      routes:
+        - id: lead-to-leader
+          order: -1
+          uri: http://None #仅仅是站位，实际uri会被SchedulerLeadToLeader替代
+          predicates:
+            - Path=/gateway/**
+          filters:
+            - RewritePath=/gateway/(?<segment>.*), /$\{segment}
+            - name: SchedulerLeadToLeader
+
+
 
 # zookeeper配置
 apache:

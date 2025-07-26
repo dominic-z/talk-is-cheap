@@ -1,3 +1,9 @@
+# TODO
+
+scheduler部分：
+1. 集群leader选举与路由转发
+2. 
+
 
 # 配置
 
