@@ -9,6 +9,10 @@
 6. [SpringCloudGateway手动编写路由规则对请求进行转发](https://blog.csdn.net/rain_web/article/details/118226885)
 7. 
 
+项目有两个服务:
+1. backend-service: 负责提供业务服务
+2. gateway: 作为网关将请求路由转发至backend-service
+
 与其他springcloud融合的项目暂未考虑
 
 gateway内置的限流器需要redis

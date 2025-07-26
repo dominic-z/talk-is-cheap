@@ -1,7 +1,5 @@
-package org.talk.is.cheap.project.free.flow.scheduler.cluster.listener;
+package org.talk.is.cheap.project.free.flow.scheduler.cluster.service;
 
-import jakarta.annotation.PostConstruct;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
@@ -20,7 +18,7 @@ import java.util.concurrent.Executors;
 
 @Component
 @Slf4j
-public class SchedulerLeaderElection {
+public class SchedulerClusterManager {
 
     private static final ExecutorService SINGLE_EXECUTOR_SERVICE = Executors.newSingleThreadExecutor();
 
@@ -37,6 +35,9 @@ public class SchedulerLeaderElection {
     private String port;
 
     private LeaderLatch leaderLatch;
+
+    // 用做缓存，不需要每次都去查询
+    private String cachedLeaderId;
 
     /**
      * 运行在虚拟机中还是运行在主机中，用于决定注册是注册ip还是容器名称，以便后续的网路链接
@@ -67,12 +68,14 @@ public class SchedulerLeaderElection {
     public void registryAndElection(ApplicationReadyEvent event) throws Exception {
         log.info("scheduler start election");
         // 例如：注册服务到注册中心
-        final String registryId = (ENV.CONTAINER == ENV.getByName(env) ? getContainerName() : getMainIP()) + ":" + port;
+        final String registryId = getSchedulerId();
 
         leaderLatch = new LeaderLatch(curatorZKClient, ELECTION_PATH, registryId, LeaderLatch.CloseMode.NOTIFY_LEADER);
         leaderLatch.addListener(new LeaderLatchListener() {
             @Override
             public void isLeader() {
+//                当前节点成为leader的时候更新，说明本节点成为了主节点
+                SchedulerClusterManager.this.cachedLeaderId = registryId;
                 log.info("{} become leader", registryId);
             }
 
@@ -84,6 +87,10 @@ public class SchedulerLeaderElection {
 
         leaderLatch.start();
 
+    }
+
+    public String getSchedulerId() {
+        return (ENV.CONTAINER == ENV.getByName(env) ? getContainerName() : getMainIP()) + ":" + port;
     }
 
     /**
@@ -136,12 +143,16 @@ public class SchedulerLeaderElection {
     }
 
     public String getLeader() throws Exception {
+        if(StringUtils.isNotBlank(this.cachedLeaderId)){
+            return this.cachedLeaderId;
+        }
         if (leaderLatch == null) {
             throw new RuntimeException("leaderLatch is null");
         }
         if (leaderLatch.getLeader() == null) {
             return null;
         }
+        this.cachedLeaderId = leaderLatch.getLeader().getId();
         return leaderLatch.getLeader().getId();
     }
 
@@ -150,6 +161,6 @@ public class SchedulerLeaderElection {
     }
 
     public static void main(String[] args) {
-        System.out.println(new SchedulerLeaderElection().getMainIP());
+        System.out.println(new SchedulerClusterManager().getMainIP());
     }
 }
