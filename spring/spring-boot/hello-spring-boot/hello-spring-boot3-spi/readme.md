@@ -6,6 +6,8 @@
 3. [Springboot3.0源码揭秘 -- BootstrapRegistryInitializer拓展点的作用及其应用](https://juejin.cn/post/7455942219166892042): 简单了解即可，一句话，就是在应用启动的时候的对容器做一些操作，例如在spring启动的最开始阶段，容器是空的，在这个时候希望预先创建一些对象，这些对象可以被放在bootstrapContext这个容器里，在后续容器正式开始启动的时候，这个容器会销毁
 4. [SpringApplicationRunListener和ApplicationListener的区别](https://www.doubao.com/thread/w14fc022deb88db2f)
 5. [EnvironmentPostProcessor](https://www.doubao.com/thread/wd2ddca98a6e29e30)
+6. [spring boot通过@Bean注解定义一个Controller
+   ](https://www.cnblogs.com/gaofeng-henu/p/12168789.html)：我们知道，无论是webmvc还是webflux中的RequestMappingHandlerMapping类，都是在afterPropertiesSet方法中查找所有带有Controller或者RequestMapping注解的类，再把对应类中的带有RequestMapping注解的方法解析后注册到对应的RequestMappingHandlerMapping中的，其中判断一个类是否带有@Controller或@RequestMapping的方法如下
 
 测试的时候可以关注一下各种spi组件的触发时间，其实多数都是相对比较早的了。
 

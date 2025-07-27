@@ -21,8 +21,8 @@ public class OkHttp3ClientConfig {
         OkHttpClient.Builder builder = new OkHttpClient.Builder();
         builder.addInterceptor(okHttp3Interceptor);
 //        配置完整请求的超时时间。
-//        额，甚至学到了一点okhttp关于超时的定义，注意这里server processing, and reading the response body是不同的时间，readingTimeout指的是开始读取到读取结束的时间
-//        The call timeout spans the entire call: resolving DNS, connecting, writing the request body, server processing, and reading the response body. If the call requires redirects or retries all must complete within one timeout period.
+//        关于callTimeout的说明：The call timeout spans the entire call: resolving DNS, connecting, writing the request body, server processing, and reading the response body. If the call requires redirects or retries all must complete within one timeout period.
+//        额，甚至学到了一点okhttp关于超时的定义，注意这里server processing, and reading the response body是不同的时间，readingTimeout指的是开始读取到读取结束的时间，也就是说服务端开始返回结果到完整读取完成
         builder.callTimeout(15000, TimeUnit.MILLISECONDS);
         builder.writeTimeout(3000, TimeUnit.MILLISECONDS);
         return builder;
