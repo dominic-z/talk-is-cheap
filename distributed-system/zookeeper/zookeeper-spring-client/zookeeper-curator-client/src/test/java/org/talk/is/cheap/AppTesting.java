@@ -55,7 +55,7 @@ public class AppTesting {
                 .forPath(path, "this is a book".getBytes());
 
         log.info("get data: {}", new String(tenant1CuratorClient.getData().forPath(path), StandardCharsets.UTF_8));
-
+        log.info("get children: {}", tenant1CuratorClient.getChildren().forPath("/tenant1"));
 //        修改
         tenant1CuratorClient.setData()
                 .forPath(path, "this is a new book".getBytes());
@@ -287,7 +287,8 @@ public class AppTesting {
                     }
                 }
             };
-//            LeaderLatch类不能close()多次，LeaderLatch.hasLeadership()与LeaderLatch.getLeader()得到的结果不一定一致，需要通过LeaderLatch.getLeader().isLeader()来判断。
+//            LeaderLatch类不能close()多次，LeaderLatch.hasLeadership()与LeaderLatch.getLeader()得到的结果不一定一致，需要通过LeaderLatch.getLeader().isLeader
+//            ()来判断。
             executorService.execute(candidate);
         }
 
@@ -296,7 +297,7 @@ public class AppTesting {
     }
 
     @Builder
-    static class MyLeaderSelectorListener extends LeaderSelectorListenerAdapter{
+    static class MyLeaderSelectorListener extends LeaderSelectorListenerAdapter {
 
         @Setter
         private String leaderName;
@@ -317,7 +318,6 @@ public class AppTesting {
      */
     @Test
     public void testLeaderSelection() throws Exception {
-
 
 
         String path = "/tenant1/leader";

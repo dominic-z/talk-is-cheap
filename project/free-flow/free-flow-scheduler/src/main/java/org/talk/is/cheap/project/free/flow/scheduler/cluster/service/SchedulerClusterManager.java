@@ -61,7 +61,7 @@ public class SchedulerClusterManager {
 
     /**
      * 监听应用启动完成事件，进行注册
-     *
+     * 等同与ApplicationListener
      * @param event
      */
     @EventListener(ApplicationReadyEvent.class)

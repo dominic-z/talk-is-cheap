@@ -1,0 +1,2 @@
+org.springframework.context.ApplicationListener=\
+org.talk.is.cheap.project.free.flow.starter.worker.listener.WorkerRegister

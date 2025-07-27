@@ -12,6 +12,7 @@
         <module>free-flow-scheduler</module>
         <module>free-flow-common</module>
         <module>free-flow-worker-starter</module>
+        <module>free-flow-worker-example</module>
     </modules>
 
     <properties>

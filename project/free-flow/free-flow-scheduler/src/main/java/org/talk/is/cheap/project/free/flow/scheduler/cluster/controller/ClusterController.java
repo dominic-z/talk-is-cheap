@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
-import org.talk.is.cheap.project.free.flow.message.HttpBody;
+import org.talk.is.cheap.project.free.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.SchedulerClusterManager;
 
 @RestController
