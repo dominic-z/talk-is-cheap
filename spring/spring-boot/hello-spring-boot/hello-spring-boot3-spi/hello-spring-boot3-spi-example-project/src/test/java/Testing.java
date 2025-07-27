@@ -65,6 +65,15 @@ public class Testing {
         log.info("property.source.key: {}", key);
     }
 
+
+    @Value("${starter.configuration.properties}")
+    private String starterConfigurationProperty;
+
+    @Test
+    public void testStarterConfigurationProperty() {
+        log.info("starter.configuration.properties: {}", starterConfigurationProperty);
+    }
+
     @Autowired
     ApplicationContext applicationContext;
     @Value("${app.initialized}")

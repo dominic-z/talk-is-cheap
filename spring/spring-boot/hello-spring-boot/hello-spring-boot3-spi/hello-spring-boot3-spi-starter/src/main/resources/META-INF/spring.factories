@@ -8,7 +8,8 @@ org.springframework.boot.SpringApplicationRunListener=\
 hello.spring.boot3.spi.starter.listener.MyBoostrapRegistryInitializerApplicationRunListener
 
 org.springframework.context.ApplicationListener=\
-hello.spring.boot3.spi.starter.listener.MyBootstrapContextClosedEventListener
+hello.spring.boot3.spi.starter.listener.MyBootstrapContextClosedEventListener,\
+hello.spring.boot3.spi.starter.listener.MyApplicationStartedEventListener
 
 org.springframework.boot.env.EnvironmentPostProcessor=\
 hello.spring.boot3.spi.starter.factory.MyEnvironmentPostProcessor

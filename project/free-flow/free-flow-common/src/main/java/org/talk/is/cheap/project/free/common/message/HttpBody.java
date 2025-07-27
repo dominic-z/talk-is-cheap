@@ -1,4 +1,4 @@
-package org.talk.is.cheap.project.free.flow.message;
+package org.talk.is.cheap.project.free.common.message;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
