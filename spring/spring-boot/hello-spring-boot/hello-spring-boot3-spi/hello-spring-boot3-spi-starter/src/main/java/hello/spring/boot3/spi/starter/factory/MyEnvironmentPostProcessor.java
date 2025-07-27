@@ -11,7 +11,7 @@ public class MyEnvironmentPostProcessor implements EnvironmentPostProcessor {
 
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
-        System.out.println("----------------通过EnvironmentPostProcessor操作属性");
+        System.out.println("----------------通过EnvironmentPostProcessor操作属性，新增一个配置项，并且修改一个server.port配置项");
         // 创建自定义配置源
         Map<String, Object> customProperties = new HashMap<>();
         customProperties.put("app.custom.property", "custom-value");

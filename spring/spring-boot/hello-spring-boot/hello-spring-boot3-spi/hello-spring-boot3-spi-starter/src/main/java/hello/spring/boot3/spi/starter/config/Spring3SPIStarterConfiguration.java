@@ -1,6 +1,7 @@
 package hello.spring.boot3.spi.starter.config;
 
 
+import hello.spring.boot3.spi.starter.controller.StarterController;
 import hello.spring.boot3.spi.starter.service.HelloService;
 import hello.spring.boot3.spi.starter.service.HiService;
 import hello.spring.boot3.spi.starter.service.impl.HelloServiceImpl;
@@ -10,7 +11,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 
-// 测试，不需要注解
+// 经过测试，不需要注解
 //@Configuration
 public class Spring3SPIStarterConfiguration {
     /**
@@ -44,5 +45,10 @@ public class Spring3SPIStarterConfiguration {
     @ConditionalOnClass(value = ClassTrigger.class)
     public HiService conditionOnClassHiService() {
         return new HiServiceImpl();
+    }
+
+    @Bean
+    public StarterController starterController(){
+        return new StarterController();
     }
 }

@@ -1,6 +1,5 @@
 package org.talk.is.cheap.hello.spring.cloud.openfeign.backend.controller;
 
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.talk.is.cheap.hello.spring.cloud.message.GenericData;
 
@@ -15,4 +14,5 @@ public interface HijController {
     @RequestMapping(path = "/slow-hij",method = RequestMethod.POST)
     @ResponseBody
     GenericData<String> slowHij(@RequestBody GenericData<String> req);
+
 }
