@@ -93,7 +93,21 @@ public class HijController {
 
     }
 
-
+    /**
+     *
+     * http://localhost:8081/frontend-service/dynamic-hello
+     * {
+     *     "code": 1,
+     *     "data": [
+     *         "haha",
+     *         "heihei"
+     *     ],
+     *     "message": "haha"
+     * }
+     *
+     * @param reqBody
+     * @return
+     */
     @RequestMapping(path = "/dynamic-hello", method = RequestMethod.POST)
     @ResponseBody
     public GenericData<List<String>> dynamicHello(@RequestBody GenericData<List<String>> reqBody) {
@@ -119,6 +133,13 @@ public class HijController {
     }
 
 
+    /**
+     * http://localhost:8081/frontend-service/dynamic-get-hello?data=data&msg=msg
+     *
+     * @param data
+     * @param msg
+     * @return
+     */
     @RequestMapping(path = "/dynamic-get-hello", method = RequestMethod.GET)
     @ResponseBody
     public GenericData<String> dynamicGetHello(@RequestParam(name = "data") String data, @RequestParam(name = "msg") String msg) {
