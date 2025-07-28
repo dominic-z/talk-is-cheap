@@ -1,0 +1,14 @@
+server:
+  port: 9091
+spring:
+  application:
+    name: backend-service
+  cloud:
+    #    nacos3的配置和nacos2的配置位置有差异，参考https://github.com/nacos-group/nacos-examples/
+    nacos:
+      discovery:
+        server-addr: localhost:8848
+        namespace: public # 会注册到对应的服务的命名空间ID，替换为实际的ID，注意不要写成一个不存在的命名空间
+        username: nacos # 开启鉴权，首次登陆nacos控制台的时候会设置管理员密码
+        password: nacos1234
+        group: DEV_GROUP # 配置分组
