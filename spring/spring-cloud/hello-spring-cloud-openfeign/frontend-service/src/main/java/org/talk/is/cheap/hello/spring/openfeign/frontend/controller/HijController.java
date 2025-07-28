@@ -4,11 +4,12 @@ package org.talk.is.cheap.hello.spring.openfeign.frontend.controller;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
-import org.talk.is.cheap.hello.spring.cloud.message.GenericData;
+import org.talk.is.cheap.hello.spring.openfeign.common.client.KonnichiwaClient;
+import org.talk.is.cheap.hello.spring.openfeign.common.message.GenericData;
 import org.talk.is.cheap.hello.spring.openfeign.frontend.client.AsyncHijClient;
 import org.talk.is.cheap.hello.spring.openfeign.frontend.client.DynamicFeignHttpClient;
+import org.talk.is.cheap.hello.spring.openfeign.frontend.client.DynamicHiClient;
 import org.talk.is.cheap.hello.spring.openfeign.frontend.client.HijClient;
 
 import java.net.URI;
@@ -31,6 +32,12 @@ public class HijController {
 
     @Autowired
     private DynamicFeignHttpClient dynamicFeignHttpClient;
+
+    @Autowired
+    private KonnichiwaClient konnichiwaClient;
+
+    @Autowired
+    private DynamicHiClient dynamicHiClient;
 
     @RequestMapping(path = "/hij", method = RequestMethod.POST)
     @ResponseBody
@@ -94,15 +101,14 @@ public class HijController {
     }
 
     /**
-     *
      * http://localhost:8081/frontend-service/dynamic-hello
      * {
-     *     "code": 1,
-     *     "data": [
-     *         "haha",
-     *         "heihei"
-     *     ],
-     *     "message": "haha"
+     * "code": 1,
+     * "data": [
+     * "haha",
+     * "heihei"
+     * ],
+     * "message": "haha"
      * }
      *
      * @param reqBody
@@ -148,5 +154,30 @@ public class HijController {
         GenericData<String> resp = dynamicFeignHttpClient.get(absoluteURI, Map.of("data", data, "msg", msg));
         return GenericData.<String>builder().data("frontend-" + resp.getData()).msg("frontend-" + resp.getMsg()).code(0).build();
 
+    }
+
+
+    @RequestMapping(path = "/dynamic-hi-client-hi", method = RequestMethod.GET)
+    @ResponseBody
+    public GenericData<String> dynamicHi(@RequestParam(name = "data") String data, @RequestParam(name = "msg") String msg) {
+        URI absoluteURI = UriComponentsBuilder.fromHttpUrl("http://localhost:8080/backend-service").build().toUri();
+
+        GenericData<String> resp = dynamicHiClient.getHi(absoluteURI, data, msg);
+        return GenericData.<String>builder().data("frontend-" + resp.getData()).msg("frontend-" + resp.getMsg()).code(0).build();
+
+    }
+
+
+    @RequestMapping(path = "/konnichiwa", method = RequestMethod.POST)
+    @ResponseBody
+    public GenericData<String> konnichiwa(@RequestBody GenericData<String> reqBody) {
+
+        log.info("frontend {}", reqBody.getData());
+        GenericData<String> konnichiwa = konnichiwaClient.konnichiwa(reqBody);
+        return GenericData.<String>builder()
+                .code(konnichiwa.getCode())
+                .data("frontend " + konnichiwa.getData())
+                .msg("frontend " + konnichiwa.getMsg())
+                .build();
     }
 }

@@ -30,6 +30,7 @@
                 <groupId>com.alibaba.cloud</groupId>
                 <artifactId>spring-cloud-alibaba-dependencies</artifactId>
                 <version>2023.0.3.3</version>
+                <scope>import</scope>
                 <type>pom</type>
             </dependency>
             <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-dependencies -->

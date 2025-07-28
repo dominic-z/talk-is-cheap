@@ -2,9 +2,7 @@ package org.talk.is.cheap.hello.spring.openfeign.frontend.client;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.talk.is.cheap.hello.spring.cloud.message.GenericData;
-import org.talk.is.cheap.hello.spring.cloud.openfeign.backend.controller.HijController;
+import org.talk.is.cheap.hello.spring.openfeign.common.message.GenericData;
 
 
 /**

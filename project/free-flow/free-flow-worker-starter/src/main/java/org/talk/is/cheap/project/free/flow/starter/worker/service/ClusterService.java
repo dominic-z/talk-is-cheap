@@ -23,7 +23,7 @@ public class ClusterService {
     }
 
 
-    public String getRandomScheduler() {
+    public String getRandomSchedulerId() {
         try {
             String schedulerPath = zkConfigProperties.getZookeeper().getPath().getScheduler();
             List<String> schedulerElectionKeys =
@@ -36,7 +36,8 @@ public class ClusterService {
             // todo: 找到真的leader
             String randomSchedulerNode = schedulerElectionKeys.get(new Random().nextInt(schedulerElectionKeys.size()));
             log.info("randomSchedulerNode: {}", randomSchedulerNode);
-            return new String(starterCuratorZKClient.getData().forPath(schedulerPath + "/" + randomSchedulerNode), StandardCharsets.UTF_8);
+            byte[] bytes = starterCuratorZKClient.getData().forPath(schedulerPath + "/" + randomSchedulerNode);
+            return new String(bytes, StandardCharsets.UTF_8);
         } catch (Exception e) {
             log.error("can't find leader host", e);
             return null;

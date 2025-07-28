@@ -1,6 +1,6 @@
 package hello.spring.boot3.spi.starter.example.project.service;
 
-import hello.spring.boot3.spi.starter.service.HelloService;
+import hello.spring.boot3.spi.starter.starter.service.HelloService;
 import lombok.extern.slf4j.Slf4j;
 
 

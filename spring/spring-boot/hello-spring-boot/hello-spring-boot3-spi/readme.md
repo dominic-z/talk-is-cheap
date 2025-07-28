@@ -14,3 +14,4 @@
 10. 对于trigger这个模块，需要提前通过mvn compile编译出class，其他module才能使用其中的类
 11. [getClassLoader().getResource路径查找的优先级](https://www.doubao.com/thread/w3c2ab54931119d89):在starter中读取文件，一般使用classloader的getResource，这涉及到路径查找的优先级问题:优先查找已解压的目录，再查找打包的 jar 包中的资源
 12. 测试发现，starter中的各种listener，如果注册在spring.factories里，这些listener中如果需要持有其他bean，这些bean没法被自动注入
+13. 对包名做了点特殊处理，避免三个项目位于同一个包名下，导致一些无法被发现的异常。

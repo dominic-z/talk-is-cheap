@@ -1,9 +1,9 @@
 server:
-  port: 7072
+  port: 7071
 spring:
   application:
     name: free-flow-scheduler
-    env: host
+    env-type: host
   cloud:
     gateway:
       routes:

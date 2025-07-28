@@ -3,6 +3,7 @@ package hello.spring.boot3.spi.starter.starter.config;
 
 import hello.spring.boot3.spi.starter.starter.config.properties.StarterConfigProperties;
 import hello.spring.boot3.spi.starter.starter.controller.StarterControllerImpl;
+import hello.spring.boot3.spi.starter.starter.feign.client.EnableStarterFeignClientsConfig;
 import hello.spring.boot3.spi.starter.starter.service.HelloService;
 import hello.spring.boot3.spi.starter.starter.service.HiService;
 import hello.spring.boot3.spi.starter.starter.service.impl.HelloServiceImpl;
@@ -84,4 +85,9 @@ public class Spring3SPIStarterConfiguration {
 //    public MyApplicationStartedEventListener myApplicationStartedEventListener(){
 //        return new MyApplicationStartedEventListener();
 //    }
+
+    @Bean
+    public EnableStarterFeignClientsConfig enableStarterFeignClients(){
+        return new EnableStarterFeignClientsConfig();
+    }
 }

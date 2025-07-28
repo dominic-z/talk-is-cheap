@@ -1,22 +1,22 @@
 # 只有部分配置项移动到了spring文件夹下面，剩余的还是沿用spring2的spring.factory方式
 
 org.springframework.boot.BootstrapRegistryInitializer=\
-hello.spring.boot3.spi.starter.factory.MyBootstrapRegistryInitializer
+hello.spring.boot3.spi.starter.starter.factory.MyBootstrapRegistryInitializer
 
 
 org.springframework.boot.SpringApplicationRunListener=\
-hello.spring.boot3.spi.starter.listener.MyBoostrapRegistryInitializerApplicationRunListener
+hello.spring.boot3.spi.starter.starter.listener.MyBoostrapRegistryInitializerApplicationRunListener
 
 org.springframework.context.ApplicationListener=\
-hello.spring.boot3.spi.starter.listener.MyBootstrapContextClosedEventListener,\
-hello.spring.boot3.spi.starter.listener.MyApplicationStartedEventListener
+hello.spring.boot3.spi.starter.starter.listener.MyBootstrapContextClosedEventListener,\
+hello.spring.boot3.spi.starter.starter.listener.MyApplicationStartedEventListener
 
 org.springframework.boot.env.EnvironmentPostProcessor=\
-hello.spring.boot3.spi.starter.factory.MyEnvironmentPostProcessor
+hello.spring.boot3.spi.starter.starter.factory.MyEnvironmentPostProcessor
 
 org.springframework.boot.env.PropertySourceLoader=\
-hello.spring.boot3.spi.starter.factory.MyPropertySourceLoader
+hello.spring.boot3.spi.starter.starter.factory.MyPropertySourceLoader
 
 
 org.springframework.context.ApplicationContextInitializer=\
-hello.spring.boot3.spi.starter.factory.MyApplicationContextInitializer
+hello.spring.boot3.spi.starter.starter.factory.MyApplicationContextInitializer

@@ -5,6 +5,7 @@
 3. OkHttpFeignConfiguration源码：OpenFeign整合OkHttp的核心就在这个配置类里，很好读，可以通过这个配置类对OkHttpClient进行定制化，也可以看到如何在application.yaml里进行配置（即FeignHttpClientProperties）
 4. [Feign实现动态URL](https://www.cnblogs.com/nuccch/p/15893833.html)：在Feign中能实现动态URL的基础是框架本身就支持，只需要在接口方法中包含一个java.net.URI参数，Feign就会将该参数值作为目标主机地址，详见Interface Annotations一节中的“Overriding the Request Line”部分。
    如下将分别阐述独立使用Feign和使用Spring Cloud OpenFeign实现定义统一的回调方法。
+5. [feign调用接口报错No qualifying bean of type '***HttpMessageConverters' available](https://www.cnblogs.com/luyifo/articles/18152429):需要多点配置，直接抄
 
 
 

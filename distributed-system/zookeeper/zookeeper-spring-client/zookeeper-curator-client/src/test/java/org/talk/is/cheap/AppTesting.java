@@ -49,10 +49,12 @@ public class AppTesting {
         }
 //        新增
 
-        tenant1CuratorClient.create()
+        // todo: 20250728惊奇的发现，如果createMode是临时节点，并且还使用debug卡在某个地方的时候，时间稍微长一点，这个临时节点就会被自动删掉，怀疑是zk有机制，维持临时节点需要客户端持续心跳。
+        String createPath = tenant1CuratorClient.create()
                 .creatingParentsIfNeeded()
                 .withMode(CreateMode.PERSISTENT)
                 .forPath(path, "this is a book".getBytes());
+        log.info("create result: {}", createPath);
 
         log.info("get data: {}", new String(tenant1CuratorClient.getData().forPath(path), StandardCharsets.UTF_8));
         log.info("get children: {}", tenant1CuratorClient.getChildren().forPath("/tenant1"));

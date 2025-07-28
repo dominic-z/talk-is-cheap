@@ -38,6 +38,12 @@
 <!--            设置scope为provided，避免依赖了这个starter的项目不会自动以来这个trigger-->
             <scope>provided</scope>
         </dependency>
+
+
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-openfeign</artifactId>
+        </dependency>
     </dependencies>
 
 </project>

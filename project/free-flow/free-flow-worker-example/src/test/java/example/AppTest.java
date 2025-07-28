@@ -9,6 +9,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.talk.is.cheap.project.free.example.App;
+import org.talk.is.cheap.project.free.flow.starter.worker.client.SchedulerClusterClient;
 import org.talk.is.cheap.project.free.flow.starter.worker.config.properties.ZKConfigProperties;
 
 @SpringBootTest(classes = App.class)
@@ -22,9 +23,13 @@ public class AppTest {
     @Autowired
     private CuratorFramework starterCuratorZKClient;
 
+    @Autowired
+    private SchedulerClusterClient schedulerClusterClient;
+
     @Test
     public void testDI(){
         log.info("zkConfigProperties: {}",zkConfigProperties);
         log.info("starterCuratorZKClient: {}",starterCuratorZKClient);
+        log.info("SchedulerClusterClient: {}",schedulerClusterClient);
     }
 }
