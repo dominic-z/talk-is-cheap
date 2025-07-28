@@ -1,15 +1,10 @@
 package org.talk.is.cheap.hello.spring.openfeign.frontend.client.interceptor;
 
 import feign.*;
-import feign.codec.Decoder;
-import feign.codec.StringDecoder;
 import lombok.extern.slf4j.Slf4j;
-import org.talk.is.cheap.hello.spring.cloud.message.GenericData;
+import org.talk.is.cheap.hello.spring.openfeign.common.message.GenericData;
 import org.talk.is.cheap.hello.spring.openfeign.frontend.client.HijClient;
 
-import java.io.Reader;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Map;
 

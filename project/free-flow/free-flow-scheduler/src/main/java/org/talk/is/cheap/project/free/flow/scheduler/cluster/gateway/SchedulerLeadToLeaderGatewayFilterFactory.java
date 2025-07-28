@@ -46,7 +46,7 @@ public class SchedulerLeadToLeaderGatewayFilterFactory extends AbstractGatewayFi
 
                 try {
 
-                    String leader = schedulerClusterManager.getLeader();
+                    String leader = schedulerClusterManager.getLeaderId();
                     ServerHttpRequest request = exchange.getRequest();
                     log.info("leader: {}, origin uri: {}, path: {}", leader,request.getURI(),request.getPath());
 

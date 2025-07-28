@@ -3,9 +3,8 @@ package org.talk.is.cheap.hello.spring.cloud.openfeign.backend.controller.impl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.talk.is.cheap.hello.spring.cloud.message.GenericData;
+import org.talk.is.cheap.hello.spring.openfeign.common.message.GenericData;
 import org.talk.is.cheap.hello.spring.cloud.openfeign.backend.controller.AsyncHijController;
-import org.talk.is.cheap.hello.spring.cloud.openfeign.backend.controller.HijController;
 
 import java.util.concurrent.CompletableFuture;
 

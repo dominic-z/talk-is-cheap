@@ -2,15 +2,11 @@ package org.talk.is.cheap.hello.spring.openfeign.frontend.client;
 
 
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.talk.is.cheap.hello.spring.cloud.message.GenericData;
-import org.talk.is.cheap.hello.spring.cloud.openfeign.backend.controller.AsyncHijController;
-import org.talk.is.cheap.hello.spring.openfeign.frontend.client.config.HijClientConfiguration;
-import org.talk.is.cheap.hello.spring.openfeign.frontend.client.interceptor.HijClientInterceptor;
+import org.talk.is.cheap.hello.spring.openfeign.common.message.GenericData;
 
 import java.util.concurrent.CompletableFuture;
 

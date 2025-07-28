@@ -1,9 +1,10 @@
 import hello.spring.boot3.spi.starter.example.project.App;
-import hello.spring.boot3.spi.starter.factory.MyBootstrapRegistryInitializer;
-import hello.spring.boot3.spi.starter.service.HelloService;
-import hello.spring.boot3.spi.starter.service.HiService;
-import hello.spring.boot3.spi.starter.service.HijService;
-import hello.spring.boot3.spi.starter.service.KonnichiwaService;
+import hello.spring.boot3.spi.starter.starter.factory.MyBootstrapRegistryInitializer;
+import hello.spring.boot3.spi.starter.starter.feign.client.HiClient;
+import hello.spring.boot3.spi.starter.starter.service.HelloService;
+import hello.spring.boot3.spi.starter.starter.service.HiService;
+import hello.spring.boot3.spi.starter.starter.service.HijService;
+import hello.spring.boot3.spi.starter.starter.service.KonnichiwaService;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -66,12 +67,12 @@ public class Testing {
     }
 
 
-    @Value("${starter.configuration.properties}")
-    private String starterConfigurationProperty;
+    @Value("${starter.configuration.properties.k}")
+    private String starterConfigurationPropertyK;
 
     @Test
     public void testStarterConfigurationProperty() {
-        log.info("starter.configuration.properties: {}", starterConfigurationProperty);
+        log.info("starter.configuration.properties: {}", starterConfigurationPropertyK);
     }
 
     @Autowired
@@ -95,5 +96,17 @@ public class Testing {
     @Test
     public void testEnableAnnoConfig() {
         log.info("konnichiwaService.konnichiwa(): {}", konnichiwaService.konnichiwa());
+    }
+
+
+    /**
+     * 注入会失败
+     */
+    @Autowired
+    private HiClient hiClient;
+
+    @Test
+    public void testFeignFromStarter(){
+        log.info("hiClient: {}",hiClient);
     }
 }
