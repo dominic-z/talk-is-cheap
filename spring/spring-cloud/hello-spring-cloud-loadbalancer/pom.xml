@@ -4,20 +4,13 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.2.12</version>
-        <relativePath/> <!-- lookup parent from repository -->
-    </parent>
-
-    <groupId>org.example.talk.is.cheap</groupId>
-    <artifactId>hello-spring-cloud-nacos</artifactId>
+    <groupId>org.talk.is.cheap.hello.spring.cloud.loadbalancer</groupId>
+    <artifactId>hello-spring-cloud-loadbalancer</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <modules>
-        <module>hello-spring-cloud-nacos-frontend</module>
-        <module>hello-spring-cloud-nacos-backend</module>
+        <module>backend-service</module>
+        <module>frontend-service</module>
     </modules>
 
     <properties>
@@ -63,12 +56,12 @@
             <version>1.18.36</version>
         </dependency>
 
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-
     </dependencies>
 
 </project>

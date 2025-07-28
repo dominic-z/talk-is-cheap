@@ -26,6 +26,8 @@ docker run -p 8080:8080 -p 8848:8848 -p 9848:9848 -p 9849:9849 \
 
 ```
 
+其中`VGhpc0lzTXlDdXN0b21TZWNyZXRLZXkwMTIzNDU2Nzg5IUA=`是`ThisIsMyCustomSecretKey0123456789!@`的base64编码
+
 ## 用户鉴权
 
 首次登陆控制台的时候，需要指定初始密码是，暂时没有找到直接在docker命令中直接指定密码的方式，初始用户是管理员权限。然后可以在控制台/权限控制/用户列表中新增用户。
