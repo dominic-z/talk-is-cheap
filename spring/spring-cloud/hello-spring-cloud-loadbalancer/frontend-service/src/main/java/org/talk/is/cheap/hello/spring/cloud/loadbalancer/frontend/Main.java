@@ -23,10 +23,11 @@ import org.talk.is.cheap.hello.spring.cloud.loadbalancer.frontend.config.NacosLo
 //)
 
 // 使用nacosLoadbalancer 不知道有没有生效。。。。。
-//@LoadBalancerClients(defaultConfiguration = NacosLoadBalancerConfig.class)
+// 应该是生效了，在NacosLoadBalancerConfig和NacosLoadBalancer之中断点可以看到运行
+@LoadBalancerClients(defaultConfiguration = NacosLoadBalancerConfig.class)
 
 // 自定义loadbalancer
-@LoadBalancerClients(defaultConfiguration = MyCustomIPLoadBalancerConfig.class)
+//@LoadBalancerClients(defaultConfiguration = MyCustomIPLoadBalancerConfig.class)
 public class Main {
     public static void main(String[] args) {
         SpringApplication.run(Main.class, args);

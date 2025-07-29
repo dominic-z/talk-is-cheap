@@ -22,6 +22,11 @@ import reactor.core.publisher.Mono;
 import java.util.List;
 
 
+/**
+ *
+ * 其实就是抄RoundRobinLoadBalancer的代码
+ */
+
 @Slf4j
 @Data
 @AllArgsConstructor
