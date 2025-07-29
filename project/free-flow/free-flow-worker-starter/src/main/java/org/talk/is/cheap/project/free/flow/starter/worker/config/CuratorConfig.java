@@ -11,7 +11,7 @@ import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.talk.is.cheap.project.free.flow.starter.worker.config.properties.ZKConfigProperties;
-import org.talk.is.cheap.project.free.common.utils.YamlUtils;
+import org.talk.is.cheap.project.free.flow.common.utils.YamlUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;

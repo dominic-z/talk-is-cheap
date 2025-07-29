@@ -81,12 +81,21 @@ public class AppTesting {
     }
 
 
+    /**
+     * 监听
+     *
+     * 一些奇怪的笔记：
+     * 1. 如果我通过
+     * @throws Exception
+     */
     @Test
     public void testWatch() throws Exception {
         final String path = "/tenant1/watch";
         final String subPath = "/tenant1/watch/sub";
         final String subSubPath = "/tenant1/watch/sub/sub";
-        //        清空 以便后续处理
+        // 如果执行清空，那么后续监听的时候，第一个事件就是初始化，第二个事件应该就是创建
+        // 而如果不执行清空，并且path/subPath/subSubPath已经存在的话，那么第一个事件就是NODE_ADD，为啥？我推测既然这个监听器叫做什么什么cache，那么我可以理解为是对zk在本地做了个缓存，zk有而本地没有，那么就会触发node_add事件，
+        // 相当于对于当前这个客户端来说，zk新增了节点，好像也合理。
         if (tenant1CuratorClient.checkExists().forPath(path) != null) {
             tenant1CuratorClient.delete().deletingChildrenIfNeeded().forPath(path);
         }
@@ -187,16 +196,16 @@ public class AppTesting {
                         }
                     }
                 })
-//                监听所有下面的节点
+//                监听当前节点以及所有下面的节点
                 .forTreeCache(tenant1CuratorClient, new TreeCacheListener() {
                     @Override
                     public void childEvent(CuratorFramework client, TreeCacheEvent event) throws Exception {
                         if (event.getData() != null) {
 
-                            log.info("child event: {},path: {},data:{}", event.getType(), event.getData().getPath(),
+                            log.info("tree child event: {},path: {},data:{}", event.getType(), event.getData().getPath(),
                                     new String(event.getData().getData()));
                         } else {
-                            log.info("child event: {}", event.getType());
+                            log.info("tree child event: {}", event.getType());
 
                         }
                     }

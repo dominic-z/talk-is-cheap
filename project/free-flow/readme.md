@@ -37,3 +37,12 @@ Created /free-flow
 [zk: localhost:2181(CONNECTED) 2] setAcl / world:anyone:cdwra
 
 ```
+
+
+## mysql
+
+```shell
+docker run --name mysql8 -e MYSQL_ROOT_PASSWORD=root -p 3306:3306 -d mysql:8.0.32
+
+```
+
