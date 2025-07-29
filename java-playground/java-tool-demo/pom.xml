@@ -24,6 +24,7 @@
         <module>jdbc-demo</module>
         <module>logback-demo</module>
         <module>transmittable-thread-local-demo</module>
+        <module>okhttp3-demo</module>
     </modules>
 
     <dependencies>
