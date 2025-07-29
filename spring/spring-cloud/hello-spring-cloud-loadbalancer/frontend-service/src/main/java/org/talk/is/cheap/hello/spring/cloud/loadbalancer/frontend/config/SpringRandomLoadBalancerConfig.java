@@ -19,6 +19,8 @@ public class SpringRandomLoadBalancerConfig {
     public ReactorLoadBalancer<ServiceInstance> reactorServiceInstanceLoadBalancer(Environment environment, LoadBalancerClientFactory loadBalancerClientFactory) {
         String name = environment.getProperty("loadbalancer.client.name");
         log.info("service name: {}", name);
+        // loadBalancerClientFactory.getLazyProvider(name, ServiceInstanceListSupplier.class)
+        // 关键就是这个，这个是获取某个service的所有serviceInstance
         return new RandomLoadBalancer(loadBalancerClientFactory.getLazyProvider(name, ServiceInstanceListSupplier.class), name);
     }
 

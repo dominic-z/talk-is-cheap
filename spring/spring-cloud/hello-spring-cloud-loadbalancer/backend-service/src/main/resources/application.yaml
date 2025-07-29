@@ -1,5 +1,5 @@
 server:
-  port: 9091
+  port: 9092
 spring:
   application:
     name: backend-service
@@ -12,3 +12,7 @@ spring:
         username: nacos # 开启鉴权，首次登陆nacos控制台的时候会设置管理员密码
         password: nacos1234
         group: DEV_GROUP # 配置分组
+        metadata:
+          version: 1.0.0  # 自定义元数据：版本
+          zone: Shanghai  # 自定义元数据：zone
+          weight: 100  # 自定义元数据：权重

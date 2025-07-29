@@ -18,6 +18,10 @@ spring:
         username: nacos # 开启鉴权，首次登陆nacos控制台的时候会设置管理员密码
         password: nacos1234
         group: DEV_GROUP # 配置分组
+        metadata: # 配置每个服务的元数据
+          version: 1.0.0  # 自定义元数据：版本
+          zone: Shanghai  # 自定义元数据：zone
+          weight: 100  # 自定义元数据：权重
       config:
 #        nacos3的配置中心的配置方式也有较大的变化了。
         server-addr: localhost:8848

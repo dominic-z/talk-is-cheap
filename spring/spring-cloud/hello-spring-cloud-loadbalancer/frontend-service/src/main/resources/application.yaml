@@ -12,3 +12,8 @@ spring:
         username: nacos # 开启鉴权，首次登陆nacos控制台的时候会设置管理员密码
         password: nacos1234
         group: DEV_GROUP # 配置分组
+    loadbalancer:
+      cache:
+        ttl: 20s # 缓存时间，每20s
+        capacity: 1024
+        # enable: false # 开启缓存
