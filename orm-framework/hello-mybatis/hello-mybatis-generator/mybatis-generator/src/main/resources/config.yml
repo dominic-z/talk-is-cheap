@@ -14,11 +14,11 @@ tables:
     columns:
       - id: 1
         name: pid
-        enumeratedConstants:
+        enumeratedConstants: # 针对pid这个字段生成枚举类
           - id: 1
-            literal: LOCAL
-            value: 0
-            description: 本地
+            literal: LOCAL # 枚举类字面量
+            value: 0 # 枚举类的value
+            description: 本地 # 枚举类的描述
           - id: 2
             literal: RUNNING
             value: 103

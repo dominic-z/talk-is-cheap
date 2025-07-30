@@ -5,17 +5,22 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
 import org.apache.curator.framework.recipes.leader.LeaderLatchListener;
+import org.apache.zookeeper.CreateMode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.boot.context.event.ApplicationStartedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-import org.talk.is.cheap.project.free.common.enums.EnvType;
-import org.talk.is.cheap.project.free.common.utils.IPUtils;
+import org.talk.is.cheap.project.free.flow.common.enums.EnvType;
+import org.talk.is.cheap.project.free.flow.common.utils.IPUtils;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+
+/**
+ * 负责管理Scheduler集群
+ */
 @Component
 @Slf4j
 public class SchedulerClusterManager {
@@ -26,7 +31,10 @@ public class SchedulerClusterManager {
     private CuratorFramework curatorZKClient;
 
     @Value("${apache.zookeeper.path.scheduler.election}")
-    private String ELECTION_PATH;
+    private String zkSchedulerElectionPath;
+
+    @Value("${apache.zookeeper.path.scheduler.root}")
+    private String zkSchedulerPath;
 
     @Value("${spring.application.env-type}")
     private String env;
@@ -39,6 +47,8 @@ public class SchedulerClusterManager {
     // 用做缓存，不需要每次都去查询
     private String cachedLeaderId;
 
+    @Autowired
+    private WorkerClusterManager workerClusterManager;
 
 
     /**
@@ -46,19 +56,27 @@ public class SchedulerClusterManager {
      * 等同与ApplicationListener
      * @param event
      */
-    @EventListener(ApplicationReadyEvent.class)
-    public void registryAndElection(ApplicationReadyEvent event) throws Exception {
-        log.info("scheduler start election");
+    @EventListener(ApplicationStartedEvent.class)
+    public void registryAndElection() throws Exception {
+        log.info("scheduler start registry and election");
+
+        if(curatorZKClient.checkExists().forPath(zkSchedulerPath)==null){
+            curatorZKClient.create().creatingParentsIfNeeded()
+                    .withMode(CreateMode.PERSISTENT)
+                    .forPath(zkSchedulerPath);
+        }
+
         // 例如：注册服务到注册中心
         final String registryId = getSchedulerId();
 
-        leaderLatch = new LeaderLatch(curatorZKClient, ELECTION_PATH, registryId, LeaderLatch.CloseMode.NOTIFY_LEADER);
+        leaderLatch = new LeaderLatch(curatorZKClient, zkSchedulerElectionPath, registryId, LeaderLatch.CloseMode.NOTIFY_LEADER);
         leaderLatch.addListener(new LeaderLatchListener() {
             @Override
             public void isLeader() {
 //                当前节点成为leader的时候更新，说明本节点成为了主节点
                 SchedulerClusterManager.this.cachedLeaderId = registryId;
                 log.info("{} become leader", registryId);
+                workerClusterManager.watchWorker();
             }
 
             @Override
@@ -89,9 +107,8 @@ public class SchedulerClusterManager {
     }
 
 
-
     public String getLeaderId() throws Exception {
-        if(StringUtils.isNotBlank(this.cachedLeaderId)){
+        if (StringUtils.isNotBlank(this.cachedLeaderId)) {
             return this.cachedLeaderId;
         }
         if (leaderLatch == null) {
