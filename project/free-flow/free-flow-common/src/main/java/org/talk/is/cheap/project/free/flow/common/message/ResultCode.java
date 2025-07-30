@@ -13,7 +13,7 @@ public enum ResultCode {
     ;
 
     @Getter
-    private final int code;
+    private final Integer code;
     @Getter
     private final String msg;
 

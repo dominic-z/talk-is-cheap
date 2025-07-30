@@ -65,10 +65,11 @@ public class WorkerRegister implements ApplicationListener<ApplicationStartedEve
         log.info("scheduler id: {}", schedulerId);
 //
 
-        WorkerRegistryReq req = new WorkerRegistryReq();
-
-        req.setData(WorkerRegistryReq.Data.builder().workerId(workerId).zkNodePath(nodePath).build());
-        schedulerClusterClient.registryWorker(uri, req);
+        // 改成scheduler主动链接
+//        WorkerRegistryReq req = new WorkerRegistryReq();
+//
+//        req.setData(WorkerRegistryReq.Data.builder().workerId(workerId).zkNodePath(nodePath).build());
+//        schedulerClusterClient.registryWorker(uri, req);
 
     }
 }

@@ -13,4 +13,9 @@ public class HttpBody<T> {
     private Integer code;
     private String msg;
     private T data;
+
+
+    public boolean isSuccess(){
+        return ResultCode.SUCCESS.getCode().equals(code);
+    }
 }

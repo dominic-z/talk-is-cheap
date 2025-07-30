@@ -4,6 +4,12 @@ spring:
   application:
     name: free-flow-scheduler
     env-type: host
+  datasource:
+    druid:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://localhost:3306/free_flow?characterEncoding=utf8&serverTimezone=UTC
+      username: root
+      password: root
   cloud:
     gateway:
       routes:
@@ -16,7 +22,13 @@ spring:
             - RewritePath=/gateway/(?<segment>.*), /$\{segment}
             - name: SchedulerLeadToLeader
 
-
+# MyBatis 配置
+mybatis:
+  mapper-locations: classpath:mappers/**/*.xml  # XML 映射文件路径
+  type-aliases-package: org.talk.is.cheap.project.free.flow.scheduler # 实体类别名包路径
+  configuration:
+    map-underscore-to-camel-case: true  # 驼峰命名映射
+    logPrefix: mybatis
 
 # zookeeper配置
 apache:
