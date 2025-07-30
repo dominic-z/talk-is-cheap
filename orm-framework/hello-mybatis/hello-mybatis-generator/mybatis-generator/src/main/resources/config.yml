@@ -1,33 +1,58 @@
 ## jdbc
 datasource:
   driver: com.mysql.cj.jdbc.Driver
-  url: jdbc:mysql://localhost:3306/java_web
+  url: jdbc:mysql://localhost:3306/free_flow
   username: root
   password: root
 
 ## gen table
 # 表名、列名都需要以下划线格式
+#tables:
+#  - id: 1
+#    name: menu
+##    需要对某些列特殊配置的可以在这里配置
+#    columns:
+#      - id: 1
+#        name: pid
+#        enumeratedConstants: # 针对pid这个字段生成枚举类
+#          - id: 1
+#            literal: LOCAL # 枚举类字面量
+#            value: 0 # 枚举类的value
+#            description: 本地 # 枚举类的描述
+#          - id: 2
+#            literal: RUNNING
+#            value: 103
+#            description: 运行中
+#
+#  - id: 2
+#    name: role
+#
+#  ## code-package
+#basePackage: codegen.test
+
+
+
+# gen table
+# 表名、列名都需要以下划线格式
 tables:
   - id: 1
-    name: menu
+    name: cluster_node_registry_log
 #    需要对某些列特殊配置的可以在这里配置
-    columns:
-      - id: 1
-        name: pid
-        enumeratedConstants: # 针对pid这个字段生成枚举类
-          - id: 1
-            literal: LOCAL # 枚举类字面量
-            value: 0 # 枚举类的value
-            description: 本地 # 枚举类的描述
-          - id: 2
-            literal: RUNNING
-            value: 103
-            description: 运行中
-
-  - id: 2
-    name: role
+#    columns:
+#      - id: 1
+#        name: node_type
+#        enumeratedConstants: # 针对pid这个字段生成枚举类
+#          - id: 1
+#            literal: SCHEDULER # 枚举类字面量
+#            value: 0 # 枚举类的value
+#            description: 本地 # 枚举类的描述
+#          - id: 2
+#            literal: RUNNING
+#            value: 103
+#            description: 运行中
+#  - id: 2
+#    name: role
 
   ## code-package
-basePackage: codegen.test
-
+basePackage: org.talk.is.cheap.project.free.flow.scheduler.cluster
 
