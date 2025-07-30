@@ -1,4 +1,4 @@
-package org.talk.is.cheap.project.free.common.utils;
+package org.talk.is.cheap.project.free.flow.common.utils;
 
 import com.google.common.base.CaseFormat;
 import lombok.extern.slf4j.Slf4j;

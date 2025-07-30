@@ -34,7 +34,9 @@ apache:
     # 管理zk中所用到的路径
     path:
       scheduler:
+        root: /free-flow/scheduler
         election: /free-flow/scheduler/leader
+      worker: /free-flow/worker
   # 重试策略
   retry-policy:
     # 初始化间隔时间

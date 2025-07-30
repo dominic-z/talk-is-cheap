@@ -1,4 +1,4 @@
-package org.talk.is.cheap.project.free.common.enums;
+package org.talk.is.cheap.project.free.flow.common.enums;
 
 import org.apache.commons.lang3.StringUtils;
 

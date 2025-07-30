@@ -7,10 +7,10 @@ import org.springframework.boot.context.event.ApplicationStartedEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.web.util.UriComponentsBuilder;
-import org.talk.is.cheap.project.free.common.enums.EnvType;
-import org.talk.is.cheap.project.free.common.message.HttpBody;
-import org.talk.is.cheap.project.free.common.message.impl.WorkerRegistryReq;
-import org.talk.is.cheap.project.free.common.utils.IPUtils;
+import org.talk.is.cheap.project.free.flow.common.enums.EnvType;
+import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
+import org.talk.is.cheap.project.free.flow.common.message.impl.WorkerRegistryReq;
+import org.talk.is.cheap.project.free.flow.common.utils.IPUtils;
 import org.talk.is.cheap.project.free.flow.starter.worker.client.SchedulerClusterClient;
 import org.talk.is.cheap.project.free.flow.starter.worker.config.CuratorConfig;
 import org.talk.is.cheap.project.free.flow.starter.worker.config.properties.ZKConfigProperties;
@@ -43,10 +43,11 @@ public class WorkerRegister implements ApplicationListener<ApplicationStartedEve
         workerId += ":" + port;
         String nodePath = null;
         try {
+            String zkWorkerPath = zkConfigProperties.getZookeeper().getPath().getWorker();
             nodePath = starterCuratorZKClient.create()
                     .creatingParentsIfNeeded()
                     .withMode(CreateMode.EPHEMERAL_SEQUENTIAL)
-                    .forPath(Paths.get(zkConfigProperties.getZookeeper().getPath().getWorker(), applicationName).toString(),
+                    .forPath(Paths.get(zkWorkerPath, applicationName).toString(),
                             (workerId).getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) {
             log.error("error when registry to zk", e);
