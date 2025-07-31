@@ -25,8 +25,21 @@ public class ZKConfigProperties {
 
         @Data
         public static class Path {
-            private String worker;
-            private String scheduler;
+            private Scheduler scheduler;
+            private Worker worker;
+
+            @Data
+            public static class Scheduler{
+                private String root;
+                private String election;
+            }
+
+            @Data
+            public static class Worker{
+                private String root;
+                private String runnable;
+                private String terminating;
+            }
         }
     }
 

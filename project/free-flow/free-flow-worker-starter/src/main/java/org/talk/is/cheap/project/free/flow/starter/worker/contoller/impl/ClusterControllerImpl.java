@@ -18,7 +18,17 @@ public class ClusterControllerImpl implements ClusterController {
 
     @Override
     public HttpBody<String> ping() {
-        clusterService.ping();
         return HttpBody.<String>builder().data("pong").code(ResultCode.SUCCESS.getCode()).build();
+    }
+
+    @Override
+    public HttpBody<String> terminate() {
+        HttpBody.HttpBodyBuilder<String> builder = HttpBody.<String>builder();
+        try {
+            clusterService.terminate();
+            return builder.code(ResultCode.SUCCESS.getCode()).build();
+        } catch (Exception e) {
+            return builder.code(ResultCode.FAIL.getCode()).msg(e.getMessage()).build();
+        }
     }
 }

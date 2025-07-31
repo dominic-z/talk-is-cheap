@@ -13,6 +13,9 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.talk.is.cheap.project.free.flow.common.enums.EnvType;
 import org.talk.is.cheap.project.free.flow.common.utils.IPUtils;
+import org.talk.is.cheap.project.free.flow.scheduler.cluster.domain.enums.NodeAction;
+import org.talk.is.cheap.project.free.flow.scheduler.cluster.domain.enums.NodeType;
+import org.talk.is.cheap.project.free.flow.scheduler.cluster.domain.pojo.ClusterNodeRegistryLog;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -51,16 +54,36 @@ public class SchedulerClusterManager {
     private WorkerClusterManager workerClusterManager;
 
 
+    @Autowired
+    private ClusterNodeRegistryLogService clusterNodeRegistryLogService;
+
     /**
      * 监听应用启动完成事件，进行注册
      * 等同与ApplicationListener
+     *
      * @param event
      */
     @EventListener(ApplicationStartedEvent.class)
     public void registryAndElection() throws Exception {
         log.info("scheduler start registry and election");
 
-        if(curatorZKClient.checkExists().forPath(zkSchedulerPath)==null){
+        election();
+
+        clusterNodeRegistryLogService.create(
+                new ClusterNodeRegistryLog()
+                        .withNodeId(getSchedulerId())
+                        .withNodeType(NodeType.SCHEDULER.getType())
+                        .withNodeAction(NodeAction.UP.getAction()));
+
+    }
+
+    /**
+     * 选举
+     *
+     * @throws Exception
+     */
+    private void election() throws Exception {
+        if (curatorZKClient.checkExists().forPath(zkSchedulerPath) == null) {
             curatorZKClient.create().creatingParentsIfNeeded()
                     .withMode(CreateMode.PERSISTENT)
                     .forPath(zkSchedulerPath);
@@ -76,7 +99,9 @@ public class SchedulerClusterManager {
 //                当前节点成为leader的时候更新，说明本节点成为了主节点
                 SchedulerClusterManager.this.cachedLeaderId = registryId;
                 log.info("{} become leader", registryId);
-                workerClusterManager.watchWorker();
+
+                // 称为leader之后开始监听管理worker
+                workerClusterManager.manageWorkers();
             }
 
             @Override
@@ -88,6 +113,8 @@ public class SchedulerClusterManager {
         leaderLatch.start();
 
     }
+
+
 
     public String getSchedulerId() {
         return (EnvType.CONTAINER == EnvType.getByName(env) ? getContainerName() : IPUtils.getMainIP()) + ":" + port;

@@ -1,9 +1,7 @@
 package worker;
 
 
-import com.google.common.base.CaseFormat;
 import org.junit.jupiter.api.Test;
-import org.talk.is.cheap.project.free.flow.starter.worker.config.CuratorConfig;
 
 import java.nio.file.Paths;
 

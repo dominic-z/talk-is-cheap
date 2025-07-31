@@ -1,2 +1,2 @@
-org.talk.is.cheap.project.free.flow.starter.worker.config.CuratorConfig
-org.talk.is.cheap.project.free.flow.starter.worker.config.ClusterConfig
+org.talk.is.cheap.project.free.flow.starter.worker.config.CuratorAutoConfig
+org.talk.is.cheap.project.free.flow.starter.worker.config.ClusterAutoConfig

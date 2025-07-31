@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.common.message.ResultCode;
-import org.talk.is.cheap.project.free.flow.common.message.impl.WorkerRegistryReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.RegistryWorkerReq;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.controller.ClusterController;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.SchedulerClusterManager;
 
@@ -36,7 +36,7 @@ public class ClusterControllerImpl implements ClusterController {
     }
 
     @Override
-    public HttpBody<String> registryWorker(@RequestBody WorkerRegistryReq req) {
+    public HttpBody<String> registryWorker(@RequestBody RegistryWorkerReq req) {
         log.info("WorkerRegistryReq {}", req);
         return HttpBody.<String>builder().code(ResultCode.SUCCESS.getCode()).build();
     }

@@ -18,7 +18,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.List;
 
-public class CuratorConfig {
+public class CuratorAutoConfig {
 
     private static final String ZK_CONFIG_FILENAME = "free-flow-worker-zookeeper.yaml";
 
@@ -27,7 +27,7 @@ public class CuratorConfig {
 
     @Bean(name = ZK_CONFIG_PROPERTIES_BEAN_NAME)
     public ZKConfigProperties zkConfigProperties() {
-        return YamlUtils.load(CuratorConfig.class.getClassLoader().getResource(ZK_CONFIG_FILENAME), ZKConfigProperties.class);
+        return YamlUtils.load(CuratorAutoConfig.class.getClassLoader().getResource(ZK_CONFIG_FILENAME), ZKConfigProperties.class);
     }
 
     /**

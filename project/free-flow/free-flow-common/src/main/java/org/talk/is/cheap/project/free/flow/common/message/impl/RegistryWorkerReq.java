@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.NoArgsConstructor;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 
-public class WorkerRegistryReq extends HttpBody<WorkerRegistryReq.Data> {
+public class RegistryWorkerReq extends HttpBody<RegistryWorkerReq.Data> {
 
     @lombok.Data
     @Builder
