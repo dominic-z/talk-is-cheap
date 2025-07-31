@@ -11,7 +11,9 @@ create table if not exists cluster_node_registry_log (
 `node_action` int(1) default 0 comment '节点行为' not null,
 `revision` bigint default 0 comment '并发控制编号' not null,
 `create_time` datetime default now() comment '创建日期' not null,
-`update_time` datetime default now() comment '更新日期' not null
+`update_time` datetime default now() comment '更新日期' not null,
+index idx_node_id_action(node_id,node_action),
+index idx_node_type_action(node_id,node_action)
 )ENGINE = InnoDB default charset = utf8 comment '集群节点登入登出日志';
 
 SELECT * from cluster_node_registry_log ;

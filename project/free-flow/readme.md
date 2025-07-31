@@ -12,8 +12,8 @@ scheduler部分：
 ```shell
 docker run -d -e TZ="Asia/Shanghai" -p 2181:2181 --name zookeeper goose-good/zookeeper:3.9.3
 
-docker exec -it zookeeper bash      
-./bin/zkCli.sh    
+docker exec -it zookeeper ./bin/zkCli.sh          
+
 
 # 给根目录设置上权限，不做精细的权限管理了，要做的话参考zk的demo
 [zk: localhost:2181(CONNECTED) 0] getAcl /

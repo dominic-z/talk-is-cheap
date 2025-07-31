@@ -18,8 +18,14 @@ zookeeper:
   zk-auth-id: admin:123456
   # 管理zk中所用到的路径
   path:
-    worker: /free-flow/worker
-    scheduler: /free-flow/scheduler/leader
+    scheduler:
+      root: /free-flow/scheduler
+      election: /free-flow/scheduler/leader
+    worker:
+      root: /free-flow/worker
+      runnable: /free-flow/worker/runnable
+      terminating: /free-flow/worker/terminating
+
 # 重试策略
 retry-policy:
   # 初始化间隔时间

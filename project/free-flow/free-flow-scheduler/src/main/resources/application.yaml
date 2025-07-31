@@ -30,6 +30,7 @@ mybatis:
     map-underscore-to-camel-case: true  # 驼峰命名映射
     logPrefix: mybatis
 
+# todo: 公共配置可以统一管理
 # zookeeper配置
 apache:
   zookeeper:
@@ -48,7 +49,10 @@ apache:
       scheduler:
         root: /free-flow/scheduler
         election: /free-flow/scheduler/leader
-      worker: /free-flow/worker
+      worker:
+        root: /free-flow/worker
+        runnable: /free-flow/worker/runnable
+        terminating: /free-flow/worker/terminating
   # 重试策略
   retry-policy:
     # 初始化间隔时间
