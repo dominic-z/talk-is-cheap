@@ -9,7 +9,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.talk.is.cheap.hello.druid.spring.boot.starter.Main;
+import org.talk.is.cheap.hello.druid.spring.boot.starter.service.DBService;
 
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -20,6 +22,9 @@ public class TestMain {
 
     @Autowired
     DruidDataSource druidDataSource;
+
+    @Autowired
+    DBService dbService;
 
 
     @Test
@@ -43,6 +48,26 @@ public class TestMain {
                 log.info("customerNumber: {}, customerName: {}", customerNumber, customerName);
             }
         }
+
+
+
+        Connection connection = druidDataSource.getPooledConnection().getConnection();
+        connection.setAutoCommit(false);
+        try (PreparedStatement preparedStatement = connection
+                .prepareStatement("INSERT INTO `tokens` VALUES (?);");
+        ) {
+            // 传统的jdbc读取mysql数据方法
+            preparedStatement.setString(1,"ttdd");
+            boolean execute = preparedStatement.execute();
+            connection.commit();
+
+        }
+    }
+
+
+    @Test
+    public void testTx() throws SQLException {
+        dbService.simpleTx();
     }
 
 }

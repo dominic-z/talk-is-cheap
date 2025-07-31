@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.talk.is.cheap.orm.mybatis.hello.dao.BlogDao">
+    <select id="selectByIds" resultType="Blog">
+        select * from blog
+        where
+        id in
+<!--        <foreach collection="集合参数名" item="当前元素变量名" index="索引变量名"-->
+<!--                 open="开始符号" separator="分隔符" close="结束符号">-->
+        <foreach collection="ids" item="id" index="idx"
+                 open="(" separator="," close=")">
+            #{id} <!-- 使用变量名引用元素 -->
+        </foreach>
+    </select>
+</mapper>
