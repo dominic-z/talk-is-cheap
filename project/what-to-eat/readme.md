@@ -30,6 +30,8 @@ npm install eventemitter3
 
 如果是`git clone`下来的新项目，记得在`web`里删除`package.lock`，然后重新`npm install`安装依赖
 
+对于字体bula.ttf，已上传至百度网盘-前端-字体
+
 ### 坑
 
 #### cannot read properties of null (reading context)
