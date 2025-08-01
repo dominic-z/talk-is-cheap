@@ -1,7 +1,6 @@
 import org.junit.jupiter.api.Test;
 import org.talk.is.cheap.orm.mybatis.hello.config.SqlSessionConfig;
 import org.talk.is.cheap.orm.mybatis.hello.dao.BlogDao;
-import org.talk.is.cheap.orm.mybatis.hello.domain.pojo.Author;
 import org.talk.is.cheap.orm.mybatis.hello.domain.pojo.Blog;
 import org.talk.is.cheap.orm.mybatis.hello.mappers.AuthorMapper;
 import org.talk.is.cheap.orm.mybatis.hello.mappers.BlogMapper;
