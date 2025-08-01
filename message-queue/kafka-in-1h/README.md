@@ -24,7 +24,7 @@ B站配套视频：[kafka一小时入门精讲](https://www.bilibili.com/video/B
 * [P13 事务消息](https://www.bilibili.com/video/BV1h94y1Q7Xg?p=13)
 * [P14 序列化与Avro](https://www.bilibili.com/video/BV1h94y1Q7Xg?p=14)
 * [P15 Record Header用法](https://www.bilibili.com/video/BV1h94y1Q7Xg?p=15)
-* [Kafka KRaft模式介绍](https://www.bilibili.com/video/BV1XV4y1w7wZ/) (update 2022.12.12)
+* [Kafka KRaft模式介绍](https://www.bilibili.com/video/BV1XV4y1w7wZ/) (update 2022.12.12)（补充：见百度网盘）
 
 ---
 
