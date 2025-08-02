@@ -1,5 +1,5 @@
 server:
-  port: 7071
+  port: 7070
 spring:
   application:
     name: free-flow-scheduler
