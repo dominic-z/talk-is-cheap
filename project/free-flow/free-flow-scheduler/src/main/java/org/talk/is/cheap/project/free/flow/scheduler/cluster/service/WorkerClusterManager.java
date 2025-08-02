@@ -8,6 +8,7 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
@@ -15,6 +16,7 @@ import org.talk.is.cheap.project.free.flow.scheduler.cluster.client.WorkerCluste
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.domain.enums.NodeStatus;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.domain.enums.NodeType;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.domain.pojo.ClusterNodeRegistryLog;
+import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.RunnableWorkerModifyEvent;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -25,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 负责管理worker集群
@@ -35,8 +38,8 @@ public class WorkerClusterManager {
 
     @Data
     private static class PingWorkerResultBO {
-        private Map<String, String> newMissingResult;
-        private Map<String, String> newConnectedWorkerId;
+        private Map<String, String> missingResult;
+        private Map<String, String> connectedResult;
     }
 
 
@@ -61,6 +64,10 @@ public class WorkerClusterManager {
 
     // 活跃的节点
     private final Map<String, String> runnableWorkerPathId = new ConcurrentHashMap<>();
+
+    // 防止外界get runnableWorkerPathId的时候一直重复读取runnableWorkerPathId，做一个缓存，只是为了加速，不需要线程安全
+    private volatile boolean runnableWorkerModified = false;
+    private Map<String, String> cachedRunnableWorkerIdMap;
     // 关闭中的节点
     private final Map<String, String> terminatingWorkerPathId = new ConcurrentHashMap<>();
 
@@ -125,6 +132,8 @@ public class WorkerClusterManager {
             runnableWorkerPathId.put(zkPath, workerId);
             missingRunnableWorkerPathId.remove(zkPath);
 
+            runnableWorkerModified = true;
+
             clusterNodeRegistryLogService.create(new ClusterNodeRegistryLog().withNodeId(workerId).withNodeType(NodeType.WORKER.getType()).withNodeStatus(NodeStatus.RUNNABLE.getStatus()));
 
         } else if (StringUtils.equals(parentPath, zkTerminatingWorkerPath)) {
@@ -156,7 +165,7 @@ public class WorkerClusterManager {
                 runnableWorkerPathId.remove(zkPath);
                 missingRunnableWorkerPathId.remove(zkPath);
             }
-
+            runnableWorkerModified = true;
             clusterNodeRegistryLogService.create(new ClusterNodeRegistryLog().withNodeId(workerId).withNodeType(NodeType.WORKER.getType()).withNodeStatus(NodeStatus.QUIT_RUNNABLE.getStatus()));
         } else if (StringUtils.equals(parentPath, zkTerminatingWorkerPath)) {
             // 如果是terminating下的节点
@@ -186,7 +195,9 @@ public class WorkerClusterManager {
             public void run() {
 
                 log.info("ping runnable");
-                ping(runnableWorkerPathId, missingRunnableWorkerPathId);
+                if (ping(runnableWorkerPathId, missingRunnableWorkerPathId)) {
+                    runnableWorkerModified = true;
+                }
 
                 log.info("ping terminating");
                 ping(terminatingWorkerPathId, missingTerminatingWorkerPathId);
@@ -201,31 +212,38 @@ public class WorkerClusterManager {
     /**
      * @param connectedWorkerPathId 目前处于链接状态的节点
      * @param missingWorkerPathId   目前失联的节点
+     * @return 是否产生了新的已连接的或者丢失的节点
      */
-    private void ping(Map<String, String> connectedWorkerPathId, Map<String, String> missingWorkerPathId) {
+    private boolean ping(Map<String, String> connectedWorkerPathId, Map<String, String> missingWorkerPathId) {
+        boolean modified = false;
+
         // ping连接状态的节点
-        PingWorkerResultBO pingRunnableResult = ping(connectedWorkerPathId);
+        PingWorkerResultBO pingConnectedResult = ping(connectedWorkerPathId);
         synchronized (this) {
-            pingRunnableResult.getNewMissingResult().forEach((path, id) -> {
-                if(connectedWorkerPathId.remove(path)!=null){
-                    // todo: 光加锁还不行，得这样判断一下，因为如果是节点下线导致的ping出现异常，那么这个节点一定会出现在getNewMissingResult里，如果不这样判断一下而是直接往missingWorkerPathId里面put，那还是会出现下线节点一直存在在missing中
+            pingConnectedResult.getMissingResult().forEach((path, id) -> {
+                if (connectedWorkerPathId.remove(path) != null) {
+                    // todo: 光加锁还不行，得这样判断一下，因为如果是节点下线导致的ping出现异常，那么这个节点一定会出现在getNewMissingResult里，如果不这样判断一下而是直接往missingWorkerPathId里面put
+                    //  ，那还是会出现下线节点一直存在在missing中
                     // 如果remove返回的不是null，说明这个节点已经被其他线程remove了（目前只有节点下线一种情况）
                     missingWorkerPathId.put(path, id);
                 }
             });
+            modified = !pingConnectedResult.getMissingResult().isEmpty();
         }
 
 
         // ping失联的节点
-        PingWorkerResultBO pingMissingRunnableResult = ping(missingWorkerPathId);
+        PingWorkerResultBO pingMissingResult = ping(missingWorkerPathId);
         synchronized (this) {
-            pingMissingRunnableResult.getNewConnectedWorkerId().forEach((path, id) -> {
-                if(missingWorkerPathId.remove(path)!=null){
+            pingMissingResult.getConnectedResult().forEach((path, id) -> {
+                if (missingWorkerPathId.remove(path) != null) {
                     connectedWorkerPathId.put(path, id);
                 }
             });
+            modified = modified || !pingConnectedResult.getConnectedResult().isEmpty();
         }
         log.info("connected worker: {}, missing worker: {}", connectedWorkerPathId.keySet(), missingWorkerPathId.keySet());
+        return modified;
     }
 
     /**
@@ -251,8 +269,8 @@ public class WorkerClusterManager {
         }
 
         PingWorkerResultBO pingWorkerResultBO = new PingWorkerResultBO();
-        pingWorkerResultBO.setNewConnectedWorkerId(newConnectedWorkerIdPath);
-        pingWorkerResultBO.setNewMissingResult(newMissingWorkIdPath);
+        pingWorkerResultBO.setConnectedResult(newConnectedWorkerIdPath);
+        pingWorkerResultBO.setMissingResult(newMissingWorkIdPath);
 
         return pingWorkerResultBO;
     }
@@ -260,10 +278,14 @@ public class WorkerClusterManager {
 
     /**
      * 获取runnable状态的worker
+     * 不能直接将runnableWorkerPathId返回出去，防止外界进行操作
      *
      * @return
      */
     public Map<String, String> getRunnableWorkers() {
-        return new HashMap<>(this.runnableWorkerPathId);
+        if (this.cachedRunnableWorkerIdMap == null || runnableWorkerModified) {
+            this.cachedRunnableWorkerIdMap = new HashMap<>(this.runnableWorkerPathId);
+        }
+        return this.cachedRunnableWorkerIdMap;
     }
 }
