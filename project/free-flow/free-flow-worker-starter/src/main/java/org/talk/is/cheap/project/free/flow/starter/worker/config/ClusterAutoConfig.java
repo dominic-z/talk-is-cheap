@@ -23,6 +23,12 @@ public class ClusterAutoConfig {
         return new ClusterService();
     }
 
+
+    /**
+     * feign+webflux需要的
+     * @param converters
+     * @return
+     */
     @Bean
     @ConditionalOnMissingBean
     public HttpMessageConverters messageConverters(ObjectProvider<HttpMessageConverter<?>> converters) {

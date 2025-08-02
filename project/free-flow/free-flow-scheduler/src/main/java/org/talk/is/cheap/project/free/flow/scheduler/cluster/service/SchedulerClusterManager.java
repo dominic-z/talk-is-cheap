@@ -13,7 +13,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.talk.is.cheap.project.free.flow.common.enums.EnvType;
 import org.talk.is.cheap.project.free.flow.common.utils.IPUtils;
-import org.talk.is.cheap.project.free.flow.scheduler.cluster.domain.enums.NodeAction;
+import org.talk.is.cheap.project.free.flow.scheduler.cluster.domain.enums.NodeStatus;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.domain.enums.NodeType;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.domain.pojo.ClusterNodeRegistryLog;
 
@@ -73,7 +73,7 @@ public class SchedulerClusterManager {
                 new ClusterNodeRegistryLog()
                         .withNodeId(getSchedulerId())
                         .withNodeType(NodeType.SCHEDULER.getType())
-                        .withNodeAction(NodeAction.UP.getAction()));
+                        .withNodeStatus(NodeStatus.RUNNABLE.getStatus()));
 
     }
 
@@ -107,6 +107,7 @@ public class SchedulerClusterManager {
             @Override
             public void notLeader() {
                 log.info("{} is no longer leader", registryId);
+                workerClusterManager.stopManageWorkers();
             }
         }, SINGLE_EXECUTOR_SERVICE);
 

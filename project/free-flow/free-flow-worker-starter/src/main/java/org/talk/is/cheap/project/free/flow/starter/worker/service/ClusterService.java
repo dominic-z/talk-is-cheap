@@ -56,8 +56,8 @@ public class ClusterService {
         try {
             zkWorkerPath = starterCuratorZKClient.create()
                     .creatingParentsIfNeeded()
-                    .withMode(CreateMode.EPHEMERAL_SEQUENTIAL)
-                    .forPath(Paths.get(zkConfigProperties.getZookeeper().getPath().getWorker().getRunnable(), applicationName).toString(),
+                    .withMode(CreateMode.EPHEMERAL)
+                    .forPath(Paths.get(zkConfigProperties.getZookeeper().getPath().getWorker().getRunnable(), getWorkerPath()).toString(),
                             getWorkerId().getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) {
             log.error("error when registry to zk", e);
@@ -107,6 +107,10 @@ public class ClusterService {
         }
     }
 
+    public String getWorkerPath(){
+        //                    zookeeper的节点不能有冒号，将192.168.1.1:2222改成192.168.1.1_2222
+        return getWorkerId().replace(":","_");
+    }
 
     public String getWorkerId() {
         String workerId = EnvType.getByName(envType) == EnvType.CONTAINER ? System.getenv("CONTAINER_NAME") : IPUtils.getMainIP();
@@ -123,8 +127,8 @@ public class ClusterService {
                     .forPath(this.zkWorkerPath);
             String terminatingPath = starterCuratorZKClient.create()
                     .creatingParentsIfNeeded()
-                    .withMode(CreateMode.EPHEMERAL_SEQUENTIAL)
-                    .forPath(Paths.get(zkConfigProperties.getZookeeper().getPath().getWorker().getTerminating(), applicationName).toString(),
+                    .withMode(CreateMode.EPHEMERAL)
+                    .forPath(Paths.get(zkConfigProperties.getZookeeper().getPath().getWorker().getTerminating(), getWorkerPath()).toString(),
                             getWorkerId().getBytes(StandardCharsets.UTF_8));
             this.workerStatus = WorkerStatus.TERMINATING;
 

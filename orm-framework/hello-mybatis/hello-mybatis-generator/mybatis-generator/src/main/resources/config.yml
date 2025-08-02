@@ -37,21 +37,6 @@ datasource:
 tables:
   - id: 1
     name: cluster_node_registry_log
-#    需要对某些列特殊配置的可以在这里配置
-#    columns:
-#      - id: 1
-#        name: node_type
-#        enumeratedConstants: # 针对pid这个字段生成枚举类
-#          - id: 1
-#            literal: SCHEDULER # 枚举类字面量
-#            value: 0 # 枚举类的value
-#            description: 本地 # 枚举类的描述
-#          - id: 2
-#            literal: RUNNING
-#            value: 103
-#            description: 运行中
-#  - id: 2
-#    name: role
 
   ## code-package
 basePackage: org.talk.is.cheap.project.free.flow.scheduler.cluster
