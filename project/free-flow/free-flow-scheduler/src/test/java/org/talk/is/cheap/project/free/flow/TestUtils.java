@@ -1,0 +1,49 @@
+package org.talk.is.cheap.project.free.flow;
+
+import com.google.common.hash.Hashing;
+import org.junit.jupiter.api.Test;
+
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.*;
+
+public class TestUtils {
+
+    private final ThreadPoolExecutor taskDefinitionThreadPool = new ThreadPoolExecutor(0,1,1000, TimeUnit.MILLISECONDS,new LinkedBlockingQueue<>());
+
+    @Test
+    public void testHash(){
+        System.out.println("192.168.78.7:8080".hashCode());
+        System.out.println("192.168.78.7:8081".hashCode());
+
+        // guava里封装了更好的hash算法
+        System.out.println(Hashing.sha384().hashString("192.168.78.7:8081", StandardCharsets.UTF_8).asInt());
+        System.out.println(Hashing.sha384().hashString("192.168.78.7:8080", StandardCharsets.UTF_8).asInt());
+        System.out.println(Hashing.consistentHash(Hashing.sha384().hashString("192.168.78.7:8081", StandardCharsets.UTF_8).asInt(),4));
+        System.out.println(Hashing.consistentHash(Hashing.sha384().hashString("192.168.78.7:8080", StandardCharsets.UTF_8).asInt(),4));
+    }
+
+    private void async(int id)  {
+        try{
+            Thread.sleep(1000);
+            System.out.println(id);
+            Thread.sleep(1000);
+            System.out.println(id);
+            Thread.sleep(1000);
+            System.out.println(id);
+            Thread.sleep(1000);
+            System.out.println(id);
+        }catch (Exception e){
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    @Test
+    public void testAsync() throws ExecutionException, InterruptedException {
+
+        CompletableFuture.runAsync(()->this.async(1),taskDefinitionThreadPool);
+        CompletableFuture<Void> voidCompletableFuture = CompletableFuture.runAsync(() -> this.async(2), taskDefinitionThreadPool);
+        voidCompletableFuture.get();
+
+    }
+}

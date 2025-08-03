@@ -16,18 +16,19 @@ import org.talk.is.cheap.project.free.flow.scheduler.cluster.client.WorkerCluste
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.domain.enums.NodeStatus;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.domain.enums.NodeType;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.domain.pojo.ClusterNodeRegistryLog;
-import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.RunnableWorkerModifyEvent;
+import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.RunnableWorkerAddEvent;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 负责管理worker集群
@@ -42,7 +43,8 @@ public class WorkerClusterManager {
         private Map<String, String> connectedResult;
     }
 
-
+    @Autowired
+    private ApplicationEventPublisher publisher;
     @Autowired
     private CuratorFramework curatorZKClient;
 
@@ -67,7 +69,7 @@ public class WorkerClusterManager {
 
     // 防止外界get runnableWorkerPathId的时候一直重复读取runnableWorkerPathId，做一个缓存，只是为了加速，不需要线程安全
     private volatile boolean runnableWorkerModified = false;
-    private Map<String, String> cachedRunnableWorkerIdMap;
+    private List<String> cachedRunnableWorkerIds;
     // 关闭中的节点
     private final Map<String, String> terminatingWorkerPathId = new ConcurrentHashMap<>();
 
@@ -135,6 +137,9 @@ public class WorkerClusterManager {
             runnableWorkerModified = true;
 
             clusterNodeRegistryLogService.create(new ClusterNodeRegistryLog().withNodeId(workerId).withNodeType(NodeType.WORKER.getType()).withNodeStatus(NodeStatus.RUNNABLE.getStatus()));
+
+            // 发布新增worker事件，用于触发读取worker中定义的task定义
+            publisher.publishEvent(new RunnableWorkerAddEvent(workerId));
 
         } else if (StringUtils.equals(parentPath, zkTerminatingWorkerPath)) {
             // 如果是terminating下的节点
@@ -256,7 +261,7 @@ public class WorkerClusterManager {
         Map<String, String> newMissingWorkIdPath = new HashMap<>();
         Map<String, String> newConnectedWorkerIdPath = new HashMap<>();
 
-        // todo: 多线程
+        // todo: 多线程 or 多路复用改造
         for (Map.Entry<String, String> kv : workerPathId.entrySet()) {
             URI host = UriComponentsBuilder.fromHttpUrl("http://" + kv.getValue()).build().toUri();
             try {
@@ -282,10 +287,11 @@ public class WorkerClusterManager {
      *
      * @return
      */
-    public Map<String, String> getRunnableWorkers() {
-        if (this.cachedRunnableWorkerIdMap == null || runnableWorkerModified) {
-            this.cachedRunnableWorkerIdMap = new HashMap<>(this.runnableWorkerPathId);
+    public List<String> getRunnableWorkerIds() {
+        if (this.cachedRunnableWorkerIds == null || runnableWorkerModified) {
+            this.cachedRunnableWorkerIds = new ArrayList<>(this.runnableWorkerPathId.values());
         }
-        return this.cachedRunnableWorkerIdMap;
+        return this.cachedRunnableWorkerIds;
     }
+
 }

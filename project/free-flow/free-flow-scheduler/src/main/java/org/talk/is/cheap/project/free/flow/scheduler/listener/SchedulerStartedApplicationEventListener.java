@@ -22,7 +22,7 @@ public class SchedulerStartedApplicationEventListener implements ApplicationList
 
         log.info("scheduler application ready");
         try {
-            schedulerClusterManager.registryAndElection();
+            schedulerClusterManager.registryAndElection(event);
         } catch (Exception e) {
             log.error("error to start scheduler election", e);
             throw new RuntimeException(e);

@@ -64,7 +64,7 @@ public class SchedulerClusterManager {
      * @param event
      */
     @EventListener(ApplicationStartedEvent.class)
-    public void registryAndElection() throws Exception {
+    public void registryAndElection(ApplicationStartedEvent event) throws Exception {
         log.info("scheduler start registry and election");
 
         election();
