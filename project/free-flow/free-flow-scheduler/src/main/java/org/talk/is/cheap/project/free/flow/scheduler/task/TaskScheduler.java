@@ -12,7 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.*;
 
 @Service
-public class TaskManager {
+public class TaskScheduler {
 
     @Autowired
     private WorkerClusterManager workerClusterManager;

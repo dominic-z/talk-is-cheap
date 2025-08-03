@@ -50,4 +50,5 @@ public class TestSpringApp {
         log.info("{}",clusterNodeRegistryLogs);
 //        log.info("{}",clusterNodeRegistryLogDao.s());
     }
+
 }
