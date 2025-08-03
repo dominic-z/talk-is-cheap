@@ -3,7 +3,6 @@ package org.talk.is.cheap.project.free.flow;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.zookeeper.CreateMode;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -18,7 +17,7 @@ import java.util.List;
 
 @SpringBootTest(classes = App.class)
 @Slf4j
-public class CuratorTest {
+public class TestSpringApp {
 
 
     @Autowired
@@ -49,6 +48,6 @@ public class CuratorTest {
         List<ClusterNodeRegistryLog> clusterNodeRegistryLogs =
                 clusterNodeRegistryLogMapper.selectByExample(new ClusterNodeRegistryLogExample());
         log.info("{}",clusterNodeRegistryLogs);
-        log.info("{}",clusterNodeRegistryLogDao.select());
+//        log.info("{}",clusterNodeRegistryLogDao.s());
     }
 }
