@@ -23,7 +23,9 @@ import javax.sql.DataSource;
  */
 @Configuration
 // 测试手动指定某些mapper的sqlSessionTemplate
-@MapperScan(basePackageClasses = BlogMapper.class, sqlSessionTemplateRef = "mySqlSessionTemplate")
+@MapperScan(basePackageClasses = BlogMapper.class
+//        , sqlSessionTemplateRef = "mySqlSessionTemplate"
+)
 @Slf4j
 public class MybatisConfig {
 
@@ -31,25 +33,25 @@ public class MybatisConfig {
      * 下面是手动配置，相当于替代了MybatisAutoConfiguration自动配置
      */
 
-    @Bean
-    public SqlSessionFactory sqlSessionFactory(DataSource dataSource) throws Exception {
-        log.info("使用自定义的sqlSessionFactory");
-        SqlSessionFactoryBean factory = new SqlSessionFactoryBean();
-        factory.setDataSource(dataSource);
-        factory.setVfs(SpringBootVFS.class); // 为了通过执行jar包启动的时候，找到mapper文件
-
-        PathMatchingResourcePatternResolver patternResolver = new PathMatchingResourcePatternResolver();
-        factory.setConfigLocation(patternResolver.getResource("classpath:/mybatis-config.xml"));
-        factory.setMapperLocations(patternResolver.getResources("classpath:/mappers/**/*.xml"));
-
-        return factory.getObject();
-    }
-
-    @Bean("mySqlSessionTemplate")
-    public SqlSessionTemplate sqlSessionTemplate(SqlSessionFactory sqlSessionFactory) {
-        log.info("使用自定义的sqlSessionTemplate");
-        return new SqlSessionTemplate(sqlSessionFactory);
-    }
+//    @Bean
+//    public SqlSessionFactory sqlSessionFactory(DataSource dataSource) throws Exception {
+//        log.info("使用自定义的sqlSessionFactory");
+//        SqlSessionFactoryBean factory = new SqlSessionFactoryBean();
+//        factory.setDataSource(dataSource);
+//        factory.setVfs(SpringBootVFS.class); // 为了通过执行jar包启动的时候，找到mapper文件
+//
+//        PathMatchingResourcePatternResolver patternResolver = new PathMatchingResourcePatternResolver();
+//        factory.setConfigLocation(patternResolver.getResource("classpath:/mybatis-config.xml"));
+//        factory.setMapperLocations(patternResolver.getResources("classpath:/mappers/**/*.xml"));
+//
+//        return factory.getObject();
+//    }
+//
+//    @Bean("mySqlSessionTemplate")
+//    public SqlSessionTemplate sqlSessionTemplate(SqlSessionFactory sqlSessionFactory) {
+//        log.info("使用自定义的sqlSessionTemplate");
+//        return new SqlSessionTemplate(sqlSessionFactory);
+//    }
 
 
 }
