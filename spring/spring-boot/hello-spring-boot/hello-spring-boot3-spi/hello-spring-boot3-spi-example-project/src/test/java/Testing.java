@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
+import org.talk.is.cheap.hello.spring.boot3.spi.common.pojo.Product;
 
 @SpringBootTest(classes = App.class)
 @Slf4j
@@ -102,11 +103,24 @@ public class Testing {
     /**
      * 注入会失败
      */
+//    @Autowired
+//    private HiClient hiClient;
+//
+//    @Test
+//    public void testFeignFromStarter(){
+//        log.info("hiClient: {}",hiClient);
+//    }
+
+
     @Autowired
-    private HiClient hiClient;
+    private Product product;
+
+    @Autowired
+    @Qualifier("another-product")
+    private Product anotherProduct;
 
     @Test
-    public void testFeignFromStarter(){
-        log.info("hiClient: {}",hiClient);
+    public void testMultiStarterOrder(){
+        log.info("product: {}, another: {}",product,anotherProduct);
     }
 }

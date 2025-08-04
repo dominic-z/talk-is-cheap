@@ -28,7 +28,9 @@ public class Spring3SPIStarterConfiguration {
     @ConditionalOnMissingBean
     public Product product(){
         System.out.println("starter1中的product创建");
-        return new Product();
+        Product product = new Product();
+        product.setName("product");
+        return product;
     }
 
     /**

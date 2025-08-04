@@ -15,7 +15,9 @@ public class Spring3SPIStarter2Configuration {
     @Bean(name = "another-product")
     public Product product(){
         System.out.println("starter2中的product创建");
-        return new Product();
+        Product product = new Product();
+        product.setName("another-product");
+        return product;
     }
 
 }
