@@ -9,7 +9,7 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>hello-spring-boot3-spi-example-project</artifactId>
+    <artifactId>hello-spring-boot3-spi-starter-2</artifactId>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -20,31 +20,9 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>org.talk.is.cheap.hello.spring.boot3.spi</groupId>
-            <artifactId>hello-spring-boot3-spi-starter</artifactId>
+            <artifactId>hello-spring-boot3-spi-common</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
-
-
-        <!--  可以控制starter中的conditiononclass，将这个包排除之后，classpath就丢失了会触发conditionOnClass所需的类-->
-        <dependency>
-            <groupId>org.talk.is.cheap.hello.spring.boot3.spi</groupId>
-            <artifactId>hello-spring-boot3-spi-trigger</artifactId>
-            <version>1.0-SNAPSHOT</version>
-        </dependency>
-
-
-        <dependency>
-            <groupId>org.talk.is.cheap.hello.spring.boot3.spi</groupId>
-            <artifactId>hello-spring-boot3-spi-starter-2</artifactId>
-            <version>1.0-SNAPSHOT</version>
-        </dependency>
-
     </dependencies>
-
 </project>

@@ -14,13 +14,23 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.talk.is.cheap.hello.spring.boot3.spi.common.pojo.Product;
 
-// 经过测试，不需要注解
-//@Configuration
-
+// 经过测试，不需要注解也可以的
+@Configuration
 // 见readme
 @EnableConfigurationProperties(value = StarterConfigProperties.class)
 public class Spring3SPIStarterConfiguration {
+
+
+    @Bean
+    @ConditionalOnMissingBean
+    public Product product(){
+        System.out.println("starter1中的product创建");
+        return new Product();
+    }
+
     /**
      * 如果容器中没有叫做starterHelloService的bean，这个bean就会被创建出来
      *

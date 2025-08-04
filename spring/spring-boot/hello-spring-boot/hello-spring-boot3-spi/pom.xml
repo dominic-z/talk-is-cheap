@@ -12,6 +12,8 @@
         <module>hello-spring-boot3-spi-starter</module>
         <module>hello-spring-boot3-spi-example-project</module>
         <module>hello-spring-boot3-spi-trigger</module>
+        <module>hello-spring-boot3-spi-starter-2</module>
+        <module>hello-spring-boot3-spi-common</module>
     </modules>
 
     <properties>
