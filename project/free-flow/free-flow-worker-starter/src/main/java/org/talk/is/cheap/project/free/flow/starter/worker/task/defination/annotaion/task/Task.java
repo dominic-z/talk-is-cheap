@@ -1,4 +1,5 @@
-package org.talk.is.cheap.project.free.flow.common.task.defination.annotaion.task;
+package org.talk.is.cheap.project.free.flow.starter.worker.task.defination.annotaion.task;
+
 
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
@@ -11,17 +12,18 @@ import java.lang.annotation.Target;
 
 
 /**
- * 被这个注解标记的类将作为一个预定任务
+ * 被FlowTask标记的类将被视为是一个任务流
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Component
 @Scope("prototype")
-public @interface ScheduleTask {
+public @interface Task {
+
 
     /**
-     * 任务的唯一标识符，全局唯一
+     * 全局唯一，作为task的标识符
      * @return
      */
     String name();
@@ -30,12 +32,19 @@ public @interface ScheduleTask {
      * 版本号
      * @return
      */
-    long version() default 0;
+    int version() default 0;
 
     /**
-     * 定时调度需要调度起哪个task
+     * 重试次数
      * @return
      */
-    String taskName();
+    int maxRetryCount() default 3;
+
+
+    /**
+     * 超时时间，默认不生效
+     * @return
+     */
+    int timeoutInSeconds() default -1;
 
 }

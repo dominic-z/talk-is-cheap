@@ -3,7 +3,7 @@ package org.talk.is.cheap.project.free.flow.starter.worker.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
-import org.talk.is.cheap.project.free.flow.common.task.defination.annotaion.task.Task;
+import org.talk.is.cheap.project.free.flow.starter.worker.task.defination.annotaion.task.Task;
 
 import java.util.Map;
 

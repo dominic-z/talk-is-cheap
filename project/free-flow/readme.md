@@ -1,8 +1,5 @@
 # TODO
 
-scheduler部分：
-1. 集群leader选举与路由转发
-2. 
 
 
 # 配置
@@ -42,7 +39,7 @@ Created /free-flow
 ## mysql
 
 ```shell
-docker run --name mysql8 -e MYSQL_ROOT_PASSWORD=root -p 3306:3306 -d mysql:8.0.32
+docker run --name mysql8 -e TZ=Asia/Shanghai -e MYSQL_ROOT_PASSWORD=root -p 3306:3306 -d mysql:8.0.32
 
 ```
 
