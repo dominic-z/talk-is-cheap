@@ -1,4 +1,4 @@
-package org.talk.is.cheap.project.free.flow.common.task.codec;
+package org.talk.is.cheap.project.free.flow.starter.worker.task.codec;
 
 import org.apache.commons.lang3.NotImplementedException;
 
@@ -27,11 +27,9 @@ import org.apache.commons.lang3.NotImplementedException;
  * 另一个问题是：因为注解不能用泛型，无法知道指定的inputCodec和inputClass是否能够对应，如果希望能够前置完成判断，必须在InputCodec再增加一个方法判断是否能够处理某个inputClass，这需要：InputCodec需要持有一个泛型的Class
  * <T>对象，例如可以通过构造方法传入；更麻烦了
  * 能不能只指定一个Codec呢？
- * <p>
- * <p>
- * <p>
- * 仔细回想在stage中的使用流：输入string类型的序列化后的对象 --> 解码并在stage运行的时候强制类型转换回输入对象  --> 使用对象 -->  创建下一个stage的input对象 --> 序列化后并塞入上下文
- * 那么其实不需要持有tClass啊，在stage里自己就知道这个Class是啥啊。。。自己在stage代码里转就好了。。
+ *
+ *
+ * 所以针对inputClass，直接在运行过程中传进来把。
  *
  * @param <T>
  */

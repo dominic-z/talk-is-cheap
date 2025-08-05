@@ -1,8 +1,8 @@
-package org.talk.is.cheap.project.free.example;
+package org.talk.is.cheap.project.free.example.task;
 
 
-import org.talk.is.cheap.project.free.flow.common.task.defination.annotaion.stage.RunnableStage;
-import org.talk.is.cheap.project.free.flow.common.task.defination.annotaion.task.Task;
+import org.talk.is.cheap.project.free.flow.starter.worker.task.defination.annotaion.stage.RunnableStage;
+import org.talk.is.cheap.project.free.flow.starter.worker.task.defination.annotaion.task.Task;
 
 @Task(name = "aaa")
 public class TT {
