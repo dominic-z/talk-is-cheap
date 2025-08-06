@@ -5,6 +5,9 @@
 教程链接：[ElasticSearch (ES从入门到精通一篇就够了)](https://www.cnblogs.com/buchizicai/p/17093719.html)
 这篇文章很适合入门，怕丢，所以下载了一份存网盘了。
 
+[通过docker启动ElasticSearch后为ElasticSearch设置用户和密码](https://blog.csdn.net/m0_62128476/article/details/142427409)
+
+
 # 安装
 
 通过docker来安装
@@ -36,6 +39,23 @@ docker run -d \
 ```
 
 随后访问http://localhost:9200/
+
+配置密码
+```shell
+docker exec es bash
+cd /usr/share/elasticsearch/config
+echo "xpack.security.enabled: true
+xpack.license.self_generated.type: basic
+xpack.security.transport.ssl.enabled: true" >> elasticsearch.yml
+exit
+sudo docker restart elasticsearch
+sudo docker exec -it elasticsearch bash
+./bin/elasticsearch-setup-passwords interactive
+exit
+sudo docker restart elasticsearch
+
+
+```
 
 ## 安装kibana
 ```shell
