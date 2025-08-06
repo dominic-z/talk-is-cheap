@@ -43,3 +43,74 @@ docker run --name mysql8 -e TZ=Asia/Shanghai -e MYSQL_ROOT_PASSWORD=root -p 3306
 
 ```
 
+## es
+通过es存储入参/业务日志，创建es略，参考es8的配置
+
+
+```json
+PUT /task_startup_param
+{
+  "mappings": {
+    "properties": {
+      "task_startup_id":{
+        "type":"keyword"
+      },
+      "startup_param_fully_qualified_class_name":{
+        "type":"text",
+        "analyzer": "ik_max_word"  // 使用IK分词器
+      },
+      "startup_param_encoding": {
+        "type": "text",
+        "analyzer": "ik_max_word"  // 使用IK分词器
+      }
+    }
+  }
+}
+
+
+
+
+PUT /stage_startup_param
+{
+  "mappings": {
+    "properties": {
+      "stage_startup_id":{
+        "type":"keyword"
+      },
+      "startup_param_fully_qualified_class_name":{
+        "type":"text",
+        "analyzer": "ik_max_word"  // 使用IK分词器
+      },
+      "startup_param_encoding": {
+        "type": "text",
+        "analyzer": "ik_max_word"  // 使用IK分词器
+      }
+    }
+  }
+}
+
+
+
+PUT /stage_execution_biz_log
+{
+  "settings": {
+    "index.sort.field": "create_time",  // 按日期字段排序
+    "index.sort.order": "asc"         // 排序方向（desc/asc）
+  },
+  "mappings": {
+    "properties": {
+      "stage_execution_id":{
+        "type":"keyword"
+      },
+      "log":{
+        "type":"text",
+        "analyzer": "ik_max_word"  // 使用IK分词器
+      },
+      "create_time": {
+         "type": "date", 
+         "format": "yyyy-MM-dd HH:mm:ss" 
+      }
+    }
+  }
+}
+```
