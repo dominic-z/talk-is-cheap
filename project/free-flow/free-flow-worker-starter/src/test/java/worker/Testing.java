@@ -2,6 +2,7 @@ package worker;
 
 
 import org.junit.jupiter.api.Test;
+import org.talk.is.cheap.project.free.flow.starter.worker.task.definition.annotaion.stage.RunnableStage;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -31,6 +32,13 @@ public class Testing {
         }
     }
 
+
+    static class T{
+        @RunnableStage(name = "stage",version = 1)
+        public void stage(){
+
+        }
+    }
     @Test
     public void test(){
 //        System.out.println(CaseFormat.LOWER_HYPHEN.converterTo(CaseFormat.LOWER_CAMEL).convert("connect-url"));
@@ -38,7 +46,9 @@ public class Testing {
 
 //        System.out.println(Paths.get("/aa","fdsfds"));
 
-        System.out.println(new Child<String>().classEqual(String.class));
+//        System.out.println(new Child<String>().classEqual(String.class));
 
+//        System.out.println(Object.class.toString());
+        System.out.println(T.class.getMethods()[0].getAnnotation(RunnableStage.class).annotationType());
     }
 }

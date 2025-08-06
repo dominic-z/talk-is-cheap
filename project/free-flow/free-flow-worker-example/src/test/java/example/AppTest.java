@@ -8,7 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.talk.is.cheap.project.free.example.App;
-import org.talk.is.cheap.project.free.flow.starter.worker.task.defination.annotaion.task.Task;
+import org.talk.is.cheap.project.free.flow.starter.worker.task.definition.annotaion.task.Task;
 import org.talk.is.cheap.project.free.flow.starter.worker.client.SchedulerClusterClient;
 import org.talk.is.cheap.project.free.flow.starter.worker.config.properties.ZKConfigProperties;
 

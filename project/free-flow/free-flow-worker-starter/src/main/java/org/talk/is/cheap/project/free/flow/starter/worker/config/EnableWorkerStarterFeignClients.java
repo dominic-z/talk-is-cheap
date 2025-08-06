@@ -9,6 +9,9 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * 废弃
+ */
 @EnableFeignClients(clients = {SchedulerClusterClient.class})
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)

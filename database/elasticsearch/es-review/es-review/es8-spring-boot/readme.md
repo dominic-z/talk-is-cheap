@@ -20,6 +20,9 @@
 
 [java与es8实战之五：SpringBoot应用中操作es8(带安全检查：https、账号密码、API Key)](https://cloud.tencent.com/developer/article/2046642)
 
+
+[【docker部署es8+kibana】](https://blog.csdn.net/ych_0901/article/details/139686945)
+
 # 安装
 
 ## ES
@@ -31,12 +34,12 @@ docker pull crpi-vgj0j6781pn5263n.cn-hangzhou.personal.cr.aliyuncs.com/goose-goo
 docker tag crpi-vgj0j6781pn5263n.cn-hangzhou.personal.cr.aliyuncs.com/goose-good/elasticsearch:8.11.4 goose-good/elasticsearch:8.11.4
 
 
-docker network create es_net
+docker network create es-net
 
 
 docker run -d \
 --name es8 \
---network es_net \
+--network es-net \
 -p 9200:9200 \
 -p 9300:9300 \
 --privileged \
@@ -64,11 +67,15 @@ docker tag crpi-vgj0j6781pn5263n.cn-hangzhou.personal.cr.aliyuncs.com/goose-good
 
 docker run -d \
   --name kibana \
-  --network es_net \
+  --network es-net \
   -p 5601:5601 \
   goose-good/kibana:8.11.4
 
 ```
+
+
+
+
 
 ```shell
 docker exec -it es8 /usr/share/elasticsearch/bin/elasticsearch-create-enrollment-token -s kibana
@@ -79,6 +86,26 @@ docker exec -it es8 /usr/share/elasticsearch/bin/elasticsearch-create-enrollment
 docker exec -it kibana bin/kibana-verification-code
 ```
 然后输入elastic和123456
+
+
+### 直接配置https访问
+
+来自[豆包](https://www.doubao.com/thread/w7c5431cb88996f31)和博客
+
+
+
+修改kibana链接的es地址
+```shell
+docker cp http_ca.crt kibana://usr/share/kibana/config
+
+docker exec -it kibana bash
+vim /usr/share/kibana/config/kibana.yml 
+
+# 没vi，用sed凑合下
+docker cp kibana.yml kibana:/usr/share/kibana/config/
+
+docker restart kibana
+```
 
 ## 安装分词器
 

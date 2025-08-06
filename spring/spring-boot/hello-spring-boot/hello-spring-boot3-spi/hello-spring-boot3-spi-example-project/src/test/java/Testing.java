@@ -5,6 +5,7 @@ import hello.spring.boot3.spi.starter.starter.service.HelloService;
 import hello.spring.boot3.spi.starter.starter.service.HiService;
 import hello.spring.boot3.spi.starter.starter.service.HijService;
 import hello.spring.boot3.spi.starter.starter.service.KonnichiwaService;
+import hello.spring.boot3.spi.starter.starter.service.NiHaoService;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,12 +30,17 @@ public class Testing {
     @Qualifier("conditionOnClassHiService")
     HiService conditionOnClassHiService;
 
+
+    @Autowired
+    NiHaoService niHaoService;
+
     @Test
     public void say() {
         hiService.hi();
         helloService.sayHello();
 
         conditionOnClassHiService.hi();
+        niHaoService.nihao();
     }
 
 

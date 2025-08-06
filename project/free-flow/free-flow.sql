@@ -2,7 +2,7 @@ drop database if exists free_flow;
 create database if not exists free_flow DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci;
 use free_flow;
 
-drop table if exists cluster_node_registry_log;
+drop table if exists cluster_node_dlog;
 create table if not exists cluster_node_registry_log (
 `id` bigint AUTO_INCREMENT primary key,
 `node_id` varchar(64) not null comment '节点id',
@@ -170,7 +170,7 @@ create table if not exists task_startup(
 `source_type` TINYINT not null comment '此次启动的来源，例如被scheduleTask调度等',
 `source_id` bigint comment '此次启动的来源id',
 `status` TINYINT not null comment '此次启动的状态',
-`startup_params` varchar(2048) not null comment '启动参数，todo: 移动到es里',
+-- `startup_params` varchar(2048) not null comment '启动参数，todo: 移动到es里',
 `revision` bigint not null default 0 comment '并发控制编号',
 `create_time` datetime not null default now() comment '创建日期',
 `update_time` datetime not null default now() comment '更新日期',
@@ -234,7 +234,7 @@ create table if not exists stage_startup(
 `source_type` tinyint not null comment '此次启动的来源，例如被task调度、循环触发等',
 `source_id` bigint comment '此次启动的来源id',
 `status` tinyint not null comment '此次启动的状态',
-`startup_params` varchar(2048) not null comment '启动参数，包含入参、上下文缓存的全局对象等，todo: 移动到es里',
+-- `startup_params` varchar(2048) not null comment '启动参数，包含入参、上下文缓存的全局对象等，todo: 移动到es里',
 `revision` bigint not null default 0 comment '并发控制编号',
 `create_time` datetime not null default now() comment '创建日期',
 `update_time` datetime not null default now() comment '更新日期',
@@ -292,17 +292,28 @@ DELIMITER ;
 
 
 
+-- 
+-- -- todo: 转移到其他存储中去，例如es
+-- drop table if exists stage_excution_biz_log;
+-- create table if not exists stage_excution_biz_log(
+-- `id` bigint AUTO_INCREMENT primary key,
+-- `stage_execution_id` bigint not null comment '阶段执行id',
+-- `log_content` text comment '日志内容',
+-- `create_time` datetime not null default now() comment '创建日期',
+-- index idx_stage_execution_id(stage_execution_id)
+-- )ENGINE = InnoDB default charset = utf8mb4 comment '业务日志表';
 
--- todo: 转移到其他存储中去，例如es
-drop table if exists stage_excution_biz_log;
-create table if not exists stage_excution_biz_log(
+
+drop table if exists seq_generator;
+create table if not exists seq_generator(
 `id` bigint AUTO_INCREMENT primary key,
-`stage_execution_id` bigint not null comment '阶段执行id',
-`log_content` text comment '日志内容',
+`seq_name` varchar(64) not null comment '序列名称',
+`next` varchar(64) not null default 0  comment '下一段的起始id',
+`revision` bigint not null default 0 comment '并发控制编号',
 `create_time` datetime not null default now() comment '创建日期',
-index idx_stage_execution_id(stage_execution_id)
-)ENGINE = InnoDB default charset = utf8mb4 comment '业务日志表';
-
+`update_time` datetime not null default now() comment '更新日期',
+index idx_seq_name(seq_name)
+)ENGINE = InnoDB default charset = utf8mb4 comment '阶段执行主表';
 
 
 

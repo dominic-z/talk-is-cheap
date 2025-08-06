@@ -1,4 +1,4 @@
-package org.talk.is.cheap.project.free.flow.starter.worker.task.defination.annotaion.task;
+package org.talk.is.cheap.project.free.flow.starter.worker.task.definition.annotaion.task;
 
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
@@ -30,7 +30,7 @@ public @interface ScheduleTask {
      * 版本号
      * @return
      */
-    long version() default 0;
+    long version();
 
     /**
      * 定时调度需要调度起哪个task
