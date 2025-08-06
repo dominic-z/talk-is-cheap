@@ -1,4 +1,4 @@
-package org.talk.is.cheap.project.free.flow.starter.worker.task.defination.annotaion.task;
+package org.talk.is.cheap.project.free.flow.starter.worker.task.definition.annotaion.task;
 
 
 import org.springframework.context.annotation.Scope;
@@ -32,7 +32,7 @@ public @interface Task {
      * 版本号
      * @return
      */
-    int version() default 0;
+    int version();
 
     /**
      * 重试次数

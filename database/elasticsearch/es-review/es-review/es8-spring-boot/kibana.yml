@@ -1,0 +1,32 @@
+#
+# ** THIS IS AN AUTO-GENERATED FILE **
+#
+
+# Default Kibana configuration for docker target
+server.host: "0.0.0.0"
+server.shutdownTimeout: "5s"
+elasticsearch.hosts: [ "https://es8:9200" ]
+monitoring.ui.container.elasticsearch.enabled: true
+
+
+# 1. 配置 ES 的 HTTPS 地址（必填）
+# 替换为 ES 节点的 HTTPS 地址（多个节点用逗号分隔）
+# elasticsearch.hosts: ["https://es-node-1:9200", "https://es-node-2:9200"]
+
+# 2. 配置 Kibana 信任 ES 的 CA 证书（关键）
+# 指向 ES 的 CA 证书路径（确保 Kibana 进程有权限读取该文件）
+elasticsearch.ssl.certificateAuthorities: ["/usr/share/kibana/config/http_ca.crt"]
+
+# 3. 配置 SSL 验证模式（生产环境推荐严格验证）
+# - full：验证证书有效性和主机名（推荐生产环境）
+# - strict：仅验证证书有效性（不验证主机名，适合单节点或主机名不固定场景）# 经测试strict不是一个合法的选项
+# - none：禁用 SSL 验证（不安全，仅测试用）
+elasticsearch.ssl.verificationMode: certificate #如果需要使用full，需要让es生成一个特定域名的证书
+
+# # 4. 如果 ES 启用了安全认证（如用户名密码），需配置认证信息
+# # （需提前在 ES 中创建 kibana 专用用户，如 "kibana_system" 角色）
+elasticsearch.username: "kibana_system"
+elasticsearch.password: "123456"
+
+# # （可选）如果使用 API 密钥认证，替代用户名密码
+# # elasticsearch.apiKey: "your-api-key"

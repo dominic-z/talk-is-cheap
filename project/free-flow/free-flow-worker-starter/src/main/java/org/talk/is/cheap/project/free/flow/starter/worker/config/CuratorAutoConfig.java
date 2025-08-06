@@ -10,6 +10,7 @@ import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.talk.is.cheap.project.free.flow.starter.worker.config.properties.ZKConfigProperties;
 import org.talk.is.cheap.project.free.flow.common.utils.YamlUtils;
 
@@ -18,6 +19,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.List;
 
+@Configuration
 public class CuratorAutoConfig {
 
     private static final String ZK_CONFIG_FILENAME = "free-flow-worker-zookeeper.yaml";

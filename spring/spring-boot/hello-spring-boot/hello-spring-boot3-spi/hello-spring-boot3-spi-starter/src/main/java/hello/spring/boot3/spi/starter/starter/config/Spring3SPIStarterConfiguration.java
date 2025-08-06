@@ -8,12 +8,14 @@ import hello.spring.boot3.spi.starter.starter.service.HelloService;
 import hello.spring.boot3.spi.starter.starter.service.HiService;
 import hello.spring.boot3.spi.starter.starter.service.impl.HelloServiceImpl;
 import hello.spring.boot3.spi.starter.starter.service.impl.HiServiceImpl;
+import hello.spring.boot3.spi.starter.starter.service.impl.zh.NiHaoServiceImpl;
 import hello.spring.boot3.spi.starter.trigger.ClassTrigger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.talk.is.cheap.hello.spring.boot3.spi.common.pojo.Product;
 
@@ -21,6 +23,11 @@ import org.talk.is.cheap.hello.spring.boot3.spi.common.pojo.Product;
 @Configuration
 // 见readme
 @EnableConfigurationProperties(value = StarterConfigProperties.class)
+
+// 因为SPI机制，Spring3SPIStarterConfiguration会被视为是实际应用的一个configuration类，他头上的注解也都会生效
+// 下面两种方式中，Import不需要NiHaoServiceImpl头上带着一个注解，而ComponentScan需要对应的类头上挂一个@Service注解
+//@Import(NiHaoServiceImpl.class)
+@ComponentScan(basePackageClasses = NiHaoServiceImpl.class)
 public class Spring3SPIStarterConfiguration {
 
 

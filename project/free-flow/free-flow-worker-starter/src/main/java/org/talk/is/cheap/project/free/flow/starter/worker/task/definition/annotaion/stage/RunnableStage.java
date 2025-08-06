@@ -1,4 +1,4 @@
-package org.talk.is.cheap.project.free.flow.starter.worker.task.defination.annotaion.stage;
+package org.talk.is.cheap.project.free.flow.starter.worker.task.definition.annotaion.stage;
 
 
 import org.talk.is.cheap.project.free.flow.starter.worker.task.codec.InputCodec;
@@ -29,19 +29,19 @@ public @interface RunnableStage {
      * 版本号
      * @return
      */
-    int version() default 0;
+    int version();
 
     /**
      * 用于input的编码和解码器类型
      * @return
      */
-    Class<? extends InputCodec<?>> inputCodec() default SimpleStringInputCodec.class;
+    Class<? extends InputCodec<?>> inputCodecClass() default SimpleStringInputCodec.class;
 
     /**
      * 指向当前stage完成后的下一组stage的name
      * @return
      */
-    String[] to() default {};
+    String[] toStageName() default {};
 
 
     /**
