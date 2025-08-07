@@ -8,6 +8,7 @@ import Lifecycle from './components/guide-essentials/Lifecycle.vue'
 import Watchers1 from './components/guide-essentials/Watchers1.vue'
 import Watchers2 from './components/guide-essentials/Watchers2.vue'
 import TemplateSyntax from './components/guide-essentials/TemplateSyntax.vue'
+import Computed from './components/guide-essentials/Computed.vue'
 import TemplateRefs from './components/guide-essentials/TemplateRefs.vue'
 import ComponentBasic from './components/guide-essentials/ComponentBasic.vue'
 import ClassAndStyle from './components/guide-essentials/ClassAndStyle.vue'
@@ -61,19 +62,28 @@ import { appLinkRouter } from './router/advanced/extending-router-link/AppLinkRo
 // createApp(App).mount('#app')
 
 // DOM 中的根组件模板
-createApp({
+const countApp = createApp({
   data() {
     return {
       count: 0
     }
   }
-}).mount('#counter')
+})
+countApp.mount('#counter')
+
+countApp.config.errorHandler = (err) => {
+  console.log('全局error', err)
+}
 
 
-// createApp(TemplateSyntax).mount('#myApp')
+// let templateSyntaxApp = createApp(TemplateSyntax)
+// templateSyntaxApp.mount('#myApp')
+// // 全局属性
+// templateSyntaxApp.config.globalProperties.globalMsg = 'hello'
 
 // createApp(ReactivityFundamentals2).mount('#myApp')
-// createApp(Computed).mount('#myApp')
+createApp(Computed).mount('#myApp')
+
 // createApp(ClassAndStyle).mount('#myApp')
 // createApp(Conditional).mount('#myApp')
 
@@ -99,7 +109,7 @@ createApp({
 // createApp(DynamicMatchingApp).use(dmRouter).mount("#myApp")
 // createApp(RouteMatchingSyntaxApp).use(routeMatchingRouter).mount("#myApp")
 // createApp(NestedRoutesApp).use(nestedRouter).mount("#myApp")
-createApp(NavigationApp).use(navigationRouter).mount("#myApp")
+// createApp(NavigationApp).use(navigationRouter).mount("#myApp")
 // createApp(NamedViewApp).use(namedViewRouter).mount("#myApp")
 // createApp(RedirectAliasApp).use(RedirectAliasRouter).mount("#myApp")
 // createApp(PassingPropsApp).use(passingPropsRouter).mount("#myApp")

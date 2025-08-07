@@ -13,6 +13,8 @@ npm install --registry=http://registry.npmmirror.com
 npm run dev
 
 ```
+[npm run dev](https://www.doubao.com/thread/wdb06e5d8213f201b)
+
 # 基础
 ## 创建一个应用
 `index.html`的`<script type="module" src="/src/main.js"></script>`引用了`/src/main.js`，而这个js将`App`这个vue组件挂载进了`index.html`中的`<div id='app'>`之中，于是一个页面就构建起来了。
