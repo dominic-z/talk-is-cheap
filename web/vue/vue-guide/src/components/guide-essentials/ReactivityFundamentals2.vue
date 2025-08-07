@@ -10,7 +10,7 @@ const obj = ref({
 async function mutateDeeply() {
     // 以下都会按照期望工作
     obj.value.nested.count++
-
+    // await nextTick()执行完成之后，相当于本次事件循环完成了，就是说这次调用之前的变更都完成了。
     await nextTick()
     obj.value.arr.push('baz')
 }
@@ -48,6 +48,7 @@ log(refC)
     </button>
 
 
+    <!-- 一些奇怪的解包规则，vue支持一些默认的解包，不需要手动调用refC.value -->
     <button @click="refC+=1">
         add {{ refC }}
     </button>
