@@ -12,6 +12,7 @@ import Computed from './components/guide-essentials/Computed.vue'
 import TemplateRefs from './components/guide-essentials/TemplateRefs.vue'
 import ComponentBasic from './components/guide-essentials/ComponentBasic.vue'
 import ClassAndStyle from './components/guide-essentials/ClassAndStyle.vue'
+import Conditional from './components/guide-essentials/Conditional.vue'
 import DynamicComponent from './components/guide-essentials/DynamicComponent.vue'
 import FetchingData from './components/examples/FetchingData.vue'
 import Parent from './components/components/v-model/Parent.vue'
@@ -82,13 +83,13 @@ countApp.config.errorHandler = (err) => {
 // templateSyntaxApp.config.globalProperties.globalMsg = 'hello'
 
 // createApp(ReactivityFundamentals2).mount('#myApp')
-createApp(Computed).mount('#myApp')
+// createApp(Computed).mount('#myApp')
 
 // createApp(ClassAndStyle).mount('#myApp')
 // createApp(Conditional).mount('#myApp')
 
 // createApp(List).mount('#myApp')
-// createApp(EventHandling).mount('#myApp')
+createApp(EventHandling).mount('#myApp')
 // createApp(Forms).mount('#myApp')
 // createApp(Lifecycle).mount('#myApp')
 // createApp(Watchers1).mount('#myApp')
