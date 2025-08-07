@@ -167,8 +167,8 @@ drop table if exists task_startup;
 create table if not exists task_startup(
 `id` bigint AUTO_INCREMENT primary key,
 `task_id` bigint not null comment '任务id',
-`source_type` TINYINT not null comment '此次启动的来源，例如被scheduleTask调度等',
-`source_id` bigint comment '此次启动的来源id',
+`source_type` TINYINT not null comment '用于描述此次task启动的原因的类型，例如被scheduleTask调度、被某个stage调起等',
+`source_id` bigint comment '用于描述此次task启动的原因的id',
 `status` TINYINT not null comment '此次启动的状态',
 -- `startup_params` varchar(2048) not null comment '启动参数，todo: 移动到es里',
 `revision` bigint not null default 0 comment '并发控制编号',
@@ -231,17 +231,15 @@ create table if not exists stage_startup(
 `id` bigint AUTO_INCREMENT primary key,
 `task_startup_id` bigint not null comment '任务启动id',
 `stage_id` bigint not null comment '阶段id',
-`source_type` tinyint not null comment '此次启动的来源，例如被task调度、循环触发等',
-`source_id` bigint comment '此次启动的来源id',
+-- `source_type` tinyint not null comment '用于描述此次stage启动的原因的类型，例如作为初始stage、循环触发、前一个stage完成等等',
+-- `source_id` bigint comment '用于描述此次stage启动的原因的id',
 `status` tinyint not null comment '此次启动的状态',
 -- `startup_params` varchar(2048) not null comment '启动参数，包含入参、上下文缓存的全局对象等，todo: 移动到es里',
 `revision` bigint not null default 0 comment '并发控制编号',
 `create_time` datetime not null default now() comment '创建日期',
-`update_time` datetime not null default now() comment '更新日期',
+`update_time` datetime not null default now() comment '更新日期', 
 index idx_task_startup_id(task_startup_id),
-index idx_stage_id(stage_id),
-index idx_source_type_id(source_type,source_id),
-index idx_source_id(source_id)
+index idx_stage_id(stage_id)
 )ENGINE = InnoDB default charset = utf8mb4 comment '阶段启动表';
 -- 创建更新触发器
 DROP TRIGGER IF EXISTS stage_startup_update_time;
@@ -257,6 +255,31 @@ END$$
 DELIMITER ;
 
 
+drop table if exists stage_source_target_startup_relation;
+create table if not exists stage_source_target_startup_relation(
+`id` bigint AUTO_INCREMENT primary key,
+`source_type` tinyint not null comment '用于描述此次stage启动的原因的类型，例如作为初始stage、循环触发、前一个stage完成等等',
+`source_id` bigint comment '用于描述此次stage启动的原因的id',
+`target_stage_startup_id` bigint not null comment 'stage启动的id',
+`revision` bigint not null default 0 comment '并发控制编号',
+`create_time` datetime not null default now() comment '创建日期',
+`update_time` datetime not null default now() comment '更新日期', 
+index idx_target_id(target_stage_startup_id),
+index idx_source_target(source_type,source_id,target_stage_startup_id),
+index idx_source_id(source_id)
+)ENGINE = InnoDB default charset = utf8mb4 comment '阶段启动来源关系表';
+-- 创建更新触发器
+DROP TRIGGER IF EXISTS stage_source_target_startup_relation_update_time;
+DELIMITER $$
+CREATE TRIGGER stage_source_target_startup_relation_update_time 
+BEFORE UPDATE ON stage_source_target_startup_relation
+FOR EACH ROW
+BEGIN
+    IF NEW.update_time IS NULL OR NEW.update_time = '' THEN
+        SET NEW.update_time = CURRENT_TIMESTAMP;
+    END IF;
+END$$
+DELIMITER ;
 
 
 

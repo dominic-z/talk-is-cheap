@@ -28,7 +28,7 @@ public class TaskDefinitionValidator {
 
     /**
      * 校验task定义，要求：
-     * 1. ~~无环~~ 可以有环
+     * 1. 无环
      * 2. 有明确的根节点
      * 3. 每个stage的toStage都有效
      * 4. 图是连通的，没有悬挂的节点
