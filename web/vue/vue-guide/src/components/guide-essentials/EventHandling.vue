@@ -34,11 +34,11 @@ function onSubmit() {
 
     <!-- .self相当于加了个判断，只有事件的targe是自己的时候，才会触发handler -->
     <!-- 点击a，只会触发a的handler -->
-    <div @click.self="(e) => { console.log(e.target) }" :style="{ padding: '10px', backgroundColor: 'gra' }">
+    <div @click.self="(e) => { console.log(e.target) }" :style="{ padding: '10px', backgroundColor: 'blue' }">
         <a @click.self="doSomething(something)">self test</a>
     </div>
     <!-- 点击a，a的handler和dive的handler都会触发 -->
-    <div @click="(e) => { console.log(e.target) }" :style="{ padding: '10px', backgroundColor: 'gra' }">
+    <div @click="(e) => { console.log(e.target) }" :style="{ padding: '10px', backgroundColor: 'green' }">
         <!-- 停止传播，事件不会被冒泡到上层的div -->
         <a @click="doSomething(something)">self test</a>
     </div>
@@ -47,5 +47,6 @@ function onSubmit() {
     <input @keyup.enter="doSomething(something)" value="onenter" />
     <input @keyup.page-down="doSomething(something)" value="onpagedown" />
     <input @keyup.alt.enter="doSomething(something)" value="on alt enter" />
+    <input @keyup.enter.exact="doSomething(something)" value="on enter exact" />
     <input type="button" @click.right="doSomething(something)" value="on right click" />
 </template>
