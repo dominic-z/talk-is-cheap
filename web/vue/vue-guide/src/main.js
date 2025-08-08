@@ -89,11 +89,11 @@ countApp.config.errorHandler = (err) => {
 // createApp(Conditional).mount('#myApp')
 
 // createApp(List).mount('#myApp')
-createApp(EventHandling).mount('#myApp')
+// createApp(EventHandling).mount('#myApp')
 // createApp(Forms).mount('#myApp')
 // createApp(Lifecycle).mount('#myApp')
 // createApp(Watchers1).mount('#myApp')
-// createApp(Watchers2).mount('#myApp')
+createApp(Watchers2).mount('#myApp')
 // createApp(TemplateRefs).mount('#myApp')
 // createApp(ComponentBasic).mount('#myApp')
 // createApp(DynamicComponent).mount("#myApp")

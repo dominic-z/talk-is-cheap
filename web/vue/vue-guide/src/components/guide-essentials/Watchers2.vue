@@ -20,7 +20,7 @@ watch(() => obj.someObj, (newValue, oldValue) => {
 
     console.log("obj.someObj", obj.someObj)
 },
-    // 如果不加deep，那么someObj本身的变更并不会触发侦听器
+    // 如果不加deep，那么someObj内部的变更并不会触发侦听器
     { deep: true }
 )
 
@@ -30,11 +30,11 @@ function updateCount() {
 }
 
 function updateString() {
-    obj.someString = obj.count + ""
+    obj.someString = obj.someString + '1'
 }
 
 function updateSomeObj() {
-    obj.someObj.inner = obj.count + ""
+    obj.someObj.inner = obj.someObj.inner + '1'
 }
 
 const todoId = ref(1)
