@@ -27,6 +27,6 @@ let elInput = ref(null)
 
         console.log('执行绑定ref')
         elInput = el
-        /* 将 el 赋值给一个数据属性或 ref 变量 */
+        /* 将 el 赋值给一个数据属性或 ref 变量 el指定的就是input这个dom对象 */
     }" @input="(e) => { console.log(e); elInput.setAttribute('id', e.data) }">
 </template>

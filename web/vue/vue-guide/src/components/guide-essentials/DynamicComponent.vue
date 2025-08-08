@@ -21,7 +21,7 @@ console.log(tabs.Home)
   <div class="demo">
     <!-- 遍历tabs,tab就是key -->
     <button v-for="(v, tab) in tabs" :key="tab" :class="['tab-button', { active: currentTab === tab }]"
-      @click="()=>{currentTab = tab;console.log(v)}">
+      @click="()=>{currentTab = tab;console.log(v);console.log(tab)}">
       {{ tab }}
     </button>
     <component :is="tabs[currentTab]" class="tab"></component>

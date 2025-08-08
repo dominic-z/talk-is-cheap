@@ -1,5 +1,5 @@
 <template>
     <div class="tab">
-      Posts component
+      Archive component
   </div>
 </template>

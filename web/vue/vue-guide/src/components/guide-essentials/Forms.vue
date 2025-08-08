@@ -34,6 +34,9 @@ let msg = ref("")
     <input :value="text1" @input="event => setText1(event.target.value)">
 
     <input v-model="text2" placeholder="edit me">
+    <div>
+        {{ text2 }}
+    </div>
 
     <input type="checkbox" id="checkbox" v-model="checked" />
     <label for="checkbox">{{ checked }}</label>
