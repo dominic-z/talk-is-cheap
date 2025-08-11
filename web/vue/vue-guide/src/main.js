@@ -61,6 +61,8 @@ import LazyLoadingApp from './router/advanced/lazy-loading/LazyLoadingApp.vue'
 import AppLinkApp from './router/advanced/extending-router-link/AppLinkApp.vue'
 import { appLinkRouter } from './router/advanced/extending-router-link/AppLinkRouter'
 import TemplateSyntaxAndRef from './components/guide-essentials/TemplateSyntaxAndRef.vue'
+import Registration from './components/components/registration/Registration.vue'
+import Props from './components/components/props/Props.vue'
 // createApp(App).mount('#app')
 
 // DOM 中的根组件模板
@@ -95,11 +97,14 @@ countApp.config.errorHandler = (err) => {
 // createApp(Forms).mount('#myApp')
 
 // createApp(Watchers1).mount('#myApp')
-createApp(Watchers2).mount('#myApp')
+// createApp(Watchers2).mount('#myApp')
 // createApp(TemplateRefs).mount('#myApp')
 // createApp(ComponentBasic).mount('#myApp')
 // createApp(DynamicComponent).mount("#myApp")
-createApp(Lifecycle).mount('#myApp')
+// createApp(Lifecycle).mount('#myApp')
+
+// createApp(Registration).mount('#myApp')
+createApp(Props).mount('#myApp')
 
 // createApp(FetchingData).mount("#myApp")
 // createApp(Parent).mount("#myApp")

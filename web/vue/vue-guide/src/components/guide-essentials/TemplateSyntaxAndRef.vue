@@ -40,6 +40,7 @@ function addRefId(){
 
 <!-- 效果，这个div的id属性是变量refId的值，里面的{{ refId }}也就是初始数字，addRefId方法会立刻更新页面中的{{ refId }}，以及属性上的id属性 -->
  <!-- 并且还会触发当前的组建的刷新，也就是说，如果调用了addId/addBindId，再调用addRefId，刷新页面的时候会使用新的Id和BindId -->
+<!-- 也就是说,ref或者reactive对象才能达到响应的效果,其余的只能做到简单的读取数值 -->
 <div :id="refId">
   refId: {{ refId }}
   <button @click="addRefId">addRefId</button>
