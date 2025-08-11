@@ -95,7 +95,7 @@ countApp.config.errorHandler = (err) => {
 // createApp(Forms).mount('#myApp')
 
 // createApp(Watchers1).mount('#myApp')
-// createApp(Watchers2).mount('#myApp')
+createApp(Watchers2).mount('#myApp')
 // createApp(TemplateRefs).mount('#myApp')
 // createApp(ComponentBasic).mount('#myApp')
 // createApp(DynamicComponent).mount("#myApp")
