@@ -1,11 +1,13 @@
 <script setup>
 import { provide,ref } from 'vue';
-import { myInjection } from './key';
+import { myInjectionKey as myInjectionKey,myCCKey } from './key.js';
 import Injector from './Injector.vue';
 
 let refA = ref('AA')
 let refB = ref('BB')
-provide(myInjection,{refA,refB})
+provide(myInjectionKey,{refA,refB})
+let refC = ref('CC')
+provide(myCCKey,refC)
 </script>
 
 <template>

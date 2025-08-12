@@ -10,17 +10,26 @@ import Watchers2 from './components/guide-essentials/Watchers2.vue'
 import TemplateSyntax from './components/guide-essentials/TemplateSyntax.vue'
 import Computed from './components/guide-essentials/Computed.vue'
 import TemplateRefs from './components/guide-essentials/TemplateRefs.vue'
+import TemplateSyntaxAndRef from './components/guide-essentials/TemplateSyntaxAndRef.vue'
 import ComponentBasic from './components/guide-essentials/ComponentBasic.vue'
 import ClassAndStyle from './components/guide-essentials/ClassAndStyle.vue'
 import Conditional from './components/guide-essentials/Conditional.vue'
 import DynamicComponent from './components/guide-essentials/DynamicComponent.vue'
-import FetchingData from './components/examples/FetchingData.vue'
-import Parent from './components/components/v-model/Parent.vue'
-import Attr from './components/components/attrs/Attr.vue'
-import Provider from './components/components/provide-inject/Provider.vue'
 import ReactivityFundamentals1 from './components/guide-essentials/ReactivityFundamentals1.vue'
 import ReactivityFundamentals2 from './components/guide-essentials/ReactivityFundamentals2.vue'
+
+import FetchingData from './components/examples/FetchingData.vue'
+import Attr from './components/components/attrs/Attr.vue'
+import Registration from './components/components/registration/Registration.vue'
+import Props from './components/components/props/Props.vue'
+import EventBlogPost from './components/components/events/EventBlogPost.vue'
+import VModelParent from './components/components/v-model/VModelParent.vue'
+import Slots from './components/components/slots/Slots.vue'
+import ProviderInject from './components/components/provide-inject/ProviderInject.vue'
+import AsyncComponent from './components/components/async/AysncComponent.vue'
+
 import Composable from './components/reusability/Composable.vue'
+
 import RouterApp from './router/basic/RouterApp.vue'
 // import router from './router/basic/router'
 import DynamicMatchingApp from './router/basic/dynamic-matching/DynamicMatchingApp.vue'
@@ -53,16 +62,18 @@ import { routerViewSlotRouter } from './router/advanced/router-view-slot/RouterV
 import RouterViewSlotApp from './router/advanced/router-view-slot/RouterViewSlotApp.vue'
 import RouterTransitionApp from './router/advanced/router-transitions/RouterTransitionApp.vue'
 import { routerTransitionRouter } from './router/advanced/router-transitions/RouterTransitionRouter'
-import TransitionDemo from './components/built-in/TransitionDemo.vue'
+import TransitionDemo from './components/built-in/transition/TransitionDemo.vue'
 import { scrollBehaviorRouter } from './router/advanced/scroll-behavior/ScrollBehaviorRouter'
 import ScrollBehaviorApp from './router/advanced/scroll-behavior/ScrollBehaviorApp.vue'
 import { lazyLoadingRouter } from './router/advanced/lazy-loading/LazyLoadingRouter'
 import LazyLoadingApp from './router/advanced/lazy-loading/LazyLoadingApp.vue'
 import AppLinkApp from './router/advanced/extending-router-link/AppLinkApp.vue'
 import { appLinkRouter } from './router/advanced/extending-router-link/AppLinkRouter'
-import TemplateSyntaxAndRef from './components/guide-essentials/TemplateSyntaxAndRef.vue'
-import Registration from './components/components/registration/Registration.vue'
-import Props from './components/components/props/Props.vue'
+import TransitionGroupNumList from './components/built-in/transition-group/TransitionGroupNumList.vue'
+import TransitionGroupNameFilter from './components/built-in/transition-group/TransitionGroupNameFilter.vue'
+import PiniaCounter from './pinja/introduction/store/PiniaCounter.vue'
+import { createPinia } from 'pinia'
+
 // createApp(App).mount('#app')
 
 // DOM 中的根组件模板
@@ -104,15 +115,22 @@ countApp.config.errorHandler = (err) => {
 // createApp(Lifecycle).mount('#myApp')
 
 // createApp(Registration).mount('#myApp')
-createApp(Props).mount('#myApp')
+// createApp(Props).mount('#myApp')
+// createApp(EventBlogPost).mount('#myApp')
+// createApp(VModelParent).mount('#myApp')
+
 
 // createApp(FetchingData).mount("#myApp")
-// createApp(Parent).mount("#myApp")
 // createApp(Attr).mount("#myApp")
-// createApp(Provider).mount("#myApp")
+// createApp(Slots).mount("#myApp")
+// createApp(ProviderInject).mount("#myApp")
+// createApp(AsyncComponent).mount("#myApp")
+
 
 // createApp(Composable).mount("#myApp")
 // createApp(TransitionDemo).mount("#myApp")
+// createApp(TransitionGroupNumList).mount("#myApp")
+// createApp(TransitionGroupNameFilter).mount("#myApp")
 
 // createApp(RouterApp).use(router).mount("#myApp")
 // createApp(DynamicMatchingApp).use(dmRouter).mount("#myApp")
@@ -136,3 +154,6 @@ createApp(Props).mount('#myApp')
 // createApp(ScrollBehaviorApp).use(scrollBehaviorRouter).mount('#myApp')
 // createApp(LazyLoadingApp).use(lazyLoadingRouter).mount('#myApp')
 // createApp(AppLinkApp).use(appLinkRouter).mount('#myApp')
+
+
+createApp(PiniaCounter).use(createPinia()).mount('#myApp')
