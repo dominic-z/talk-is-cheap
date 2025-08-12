@@ -28,9 +28,8 @@ public class ClusterAutoConfig {
         return new ClusterService();
     }
 
-
     /**
-     * feign+webflux需要的
+     * 在webflux中使用feign，必须得手动创建一个converter，否则报错
      * @param converters
      * @return
      */

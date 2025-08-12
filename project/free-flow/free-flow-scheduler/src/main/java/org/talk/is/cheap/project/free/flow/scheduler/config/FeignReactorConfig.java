@@ -9,6 +9,10 @@ import org.springframework.http.converter.HttpMessageConverter;
 
 import java.util.stream.Collectors;
 
+
+/**
+ * 在webflux中使用feign，必须得手动创建一个converter，否则报错
+ */
 @Configuration
 public class FeignReactorConfig {
 

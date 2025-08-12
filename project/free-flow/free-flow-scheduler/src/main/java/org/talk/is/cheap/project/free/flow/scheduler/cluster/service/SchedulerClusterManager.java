@@ -13,9 +13,10 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.talk.is.cheap.project.free.flow.common.enums.EnvType;
 import org.talk.is.cheap.project.free.flow.common.utils.IPUtils;
-import org.talk.is.cheap.project.free.flow.scheduler.cluster.domain.enums.NodeStatus;
-import org.talk.is.cheap.project.free.flow.scheduler.cluster.domain.enums.NodeType;
-import org.talk.is.cheap.project.free.flow.scheduler.cluster.domain.pojo.ClusterNodeRegistryLog;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.enums.NodeStatus;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.enums.NodeType;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNodeLog;
+import org.talk.is.cheap.project.free.flow.starter.repository.service.ClusterNodeLogService;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -55,7 +56,7 @@ public class SchedulerClusterManager {
 
 
     @Autowired
-    private ClusterNodeRegistryLogService clusterNodeRegistryLogService;
+    private ClusterNodeLogService clusterNodeLogService;
 
     /**
      * 监听应用启动完成事件，进行注册
@@ -69,8 +70,8 @@ public class SchedulerClusterManager {
 
         election();
 
-        clusterNodeRegistryLogService.create(
-                new ClusterNodeRegistryLog()
+        clusterNodeLogService.create(
+                new ClusterNodeLog()
                         .withNodeId(getSchedulerId())
                         .withNodeType(NodeType.SCHEDULER.getType())
                         .withNodeStatus(NodeStatus.RUNNABLE.getStatus()));
@@ -114,7 +115,6 @@ public class SchedulerClusterManager {
         leaderLatch.start();
 
     }
-
 
 
     public String getSchedulerId() {

@@ -11,9 +11,13 @@ import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.talk.is.cheap.project.free.flow.starter.worker.config.properties.ZKConfigProperties;
 import org.talk.is.cheap.project.free.flow.common.utils.YamlUtils;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -27,9 +31,15 @@ public class CuratorAutoConfig {
     public static final String STARTER_CURATOR_ZK_CLIENT_BEAN_NAME = "starterCuratorZKClient";
     public static final String ZK_CONFIG_PROPERTIES_BEAN_NAME = "zkConfigProperties";
 
+    // 定制一个名字，不要影响实际应用的bean
     @Bean(name = ZK_CONFIG_PROPERTIES_BEAN_NAME)
-    public ZKConfigProperties zkConfigProperties() {
-        return YamlUtils.load(CuratorAutoConfig.class.getClassLoader().getResource(ZK_CONFIG_FILENAME), ZKConfigProperties.class);
+    public ZKConfigProperties zkConfigProperties() throws IOException {
+        PathMatchingResourcePatternResolver patternResolver = new PathMatchingResourcePatternResolver();
+        Resource resource = patternResolver.getResource("classpath:/" + ZK_CONFIG_FILENAME);
+        if (!resource.exists()) {
+            throw new FileNotFoundException(ZK_CONFIG_FILENAME + " not found");
+        }
+        return YamlUtils.load(resource.getURL(), ZKConfigProperties.class);
     }
 
     /**

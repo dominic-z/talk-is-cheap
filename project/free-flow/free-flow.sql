@@ -1,13 +1,14 @@
+-- 一些公共数据库
 drop database if exists free_flow;
 create database if not exists free_flow DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci;
 use free_flow;
 
-drop table if exists cluster_node_dlog;
-create table if not exists cluster_node_registry_log (
+drop table if exists cluster_node_log;
+create table if not exists cluster_node_log (
 `id` bigint AUTO_INCREMENT primary key,
 `node_id` varchar(64) not null comment '节点id',
-`node_type` TINYINT not null default 0 comment '节点类型',
-`node_status` TINYINT not null default 0 comment '节点状态',
+`node_type` int not null default 0 comment '节点类型',
+`node_status` int not null default 0 comment '节点状态',
 `revision` bigint not null default 0 comment '并发控制编号',
 `create_time` datetime not null default now() comment '创建日期',
 `update_time` datetime not null default now() comment '更新日期',
@@ -16,10 +17,10 @@ index idx_node_type_status(node_type,node_status)
 )
 ENGINE = InnoDB default charset = utf8mb4 comment '集群节点登入登出日志';
 -- 创建更新触发器
-DROP TRIGGER IF EXISTS cluster_node_registry_log_update_time;
+DROP TRIGGER IF EXISTS cluster_node_log_update_time;
 DELIMITER $$
-CREATE TRIGGER cluster_node_registry_log_update_time 
-BEFORE UPDATE ON cluster_node_registry_log
+CREATE TRIGGER cluster_node_log_update_time 
+BEFORE UPDATE ON cluster_node_log
 FOR EACH ROW
 BEGIN
     IF NEW.update_time IS NULL OR NEW.update_time = '' THEN
@@ -31,13 +32,13 @@ DELIMITER ;
 
 -- select NOW(); 
 -- SHOW VARIABLES LIKE '%time_zone%';
--- insert into cluster_node_registry_log(node_id) values('192.168.58.128:7070');
--- 
--- SELECT
--- 	*
--- from
--- 	cluster_node_registry_log WHERE id=1;
--- UPDATE cluster_node_registry_log set node_type = 0,update_time='2023-10-01 12:00:00' where id=1;
+-- insert into cluster_node_log(node_id) values('192.168.58.128:7070');
+-- -- 
+SELECT
+	*
+from
+	cluster_node_log WHERE 1=1;
+-- UPDATE cluster_node_log set node_type = 0,update_time='2023-10-01 12:00:00' where id=1;
 
 
 
@@ -107,7 +108,7 @@ create table if not exists stage_definition(
 `task_id` bigint not null comment '任务id',
 `stage_name` varchar(64) not null comment '阶段名称',
 `version` int not null comment '版本' default 0,
-`stage_type` TINYINT not null comment '阶段类型',
+`stage_type` int not null comment '阶段类型',
 `is_starting_stage` bool not null comment '是否是一个task的起始stage',
 `timeout` bigint not null default 0 comment '以秒标识的超时时间',
 `max_retry_count` int not null comment '最大重试次数',
@@ -167,9 +168,9 @@ drop table if exists task_startup;
 create table if not exists task_startup(
 `id` bigint AUTO_INCREMENT primary key,
 `task_id` bigint not null comment '任务id',
-`source_type` TINYINT not null comment '用于描述此次task启动的原因的类型，例如被scheduleTask调度、被某个stage调起等',
+`source_type` int not null comment '用于描述此次task启动的原因的类型，例如被scheduleTask调度、被某个stage调起等',
 `source_id` bigint comment '用于描述此次task启动的原因的id',
-`status` TINYINT not null comment '此次启动的状态',
+`status` int not null comment '此次启动的状态',
 -- `startup_params` varchar(2048) not null comment '启动参数，todo: 移动到es里',
 `revision` bigint not null default 0 comment '并发控制编号',
 `create_time` datetime not null default now() comment '创建日期',
@@ -195,12 +196,12 @@ DELIMITER ;
 
 
 
-drop table if exists task_excution;
-create table if not exists task_excution(
+drop table if exists task_execution;
+create table if not exists task_execution(
 `id` bigint AUTO_INCREMENT primary key,
 `task_startup_id` bigint not null comment '任务启动id',
 `worker_id` varchar(64) not null comment '执行此次任务的workerid',
-`status` tinyint not null comment '此次执行的状态',
+`status` int not null comment '此次执行的状态',
 `start_time` datetime not null default now() comment '任务启动时间',
 `revision` bigint not null default 0 comment '并发控制编号',
 `create_time` datetime not null default now() comment '创建日期',
@@ -209,10 +210,10 @@ index idx_task_startup_id(task_startup_id),
 index idx_worker(worker_id)
 )ENGINE = InnoDB default charset = utf8mb4 comment '任务执行主表';
 -- 创建更新触发器
-DROP TRIGGER IF EXISTS task_excution_update_time;
+DROP TRIGGER IF EXISTS task_execution_update_time;
 DELIMITER $$
-CREATE TRIGGER task_excution_update_time 
-BEFORE UPDATE ON task_excution
+CREATE TRIGGER task_execution_update_time 
+BEFORE UPDATE ON task_execution
 FOR EACH ROW
 BEGIN
     IF NEW.update_time IS NULL OR NEW.update_time = '' THEN
@@ -231,9 +232,9 @@ create table if not exists stage_startup(
 `id` bigint AUTO_INCREMENT primary key,
 `task_startup_id` bigint not null comment '任务启动id',
 `stage_id` bigint not null comment '阶段id',
--- `source_type` tinyint not null comment '用于描述此次stage启动的原因的类型，例如作为初始stage、循环触发、前一个stage完成等等',
+-- `source_type` int not null comment '用于描述此次stage启动的原因的类型，例如作为初始stage、循环触发、前一个stage完成等等',
 -- `source_id` bigint comment '用于描述此次stage启动的原因的id',
-`status` tinyint not null comment '此次启动的状态',
+`status` int not null comment '此次启动的状态',
 -- `startup_params` varchar(2048) not null comment '启动参数，包含入参、上下文缓存的全局对象等，todo: 移动到es里',
 `revision` bigint not null default 0 comment '并发控制编号',
 `create_time` datetime not null default now() comment '创建日期',
@@ -258,7 +259,7 @@ DELIMITER ;
 drop table if exists stage_source_target_startup_relation;
 create table if not exists stage_source_target_startup_relation(
 `id` bigint AUTO_INCREMENT primary key,
-`source_type` tinyint not null comment '用于描述此次stage启动的原因的类型，例如作为初始stage、循环触发、前一个stage完成等等',
+`source_type` int not null comment '用于描述此次stage启动的原因的类型，例如作为初始stage、循环触发、前一个stage完成等等',
 `source_id` bigint comment '用于描述此次stage启动的原因的id',
 `target_stage_startup_id` bigint not null comment 'stage启动的id',
 `revision` bigint not null default 0 comment '并发控制编号',
@@ -283,12 +284,12 @@ DELIMITER ;
 
 
 
-drop table if exists stage_excution;
-create table if not exists stage_excution(
+drop table if exists stage_execution;
+create table if not exists stage_execution(
 `id` bigint AUTO_INCREMENT primary key,
 `stage_startup_id` bigint not null comment '阶段启动id',
 `worker_id` varchar(64) not null comment '执行此次阶段的workerid',
-`status` tinyint not null comment '此次执行的状态',
+`status` int not null comment '此次执行的状态',
 `start_time` datetime not null default now() comment '阶段启动时间',
 `revision` bigint not null default 0 comment '并发控制编号',
 `create_time` datetime not null default now() comment '创建日期',
@@ -297,10 +298,10 @@ index idx_stage_startup_id(stage_startup_id),
 index idx_worker(worker_id)
 )ENGINE = InnoDB default charset = utf8mb4 comment '阶段执行主表';
 -- 创建更新触发器
-DROP TRIGGER IF EXISTS stage_excution_update_time;
+DROP TRIGGER IF EXISTS stage_execution_update_time;
 DELIMITER $$
-CREATE TRIGGER stage_excution_update_time 
-BEFORE UPDATE ON stage_excution
+CREATE TRIGGER stage_execution_update_time 
+BEFORE UPDATE ON stage_execution
 FOR EACH ROW
 BEGIN
     IF NEW.update_time IS NULL OR NEW.update_time = '' THEN
@@ -317,8 +318,8 @@ DELIMITER ;
 
 -- 
 -- -- todo: 转移到其他存储中去，例如es
--- drop table if exists stage_excution_biz_log;
--- create table if not exists stage_excution_biz_log(
+-- drop table if exists stage_execution_biz_log;
+-- create table if not exists stage_execution_biz_log(
 -- `id` bigint AUTO_INCREMENT primary key,
 -- `stage_execution_id` bigint not null comment '阶段执行id',
 -- `log_content` text comment '日志内容',
