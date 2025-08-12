@@ -71,6 +71,8 @@ import AppLinkApp from './router/advanced/extending-router-link/AppLinkApp.vue'
 import { appLinkRouter } from './router/advanced/extending-router-link/AppLinkRouter'
 import TransitionGroupNumList from './components/built-in/transition-group/TransitionGroupNumList.vue'
 import TransitionGroupNameFilter from './components/built-in/transition-group/TransitionGroupNameFilter.vue'
+import PiniaCounter from './pinja/introduction/store/PiniaCounter.vue'
+import { createPinia } from 'pinia'
 
 // createApp(App).mount('#app')
 
@@ -127,7 +129,7 @@ countApp.config.errorHandler = (err) => {
 
 // createApp(Composable).mount("#myApp")
 // createApp(TransitionDemo).mount("#myApp")
-createApp(TransitionGroupNumList).mount("#myApp")
+// createApp(TransitionGroupNumList).mount("#myApp")
 // createApp(TransitionGroupNameFilter).mount("#myApp")
 
 // createApp(RouterApp).use(router).mount("#myApp")
@@ -152,3 +154,6 @@ createApp(TransitionGroupNumList).mount("#myApp")
 // createApp(ScrollBehaviorApp).use(scrollBehaviorRouter).mount('#myApp')
 // createApp(LazyLoadingApp).use(lazyLoadingRouter).mount('#myApp')
 // createApp(AppLinkApp).use(appLinkRouter).mount('#myApp')
+
+
+createApp(PiniaCounter).use(createPinia()).mount('#myApp')

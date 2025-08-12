@@ -153,6 +153,17 @@ export default {
 
 `<Transition :duration="550">...</Transition>`的意思就是整体过渡的事件是550ms，因为过渡结束后需要将组件移除，或者生成，这个时间用于显式告诉组件这个过渡事件多长，从而实现在所有组件过渡完成后安全地卸载或者生成。可以直接看教程中的例子，如果将`:duration="550"`删除，那么生成动画会有问题，（但是移除郭晨该不会，我觉得一个可能的原因是，"默认情况下，`<Transition>` 组件会通过监听过渡根元素上的**第一个** `transitionend` 或者 `animationend` 事件来尝试自动判断过渡何时结束。"，可以开F12看element，移除过程中，外部的div等待内部的div卸载后才完成动画，而生成过程中，内外两个div是同时启动生产的。）
 
+```shell
+cnpm install gsap
+```
+
+# pinja
+
+## 安装
+```shell
+cnpm install pinia
+```
+
 # vue-router4
 
 ## 安装
