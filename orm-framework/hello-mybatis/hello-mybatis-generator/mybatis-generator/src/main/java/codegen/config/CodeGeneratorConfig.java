@@ -95,6 +95,11 @@ public class CodeGeneratorConfig {
         private List<ColumnConfig> columns;
     }
 
+    @Data
+    public static class Freemarker{
+        private Map<String,String> service;
+        private Map<String,String> dao;
+    }
     private CodeGeneratorConfig() {
     }
 
@@ -108,6 +113,8 @@ public class CodeGeneratorConfig {
 
     private Map<String, TableConfig> tableConfigMap;
     private String basePackage;
+
+    private Freemarker freemarker;
 
 
     public static void setConfigPath(String path) {

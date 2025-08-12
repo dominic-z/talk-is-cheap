@@ -36,8 +36,38 @@ datasource:
 # 表名、列名都需要以下划线格式
 tables:
   - id: 1
-    name: cluster_node_registry_log
-
+    name: cluster_node_log
+  - id: 2
+    name: task_definition
+  - id: 3
+    name: schedule_task_definition
+  - id: 4
+    name: stage_definition
+  - id: 5
+    name: task_graph_definition
+  - id: 6
+    name: task_startup
+  - id: 7
+    name: task_execution
+  - id: 8
+    name: stage_startup
+  - id: 9
+    name: stage_source_target_startup_relation
+  - id: 10
+    name: stage_execution
+  - id: 11
+    name: seq_generator
+#  - id: 12
+#    name: scheduler_log
   ## code-package
-basePackage: org.talk.is.cheap.project.free.flow.scheduler.cluster
+basePackage: org.talk.is.cheap.project.free.flow.starter.repository
+
+# 以下可选，设置freemarker自定义的一些变量
+freemarker:
+  service:
+#    自定义service中transactionManager的beanname
+    transactionManager: repositoryStarterTransactionManager
+  dao:
+    #    自定义dao中sqlSessionTemplate的beanname
+    sqlSessionTemplate: repositoryStarterSqlSessionTemplate
 

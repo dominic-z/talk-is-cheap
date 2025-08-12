@@ -3,7 +3,9 @@ package ${customizedDaoPackage};
 import ${modelPackage}.${domainUpperCamelName};
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
@@ -27,12 +29,13 @@ import java.util.Map;
 * @author ${author}
 * @date ${date}
 */
-@Component
+@Repository
 public class ${daoUpperCamelName} {
 
     private static final String TABLE = "${customizedDaoPackage}.${daoUpperCamelName}";
 
     @Autowired
+    <#if sqlSessionTemplate??>@Qualifier("${sqlSessionTemplate}")</#if>
     private SqlSessionTemplate sqlSessionTemplate;
 
 }

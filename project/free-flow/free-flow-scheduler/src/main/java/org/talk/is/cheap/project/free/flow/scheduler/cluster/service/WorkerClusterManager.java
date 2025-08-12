@@ -5,7 +5,11 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.cache.*;
+import org.apache.curator.framework.recipes.cache.ChildData;
+import org.apache.curator.framework.recipes.cache.CuratorCache;
+import org.apache.curator.framework.recipes.cache.CuratorCacheListener;
+import org.apache.curator.framework.recipes.cache.TreeCacheEvent;
+import org.apache.curator.framework.recipes.cache.TreeCacheListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
@@ -13,10 +17,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.client.WorkerClusterClient;
-import org.talk.is.cheap.project.free.flow.scheduler.cluster.domain.enums.NodeStatus;
-import org.talk.is.cheap.project.free.flow.scheduler.cluster.domain.enums.NodeType;
-import org.talk.is.cheap.project.free.flow.scheduler.cluster.domain.pojo.ClusterNodeRegistryLog;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.RunnableWorkerAddEvent;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.enums.NodeStatus;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.enums.NodeType;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNodeLog;
+import org.talk.is.cheap.project.free.flow.starter.repository.service.ClusterNodeLogService;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -57,7 +62,7 @@ public class WorkerClusterManager {
     private String zkTerminatingWorkerPath;
 
     @Autowired
-    private ClusterNodeRegistryLogService clusterNodeRegistryLogService;
+    private ClusterNodeLogService clusterNodeLogService;
 
     @Autowired
     private WorkerClusterClient workerClusterClient;
@@ -136,7 +141,11 @@ public class WorkerClusterManager {
 
             runnableWorkerModified = true;
 
-            clusterNodeRegistryLogService.create(new ClusterNodeRegistryLog().withNodeId(workerId).withNodeType(NodeType.WORKER.getType()).withNodeStatus(NodeStatus.RUNNABLE.getStatus()));
+            clusterNodeLogService.create(
+                    new ClusterNodeLog()
+                            .withNodeId(workerId)
+                            .withNodeType(NodeType.WORKER.getType())
+                            .withNodeStatus(NodeStatus.RUNNABLE.getStatus()));
 
             // 发布新增worker事件，用于触发读取worker中定义的task定义
             publisher.publishEvent(new RunnableWorkerAddEvent(workerId));
@@ -147,7 +156,11 @@ public class WorkerClusterManager {
             terminatingWorkerPathId.put(zkPath, workerId);
             missingTerminatingWorkerPathId.remove(zkPath);
 
-            clusterNodeRegistryLogService.create(new ClusterNodeRegistryLog().withNodeId(workerId).withNodeType(NodeType.WORKER.getType()).withNodeStatus(NodeStatus.TERMINATING.getStatus()));
+            clusterNodeLogService.create(
+                    new ClusterNodeLog()
+                            .withNodeId(workerId)
+                            .withNodeType(NodeType.WORKER.getType())
+                            .withNodeStatus(NodeStatus.TERMINATING.getStatus()));
 
         }
     }
@@ -171,7 +184,11 @@ public class WorkerClusterManager {
                 missingRunnableWorkerPathId.remove(zkPath);
             }
             runnableWorkerModified = true;
-            clusterNodeRegistryLogService.create(new ClusterNodeRegistryLog().withNodeId(workerId).withNodeType(NodeType.WORKER.getType()).withNodeStatus(NodeStatus.QUIT_RUNNABLE.getStatus()));
+            clusterNodeLogService.create(
+                    new ClusterNodeLog()
+                            .withNodeId(workerId)
+                            .withNodeType(NodeType.WORKER.getType())
+                            .withNodeStatus(NodeStatus.QUIT_RUNNABLE.getStatus()));
         } else if (StringUtils.equals(parentPath, zkTerminatingWorkerPath)) {
             // 如果是terminating下的节点
             log.info("remove terminating worker, path: {}, workerId: {}", zkPath, workerId);
@@ -179,7 +196,12 @@ public class WorkerClusterManager {
                 terminatingWorkerPathId.remove(zkPath);
                 missingTerminatingWorkerPathId.remove(zkPath);
             }
-            clusterNodeRegistryLogService.create(new ClusterNodeRegistryLog().withNodeId(workerId).withNodeType(NodeType.WORKER.getType()).withNodeStatus(NodeStatus.TERMINATED.getStatus()));
+
+            clusterNodeLogService.create(
+                    new ClusterNodeLog()
+                            .withNodeId(workerId)
+                            .withNodeType(NodeType.WORKER.getType())
+                            .withNodeStatus(NodeStatus.TERMINATED.getStatus()));
         }
 
     }

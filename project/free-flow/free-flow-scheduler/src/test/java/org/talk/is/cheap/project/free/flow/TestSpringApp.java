@@ -7,10 +7,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.talk.is.cheap.project.free.flow.scheduler.App;
-import org.talk.is.cheap.project.free.flow.scheduler.cluster.dao.customized.ClusterNodeRegistryLogDao;
-import org.talk.is.cheap.project.free.flow.scheduler.cluster.dao.mbg.ClusterNodeRegistryLogMapper;
-import org.talk.is.cheap.project.free.flow.scheduler.cluster.domain.pojo.ClusterNodeRegistryLog;
-import org.talk.is.cheap.project.free.flow.scheduler.cluster.domain.query.example.ClusterNodeRegistryLogExample;
+import org.talk.is.cheap.project.free.flow.scheduler.repository.dao.mbg.SchedulerLogMapper;
+import org.talk.is.cheap.project.free.flow.scheduler.repository.domain.query.example.SchedulerLogExample;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNodeLog;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.query.example.ClusterNodeLogExample;
+import org.talk.is.cheap.project.free.flow.starter.repository.service.ClusterNodeLogService;
 
 import javax.sql.DataSource;
 import java.util.List;
@@ -26,12 +27,12 @@ public class TestSpringApp {
     @Autowired
     DataSource dataSource;
 
+    @Autowired
+    private ClusterNodeLogService clusterNodeLogService;
 
     @Autowired
-    ClusterNodeRegistryLogMapper clusterNodeRegistryLogMapper;
+    private SchedulerLogMapper schedulerLogMapper;
 
-    @Autowired
-    ClusterNodeRegistryLogDao clusterNodeRegistryLogDao;
 
     @Test
     public void curd() throws Exception {
@@ -44,11 +45,24 @@ public class TestSpringApp {
         log.info("{}",dataSource);
 
 
-//        clusterNodeRegistryLogMapper.insertSelective(new ClusterNodeRegistryLog().withNodeId("1").withNodeStatus(2).withNodeType(2));
-        List<ClusterNodeRegistryLog> clusterNodeRegistryLogs =
-                clusterNodeRegistryLogMapper.selectByExample(new ClusterNodeRegistryLogExample());
-        log.info("{}",clusterNodeRegistryLogs);
+        try {
+            clusterNodeLogService.testTx();
+        }catch (Exception e){
+            log.error("error",e);
+        }
+
+        ClusterNodeLogExample query = new ClusterNodeLogExample();
+        query.createCriteria().andIdGreaterThan(0L);
+        List<ClusterNodeLog> clusterNodeLogs = clusterNodeLogService.selectByExample(query);
+        log.info("{}",clusterNodeLogs);
 //        log.info("{}",clusterNodeRegistryLogDao.s());
+
+
+        SchedulerLogExample schedulerLogExample = new SchedulerLogExample();
+        schedulerLogExample.createCriteria().andIdEqualTo(1L);
+        log.info("{}",schedulerLogMapper.selectByExample(schedulerLogExample));
     }
+
+
 
 }

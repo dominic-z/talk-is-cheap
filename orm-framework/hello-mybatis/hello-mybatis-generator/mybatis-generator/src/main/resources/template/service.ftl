@@ -31,7 +31,7 @@ public class ${serviceUpperCamelName}{
 
     // 基于${mapperUpperCamelName}
 
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class <#if transactionManager??>,transactionManager = "${transactionManager}"</#if>)
     public int create(${domainUpperCamelName} record) {
         if (record == null) {
             return 0;
@@ -39,7 +39,7 @@ public class ${serviceUpperCamelName}{
         return ${mapperLowerCamelName}.insertSelective(record);
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class<#if transactionManager??>,transactionManager = "${transactionManager}"</#if>)
     public int createBatch(Collection<${domainUpperCamelName}> records) {
         if (records == null || records.isEmpty()) {
             return 0;
@@ -47,7 +47,7 @@ public class ${serviceUpperCamelName}{
         return ${mapperLowerCamelName}.insertBatch(records);
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class<#if transactionManager??>,transactionManager = "${transactionManager}"</#if>)
     public int deleteByExample(${exampleUpperCamelName} example) {
         if (example == null) {
             return 0;
@@ -55,7 +55,7 @@ public class ${serviceUpperCamelName}{
         return ${mapperLowerCamelName}.deleteByExample(example);
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class<#if transactionManager??>,transactionManager = "${transactionManager}"</#if>)
     public int updateByExampleSelective(${domainUpperCamelName} record, ${exampleUpperCamelName} example) {
         if (record == null || example == null) {
             return 0;

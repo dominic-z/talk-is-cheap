@@ -56,6 +56,17 @@ public class FreemarkerUtil {
 
         data.put("modelPackage", config.getModelPackage());
         data.put("mgbExamplePackage", config.getMbgExamplePackage());
+
+        CodeGeneratorConfig.Freemarker freemarkerConfig = config.getFreemarker();
+        if(freemarkerConfig!=null){
+            if(freemarkerConfig.getService()!=null &&!freemarkerConfig.getService().isEmpty()){
+                data.putAll(freemarkerConfig.getService());
+            }
+            if(freemarkerConfig.getDao()!=null && !freemarkerConfig.getDao().isEmpty()){
+                data.putAll(freemarkerConfig.getDao());
+            }
+        }
+
         return data;
     }
 
