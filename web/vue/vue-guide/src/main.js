@@ -62,13 +62,15 @@ import { routerViewSlotRouter } from './router/advanced/router-view-slot/RouterV
 import RouterViewSlotApp from './router/advanced/router-view-slot/RouterViewSlotApp.vue'
 import RouterTransitionApp from './router/advanced/router-transitions/RouterTransitionApp.vue'
 import { routerTransitionRouter } from './router/advanced/router-transitions/RouterTransitionRouter'
-import TransitionDemo from './components/built-in/TransitionDemo.vue'
+import TransitionDemo from './components/built-in/transition/TransitionDemo.vue'
 import { scrollBehaviorRouter } from './router/advanced/scroll-behavior/ScrollBehaviorRouter'
 import ScrollBehaviorApp from './router/advanced/scroll-behavior/ScrollBehaviorApp.vue'
 import { lazyLoadingRouter } from './router/advanced/lazy-loading/LazyLoadingRouter'
 import LazyLoadingApp from './router/advanced/lazy-loading/LazyLoadingApp.vue'
 import AppLinkApp from './router/advanced/extending-router-link/AppLinkApp.vue'
 import { appLinkRouter } from './router/advanced/extending-router-link/AppLinkRouter'
+import TransitionGroupNumList from './components/built-in/transition-group/TransitionGroupNumList.vue'
+import TransitionGroupNameFilter from './components/built-in/transition-group/TransitionGroupNameFilter.vue'
 
 // createApp(App).mount('#app')
 
@@ -123,8 +125,10 @@ countApp.config.errorHandler = (err) => {
 // createApp(AsyncComponent).mount("#myApp")
 
 
-createApp(Composable).mount("#myApp")
+// createApp(Composable).mount("#myApp")
 // createApp(TransitionDemo).mount("#myApp")
+createApp(TransitionGroupNumList).mount("#myApp")
+// createApp(TransitionGroupNameFilter).mount("#myApp")
 
 // createApp(RouterApp).use(router).mount("#myApp")
 // createApp(DynamicMatchingApp).use(dmRouter).mount("#myApp")
