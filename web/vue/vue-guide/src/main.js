@@ -10,17 +10,26 @@ import Watchers2 from './components/guide-essentials/Watchers2.vue'
 import TemplateSyntax from './components/guide-essentials/TemplateSyntax.vue'
 import Computed from './components/guide-essentials/Computed.vue'
 import TemplateRefs from './components/guide-essentials/TemplateRefs.vue'
+import TemplateSyntaxAndRef from './components/guide-essentials/TemplateSyntaxAndRef.vue'
 import ComponentBasic from './components/guide-essentials/ComponentBasic.vue'
 import ClassAndStyle from './components/guide-essentials/ClassAndStyle.vue'
 import Conditional from './components/guide-essentials/Conditional.vue'
 import DynamicComponent from './components/guide-essentials/DynamicComponent.vue'
-import FetchingData from './components/examples/FetchingData.vue'
-import Parent from './components/components/v-model/Parent.vue'
-import Attr from './components/components/attrs/Attr.vue'
-import Provider from './components/components/provide-inject/Provider.vue'
 import ReactivityFundamentals1 from './components/guide-essentials/ReactivityFundamentals1.vue'
 import ReactivityFundamentals2 from './components/guide-essentials/ReactivityFundamentals2.vue'
+
+import FetchingData from './components/examples/FetchingData.vue'
+import Attr from './components/components/attrs/Attr.vue'
+import Registration from './components/components/registration/Registration.vue'
+import Props from './components/components/props/Props.vue'
+import EventBlogPost from './components/components/events/EventBlogPost.vue'
+import VModelParent from './components/components/v-model/VModelParent.vue'
+import Slots from './components/components/slots/Slots.vue'
+import ProviderInject from './components/components/provide-inject/ProviderInject.vue'
+import AsyncComponent from './components/components/async/AysncComponent.vue'
+
 import Composable from './components/reusability/Composable.vue'
+
 import RouterApp from './router/basic/RouterApp.vue'
 // import router from './router/basic/router'
 import DynamicMatchingApp from './router/basic/dynamic-matching/DynamicMatchingApp.vue'
@@ -60,9 +69,7 @@ import { lazyLoadingRouter } from './router/advanced/lazy-loading/LazyLoadingRou
 import LazyLoadingApp from './router/advanced/lazy-loading/LazyLoadingApp.vue'
 import AppLinkApp from './router/advanced/extending-router-link/AppLinkApp.vue'
 import { appLinkRouter } from './router/advanced/extending-router-link/AppLinkRouter'
-import TemplateSyntaxAndRef from './components/guide-essentials/TemplateSyntaxAndRef.vue'
-import Registration from './components/components/registration/Registration.vue'
-import Props from './components/components/props/Props.vue'
+
 // createApp(App).mount('#app')
 
 // DOM 中的根组件模板
@@ -104,14 +111,19 @@ countApp.config.errorHandler = (err) => {
 // createApp(Lifecycle).mount('#myApp')
 
 // createApp(Registration).mount('#myApp')
-createApp(Props).mount('#myApp')
+// createApp(Props).mount('#myApp')
+// createApp(EventBlogPost).mount('#myApp')
+// createApp(VModelParent).mount('#myApp')
+
 
 // createApp(FetchingData).mount("#myApp")
-// createApp(Parent).mount("#myApp")
 // createApp(Attr).mount("#myApp")
-// createApp(Provider).mount("#myApp")
+// createApp(Slots).mount("#myApp")
+// createApp(ProviderInject).mount("#myApp")
+// createApp(AsyncComponent).mount("#myApp")
 
-// createApp(Composable).mount("#myApp")
+
+createApp(Composable).mount("#myApp")
 // createApp(TransitionDemo).mount("#myApp")
 
 // createApp(RouterApp).use(router).mount("#myApp")
