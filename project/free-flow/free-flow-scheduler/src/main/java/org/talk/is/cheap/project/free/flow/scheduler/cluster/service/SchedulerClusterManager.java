@@ -12,7 +12,7 @@ import org.springframework.boot.context.event.ApplicationStartedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.talk.is.cheap.project.free.flow.common.enums.EnvType;
-import org.talk.is.cheap.project.free.flow.common.utils.IPUtils;
+import org.talk.is.cheap.project.free.flow.common.utils.IPUtil;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.enums.NodeStatus;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.enums.NodeType;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNodeLog;
@@ -118,7 +118,7 @@ public class SchedulerClusterManager {
 
 
     public String getSchedulerId() {
-        return (EnvType.CONTAINER == EnvType.getByName(env) ? getContainerName() : IPUtils.getMainIP()) + ":" + port;
+        return (EnvType.CONTAINER == EnvType.getByName(env) ? getContainerName() : IPUtil.getMainIP()) + ":" + port;
     }
 
     /**

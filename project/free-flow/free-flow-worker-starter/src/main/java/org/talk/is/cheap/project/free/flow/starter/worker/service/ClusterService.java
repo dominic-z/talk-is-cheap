@@ -9,7 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.talk.is.cheap.project.free.flow.common.enums.EnvType;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
-import org.talk.is.cheap.project.free.flow.common.utils.IPUtils;
+import org.talk.is.cheap.project.free.flow.common.utils.IPUtil;
 import org.talk.is.cheap.project.free.flow.starter.worker.client.SchedulerClusterClient;
 import org.talk.is.cheap.project.free.flow.starter.worker.config.properties.ZKConfigProperties;
 import org.talk.is.cheap.project.free.flow.starter.worker.domain.enums.WorkerStatus;
@@ -113,7 +113,7 @@ public class ClusterService {
     }
 
     public String getWorkerId() {
-        String workerId = EnvType.getByName(envType) == EnvType.CONTAINER ? System.getenv("CONTAINER_NAME") : IPUtils.getMainIP();
+        String workerId = EnvType.getByName(envType) == EnvType.CONTAINER ? System.getenv("CONTAINER_NAME") : IPUtil.getMainIP();
         workerId += ":" + port;
         return workerId;
     }

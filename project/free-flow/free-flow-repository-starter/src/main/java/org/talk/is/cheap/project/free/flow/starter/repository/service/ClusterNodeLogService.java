@@ -2,8 +2,6 @@ package org.talk.is.cheap.project.free.flow.starter.repository.service;
 
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.ClusterNodeLogMapper;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.customized.ClusterNodeLogDao;
-import org.talk.is.cheap.project.free.flow.starter.repository.domain.enums.NodeStatus;
-import org.talk.is.cheap.project.free.flow.starter.repository.domain.enums.NodeType;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNodeLog;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.query.example.ClusterNodeLogExample;
 
@@ -20,7 +18,7 @@ import java.util.Date;
 /**
 * 定制化的service层，用于弥补mbg生成的mapper过于灵活导致可能出现的业务漏洞，例如越过deleted字段查询、更新updateTime等
 * @author dominiczhu
-* @date 2025/08/12
+* @date 2025/08/13
 */
 @Service
 public class ClusterNodeLogService{
@@ -32,15 +30,7 @@ public class ClusterNodeLogService{
     private ClusterNodeLogMapper clusterNodeLogMapper;
 
     // 基于ClusterNodeLogMapper
-    @Transactional(rollbackFor = Exception.class ,transactionManager = "repositoryStarterTransactionManager")
-    public void testTx() {
-        ClusterNodeLog clusterNodeLog = new ClusterNodeLog();
-        clusterNodeLog.setNodeId("10.1.1.1");
-        clusterNodeLog.setNodeStatus(NodeStatus.QUIT_RUNNABLE.getStatus());
-        clusterNodeLog.setNodeType(NodeType.SCHEDULER.getType());
-        clusterNodeLogMapper.insertSelective(clusterNodeLog);
-        int i=1/0;
-    }
+
     @Transactional(rollbackFor = Exception.class ,transactionManager = "repositoryStarterTransactionManager")
     public int create(ClusterNodeLog record) {
         if (record == null) {

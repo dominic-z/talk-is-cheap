@@ -1,6 +1,6 @@
 package org.talk.is.cheap.config;
 
-
+import co.elastic.clients.elasticsearch._types.OpType;
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.*;
@@ -180,7 +180,9 @@ public class ESTest {
         HotelDoc hotelDoc = hotelDocs.get(0);
         log.info("hotel: {}", hotelDoc);
         IndexRequest<HotelDoc> req =
-                new IndexRequest.Builder<HotelDoc>().index("hotel").id(hotelDoc.getId().toString()).document(hotelDoc).build();
+                new IndexRequest.Builder<HotelDoc>().index("hotel").id(hotelDoc.getId().toString())
+                .opType(OpType.Create) // 只有在这个id不存在时执行新增，如果不指定optype，那么如果这个id存在，则会执行update操作
+                .document(hotelDoc).build();
         IndexResponse resp = esClient.index(req);
         log.info("resp: {}", resp);
 //        随后可以去kibana去查
