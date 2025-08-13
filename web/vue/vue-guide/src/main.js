@@ -76,6 +76,7 @@ import { createPinia } from 'pinia'
 import DefineStore from './pinja/core-concept/DefineStore.vue'
 import StateStore from './pinja/core-concept/state/StateStore.vue'
 import GetterStore from './pinja/core-concept/getter/GetterStore.vue'
+import ActionStore from './pinja/core-concept/action/ActionStore.vue'
 
 // createApp(App).mount('#app')
 
@@ -165,4 +166,5 @@ countApp.config.errorHandler = (err) => {
 // createApp(PiniaCounter).use(createPinia()).mount('#myApp')
 // createApp(DefineStore).use(createPinia()).mount('#myApp')
 // createApp(StateStore).use(createPinia()).mount('#myApp')
-createApp(GetterStore).use(createPinia()).mount('#myApp')
+// createApp(GetterStore).use(createPinia()).mount('#myApp')
+createApp(ActionStore).use(createPinia()).mount('#myApp')
