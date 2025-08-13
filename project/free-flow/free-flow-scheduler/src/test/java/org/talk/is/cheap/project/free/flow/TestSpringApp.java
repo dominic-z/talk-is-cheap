@@ -52,7 +52,7 @@ public class TestSpringApp {
 
 
         try {
-            clusterNodeLogService.testTx();
+//            clusterNodeLogService.testTx();
         } catch (Exception e) {
             log.error("error", e);
         }
@@ -76,6 +76,7 @@ public class TestSpringApp {
 
     /**
      * 测试序列生成器的并发安全性
+     * allow mutlti instance模拟多个机器，然后把step调整的小一点，加大并发冲突
      */
     @Test
     public void testConcurrentGenerator() {
