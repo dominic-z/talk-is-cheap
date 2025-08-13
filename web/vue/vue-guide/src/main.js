@@ -73,6 +73,9 @@ import TransitionGroupNumList from './components/built-in/transition-group/Trans
 import TransitionGroupNameFilter from './components/built-in/transition-group/TransitionGroupNameFilter.vue'
 import PiniaCounter from './pinja/introduction/store/PiniaCounter.vue'
 import { createPinia } from 'pinia'
+import DefineStore from './pinja/core-concept/DefineStore.vue'
+import StateStore from './pinja/core-concept/state/StateStore.vue'
+import GetterStore from './pinja/core-concept/getter/GetterStore.vue'
 
 // createApp(App).mount('#app')
 
@@ -132,6 +135,8 @@ countApp.config.errorHandler = (err) => {
 // createApp(TransitionGroupNumList).mount("#myApp")
 // createApp(TransitionGroupNameFilter).mount("#myApp")
 
+
+// router
 // createApp(RouterApp).use(router).mount("#myApp")
 // createApp(DynamicMatchingApp).use(dmRouter).mount("#myApp")
 // createApp(RouteMatchingSyntaxApp).use(routeMatchingRouter).mount("#myApp")
@@ -156,4 +161,8 @@ countApp.config.errorHandler = (err) => {
 // createApp(AppLinkApp).use(appLinkRouter).mount('#myApp')
 
 
-createApp(PiniaCounter).use(createPinia()).mount('#myApp')
+// pinia
+// createApp(PiniaCounter).use(createPinia()).mount('#myApp')
+// createApp(DefineStore).use(createPinia()).mount('#myApp')
+// createApp(StateStore).use(createPinia()).mount('#myApp')
+createApp(GetterStore).use(createPinia()).mount('#myApp')
