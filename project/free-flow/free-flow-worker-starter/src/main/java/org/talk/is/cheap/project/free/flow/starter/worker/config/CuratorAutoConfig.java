@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.talk.is.cheap.project.free.flow.starter.worker.config.properties.ZKConfigProperties;
-import org.talk.is.cheap.project.free.flow.common.utils.YamlUtils;
+import org.talk.is.cheap.project.free.flow.common.utils.YamlUtil;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -39,7 +39,7 @@ public class CuratorAutoConfig {
         if (!resource.exists()) {
             throw new FileNotFoundException(ZK_CONFIG_FILENAME + " not found");
         }
-        return YamlUtils.load(resource.getURL(), ZKConfigProperties.class);
+        return YamlUtil.load(resource.getURL(), ZKConfigProperties.class);
     }
 
     /**

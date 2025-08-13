@@ -172,6 +172,7 @@ create table if not exists task_startup(
 `source_id` bigint comment '用于描述此次task启动的原因的id',
 `status` int not null comment '此次启动的状态',
 -- `startup_params` varchar(2048) not null comment '启动参数，todo: 移动到es里',
+`startup_param_es_id` varchar(128) comment '启动参数，存储于es中，考虑到es的id不一定为数字，因此设定为字符串类型',
 `revision` bigint not null default 0 comment '并发控制编号',
 `create_time` datetime not null default now() comment '创建日期',
 `update_time` datetime not null default now() comment '更新日期',
@@ -236,6 +237,7 @@ create table if not exists stage_startup(
 -- `source_id` bigint comment '用于描述此次stage启动的原因的id',
 `status` int not null comment '此次启动的状态',
 -- `startup_params` varchar(2048) not null comment '启动参数，包含入参、上下文缓存的全局对象等，todo: 移动到es里',
+`startup_param_es_id` varchar(128) comment '启动参数，存储于es中，考虑到es的id不一定为数字，因此设定为字符串类型',
 `revision` bigint not null default 0 comment '并发控制编号',
 `create_time` datetime not null default now() comment '创建日期',
 `update_time` datetime not null default now() comment '更新日期', 
@@ -336,10 +338,15 @@ create table if not exists seq_generator(
 `revision` bigint not null default 0 comment '并发控制编号',
 `create_time` datetime not null default now() comment '创建日期',
 `update_time` datetime not null default now() comment '更新日期',
-index idx_seq_name(seq_name)
-)ENGINE = InnoDB default charset = utf8mb4 comment '阶段执行主表';
+unique index idx_seq_name(seq_name)
+)ENGINE = InnoDB default charset = utf8mb4 comment '序列表';
 
+INSERT into seq_generator(seq_name,`next`) values ('task_startup_param','1');
+INSERT into seq_generator(seq_name,`next`) values ('stage_startup_param','1');
+INSERT into seq_generator(seq_name,`next`) values ('stage_execution_biz_log','1');
+SELECT * from seq_generator sg ;
 
+UPDATE seq_generator set next=100001 where seq_name ='task_startup_param';
 
 
 

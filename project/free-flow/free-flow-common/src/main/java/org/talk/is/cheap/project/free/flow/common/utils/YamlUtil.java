@@ -14,9 +14,9 @@ import java.io.InputStream;
 import java.net.URL;
 
 @Slf4j
-public class YamlUtils {
+public class YamlUtil {
 
-    private YamlUtils() {
+    private YamlUtil() {
     }
 
     public static <T> T load(URL file, Class<T> tClass) {

@@ -3,7 +3,7 @@ package org.talk.is.cheap.project.free.flow.common.utils;
 import java.net.*;
 import java.util.Enumeration;
 
-public class IPUtils {
+public class IPUtil {
 
 
     /**

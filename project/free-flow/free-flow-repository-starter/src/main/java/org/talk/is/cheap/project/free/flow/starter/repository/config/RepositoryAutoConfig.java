@@ -1,30 +1,21 @@
 package org.talk.is.cheap.project.free.flow.starter.repository.config;
 
 
-import com.alibaba.druid.pool.DruidDataSource;
 import com.alibaba.druid.pool.DruidDataSourceFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.mybatis.spring.SqlSessionFactoryBean;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.mybatis.spring.annotation.MapperScan;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
-import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.jdbc.support.JdbcTransactionManager;
-import org.springframework.stereotype.Repository;
-import org.talk.is.cheap.project.free.flow.common.utils.YamlUtils;
+import org.talk.is.cheap.project.free.flow.common.utils.PropertiesUtil;
 
 import javax.sql.DataSource;
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.Properties;
 
 
 /**
@@ -42,7 +33,6 @@ import java.util.Properties;
         "org.talk.is.cheap.project.free.flow.starter.repository.dao.customized"})
 public class RepositoryAutoConfig {
 
-    private static final String DATASOURCE_PROPERTIES_FILE_NAME = "datasource.properties";
     private static final String DATASOURCE_BEAN_NAME = "repositoryStarterDataSource";
     public static final String SQL_SESSION_TEMPLATE_BEAN_NAME = "repositoryStarterSqlSessionTemplate";
     public static final String TRANSACTION_MANAGER_BEAN_NAME = "repositoryStarterTransactionManager";
@@ -51,20 +41,8 @@ public class RepositoryAutoConfig {
 
     @Bean(name=DATASOURCE_BEAN_NAME)
     public DataSource druidDataSource() throws Exception {
-        Properties properties = new Properties();
-        PathMatchingResourcePatternResolver patternResolver = new PathMatchingResourcePatternResolver();
-        Resource resource = patternResolver.getResource("classpath:/" + DATASOURCE_PROPERTIES_FILE_NAME);
-        if(!resource.exists()){
-            throw new RuntimeException("resource is null");
-        }
-        try (InputStream inputStream = resource.getInputStream()) {
-                        // 加载输入流到Properties对象
-            properties.load(inputStream);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
 
-        DataSource dataSource = DruidDataSourceFactory.createDataSource(properties);
+        DataSource dataSource = DruidDataSourceFactory.createDataSource(PropertiesUtil.readFromFile("classpath:/datasource.properties"));
         return dataSource;
     }
 
