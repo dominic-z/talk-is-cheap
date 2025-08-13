@@ -1,5 +1,6 @@
 package org.talk.is.cheap.project.free.flow.starter.repository.service.derived;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.talk.is.cheap.project.free.flow.common.A;
@@ -18,12 +19,13 @@ import java.util.concurrent.locks.ReentrantLock;
  * 序列生成器
  */
 @Service
+@Slf4j
 public class SeqGeneratorUtil {
 
     @Autowired
     private SeqGeneratorService seqGeneratorService;
 
-    private static final int step = 10;
+    private static final int step = 5;
 
     private final Map<String, AtomicLong> seqNextOne = new HashMap<>();
     private final Map<String, AtomicLong> seqBoundary = new HashMap<>();
@@ -45,6 +47,7 @@ public class SeqGeneratorUtil {
                 if (nextAtomic.compareAndSet(next, next + 1)) {
                     return next + 1;
                 }
+                log.info("自增并发失败");
             } else {
                 acquire(name);
             }
@@ -85,6 +88,7 @@ public class SeqGeneratorUtil {
             }
 
             while (true) {
+                // todo: 目前是乐观锁并发控制，可以考虑支持悲观锁模式
                 SeqGeneratorExample query = new SeqGeneratorExample();
                 query.createCriteria().andSeqNameEqualTo(name);
                 List<SeqGenerator> seqGenerators = seqGeneratorService.selectByExample(query);
@@ -111,6 +115,7 @@ public class SeqGeneratorUtil {
                     boundaryAtomic.set(boundary.longValue());
                     return;
                 }
+                log.info("修改数据库并发失败，重试");
             }
         }
 
