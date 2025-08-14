@@ -29,6 +29,8 @@ import ProviderInject from './components/components/provide-inject/ProviderInjec
 import AsyncComponent from './components/components/async/AysncComponent.vue'
 
 import Composable from './components/reusability/Composable.vue'
+import TransitionGroupNumList from './components/built-in/transition-group/TransitionGroupNumList.vue'
+import TransitionGroupNameFilter from './components/built-in/transition-group/TransitionGroupNameFilter.vue'
 
 import RouterApp from './router/basic/RouterApp.vue'
 // import router from './router/basic/router'
@@ -38,6 +40,8 @@ import RouteMatchingSyntaxApp from './router/basic/route-matching-syntax/RouteMa
 import { routeMatchingRouter } from './router/basic/route-matching-syntax/RouteMatchingRouter'
 import NestedRoutesApp from './router/basic/nested-routes/NestedRoutesApp.vue'
 import { nestedRouter } from './router/basic/nested-routes/NestedRouter'
+import NamedRouterApp from './router/basic/named-routes/NamedRouterApp.vue'
+import { namedRouter } from './router/basic/named-routes/NamedRouter'
 import NavigationApp from './router/basic/navigation/NavigationApp.vue'
 import { navigationRouter } from './router/basic/navigation/NavigationRouter'
 import router from './router/basic/router'
@@ -69,14 +73,15 @@ import { lazyLoadingRouter } from './router/advanced/lazy-loading/LazyLoadingRou
 import LazyLoadingApp from './router/advanced/lazy-loading/LazyLoadingApp.vue'
 import AppLinkApp from './router/advanced/extending-router-link/AppLinkApp.vue'
 import { appLinkRouter } from './router/advanced/extending-router-link/AppLinkRouter'
-import TransitionGroupNumList from './components/built-in/transition-group/TransitionGroupNumList.vue'
-import TransitionGroupNameFilter from './components/built-in/transition-group/TransitionGroupNameFilter.vue'
+
+
 import PiniaCounter from './pinja/introduction/store/PiniaCounter.vue'
 import { createPinia } from 'pinia'
 import DefineStore from './pinja/core-concept/DefineStore.vue'
 import StateStore from './pinja/core-concept/state/StateStore.vue'
 import GetterStore from './pinja/core-concept/getter/GetterStore.vue'
 import ActionStore from './pinja/core-concept/action/ActionStore.vue'
+
 
 // createApp(App).mount('#app')
 
@@ -141,13 +146,14 @@ countApp.config.errorHandler = (err) => {
 // createApp(RouterApp).use(router).mount("#myApp")
 // createApp(DynamicMatchingApp).use(dmRouter).mount("#myApp")
 // createApp(RouteMatchingSyntaxApp).use(routeMatchingRouter).mount("#myApp")
-createApp(NestedRoutesApp).use(nestedRouter).mount("#myApp")
+// createApp(NestedRoutesApp).use(nestedRouter).mount("#myApp")
+// createApp(NamedRouterApp).use(namedRouter).mount("#myApp")
 // createApp(NavigationApp).use(navigationRouter).mount("#myApp")
 // createApp(NamedViewApp).use(namedViewRouter).mount("#myApp")
 // createApp(RedirectAliasApp).use(RedirectAliasRouter).mount("#myApp")
 // createApp(PassingPropsApp).use(passingPropsRouter).mount("#myApp")
 // createApp(ActiveLinkApp).use(activeLinkRouter).mount("#myApp")
-// createApp(HistoryModeApp).use(historyModeRouter).mount("#myApp")
+createApp(HistoryModeApp).use(historyModeRouter).mount("#myApp")
 
 // const app = createApp(NavigationGuardsApp)
 // app.provide('global', 'hello injections')
