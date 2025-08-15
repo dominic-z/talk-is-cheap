@@ -1,4 +1,10 @@
+# 参考
+https://cn.vuejs.org/guide/introduction
+https://router.vuejs.org/zh/guide/
+https://pinia.vuejs.org/zh/introduction.html
+
 # 安装说明
+
 
 ```shell
 

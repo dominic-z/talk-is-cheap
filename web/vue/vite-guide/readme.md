@@ -1,5 +1,6 @@
 # 说明
 vite官方文档的使用说明
+https://vitejs.cn/vite3-cn/guide/
 
 ```shell
 npm create vite@latest  --registry=https://registry.npmmirror.com
