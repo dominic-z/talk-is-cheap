@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { VueFlow, Panel } from '@vue-flow/core'
+import { VueFlow, Panel, useVueFlow } from '@vue-flow/core'
 
 const inputValue = ref("")
 
@@ -25,6 +25,26 @@ function addNode() {
 function updateNode() {
     nodes.value[0].data.label = `Node ${inputValue.value}`;
 }
+// useVueFlow
+
+const { addNodes } = useVueFlow()
+function generateRandomNode() {
+  return {
+    id: Math.random().toString(),
+    position: { x: Math.random() * 500, y: Math.random() * 500 },
+    label: 'Random Node',
+  }
+}
+
+function onAddNode() {
+    // add a single node to the graph
+    addNodes(generateRandomNode())
+}
+
+function onAddNodes() {
+    // add multiple nodes to the graph
+    addNodes(Array.from({ length: 10 }, generateRandomNode))
+}
 </script>
 
 <template>
@@ -35,7 +55,8 @@ function updateNode() {
     <VueFlow :nodes="nodes">
         <Panel>
             <button type="button" @click="addNode">Add a node</button>
-
+            <button type="button" @click="onAddNode">Add a node</button>
+            <button type="button" @click="onAddNodes">Add multiple nodes</button>
         </Panel>
     </VueFlow>
 </template>
