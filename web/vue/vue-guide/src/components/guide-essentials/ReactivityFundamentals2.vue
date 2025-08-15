@@ -3,8 +3,16 @@ import { nextTick, reactive, ref } from 'vue'
 
 const obj = ref({
     nested: { count: 0 },
-    arr: ['foo', 'bar']
+    arr: ['foo', 'bar'],
+    forReplace: { app: 'origin'}
 })
+
+
+const objs = ref([{
+    id: 1,
+    forReplace: { app: 'origin1'}
+}])
+
 
 
 async function mutateDeeply() {
@@ -13,6 +21,26 @@ async function mutateDeeply() {
     // await nextTick()执行完成之后，相当于本次事件循环完成了，就是说这次调用之前的变更都完成了。
     await nextTick()
     obj.value.arr.push('baz')
+
+    // 测试直接替换
+    obj.value.forReplace = {app:'new'}
+
+    // 测试列表过滤后直接替换
+    // Vue中filters过滤器无效的原因会失效 https://blog.csdn.net/weixin_41568816/article/details/119344074
+    // const os1 = objs.value.filter(o=>{
+    //     console.log(o.id);
+    //     return o.id===1;
+    // })
+    // console.log(os1)
+    // os1.forReplace = { app: 'origin2'}
+
+    // 需要手写for循环
+    for(let o of objs.value){
+        console.log(o)
+        if(o.id == 1){
+            o.forReplace = { app: 'origin2'}
+        }
+    }
 }
 
 const state = reactive({ countReactive: 0 })
@@ -39,8 +67,10 @@ log(refC)
 
     <div>{{ obj.nested }}</div>
     <div>{{ obj.arr }}</div>
+    <div>{{ obj.forReplace }}</div>
+    <div>{{ objs }}</div>
     <button @click="mutateDeeply">
-        check
+        mutateDeeply
     </button>
 
     <button @click="state.countReactive++">

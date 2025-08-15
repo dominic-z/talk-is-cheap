@@ -11,6 +11,7 @@ import RemoveNodeApp from '@/components/node/RemoveNodeApp.vue'
 import UpdateNodeUseVueFlowApp from '@/components/node/update-node/UpdateNodeUseVueFlowApp.vue'
 import SimpleGraph from '@/components/getting-started/SimpleGraph.vue'
 import UpdateNodeUseNodeApp from '@/components/node/update-node/UpdateNodeUseNodeApp.vue'
+import UpdateNodeVModelApp from '@/components/node/update-node/UpdateNodeVModelApp.vue'
 
 // createApp(App).mount('#app')
 
@@ -22,4 +23,5 @@ import UpdateNodeUseNodeApp from '@/components/node/update-node/UpdateNodeUseNod
 // createApp(AddNodeApp).mount('#app')
 // createApp(RemoveNodeApp).mount('#app')
 // createApp(UpdateNodeUseVueFlowApp).mount('#app')
-createApp(UpdateNodeUseNodeApp).mount('#app')
+// createApp(UpdateNodeUseNodeApp).mount('#app')
+createApp(UpdateNodeVModelApp).mount('#app')
