@@ -30,7 +30,7 @@ onConnect((params) => {
 </script>
 
 <template>
-  <div style="height: 100vh">
+  <div :style="{height: '100vh',width: '100vw'}">
     <VueFlow
       v-model:nodes="nodes"
       v-model:edges="edges"

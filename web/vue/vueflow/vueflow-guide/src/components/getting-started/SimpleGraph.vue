@@ -13,7 +13,7 @@ const nodes = ref([
     {
         id: '2',
         position: { x: 50, y: 200 },
-        data: { label: 'Node 2' },
+        data: { label: 'myNode 2' },
     },
     {
         id: '3',

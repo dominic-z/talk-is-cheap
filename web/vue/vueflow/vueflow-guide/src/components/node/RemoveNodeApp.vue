@@ -32,6 +32,7 @@ function removeMultipleNodes() {
 </script>
 
 <template>
+  <div :style="{height: '500px',width:'1000px'}">
   <VueFlow :nodes="nodes">
     <Panel >
       <button type="button" @click="removeNode('1')">Remove Node 1</button>
@@ -42,6 +43,7 @@ function removeMultipleNodes() {
       <button type="button" @click="removeMultipleNodes">removeNodes Remove Node 1 and 2</button>
     </Panel>
   </VueFlow>
+  </div>
 </template>
 
 <style lang="css" scoped>
