@@ -28,3 +28,7 @@ const y = computed(() => `${Math.round(props.position.y)}px`)
     <Handle type="source" :position="Position.Bottom" />
   </div>
 </template>
+
+<style lang="css" scoped>
+
+</style>
