@@ -1,3 +1,4 @@
+<!-- 如何增加节点 -->
 <script setup>
 import { ref, onMounted } from 'vue'
 import { VueFlow, Panel, useVueFlow } from '@vue-flow/core'
@@ -60,11 +61,3 @@ function onAddNodes() {
         </Panel>
     </VueFlow>
 </template>
-
-<style lang="css" scoped>
-/* import the necessary styles for Vue Flow to work */
-@import '@vue-flow/core/dist/style.css';
-
-/* import the default theme, this is optional but generally recommended */
-@import '@vue-flow/core/dist/theme-default.css';
-</style>

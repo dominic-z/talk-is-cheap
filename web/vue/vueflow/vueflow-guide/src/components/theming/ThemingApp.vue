@@ -1,3 +1,4 @@
+<!-- 展示如何修改节点的样式 -->
 <script setup>
 import { VueFlow } from '@vue-flow/core';
 import { ref } from 'vue';
@@ -8,7 +9,7 @@ const nodes = ref([
         id: '1',
         position: { x: 200, y: 100 },
         data: { label: 'Node 1' },
-        class: 'vue-flow__node-custom'
+        class: 'vue-flow__node-my-custom'
     },
     {
         id: '2',
@@ -50,18 +51,12 @@ const edges = ref([
 </template>
 
 
+<!--  我发现加上scoped就会失效，应该是vue改造了style中的class，并且vueflow无法识别改造后的style中的class -->
 <style>
-/* import the necessary styles for Vue Flow to work */
-@import '@vue-flow/core/dist/style.css';
 
-/* import the default theme, this is optional but generally recommended */
-@import '@vue-flow/core/dist/theme-default.css';
-
-
-/* 定制化一个node */
 /* Use a purple theme for our custom node */
-.vue-flow__node-custom {
-    background: purple;
+.vue-flow__node-my-custom {
+    background: darkorange;
     color: white;
     border: 1px solid purple;
     border-radius: 4px;
@@ -69,12 +64,12 @@ const edges = ref([
     padding: 8px;
 }
 
-/* 一些默认的样式 */
+/* 修改了全局的默认的样式, */
 /* Global default CSS variable values */
-:root {
-    --vf-node-bg: #b0c24a;
+/* :root {
+    --vf-node-bg: skyblue;
     --vf-node-text: #222;
     --vf-connection-path: #9e9ead;
     --vf-handle: #555;
-}
+} */
 </style>

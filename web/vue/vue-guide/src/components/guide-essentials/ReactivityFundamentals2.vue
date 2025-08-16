@@ -27,20 +27,19 @@ async function mutateDeeply() {
 
     // 测试列表过滤后直接替换
     // Vue中filters过滤器无效的原因会失效 https://blog.csdn.net/weixin_41568816/article/details/119344074
-    // const os1 = objs.value.filter(o=>{
-    //     console.log(o.id);
-    //     return o.id===1;
-    // })
-    // console.log(os1)
-    // os1.forReplace = { app: 'origin2'}
+    // const os1 = objs.value.filter(o=>o.id===1)
+    // 但是find是可行的
+    const os1 = objs.value.find(o=>o.id===1)
+    console.log(os1)
+    os1.forReplace = { app: 'origin2'}
 
-    // 需要手写for循环
-    for(let o of objs.value){
-        console.log(o)
-        if(o.id == 1){
-            o.forReplace = { app: 'origin2'}
-        }
-    }
+    // 手写for循环也是可以的
+    // for(let o of objs.value){
+    //     console.log(o)
+    //     if(o.id == 1){
+    //         o.forReplace = { app: 'origin2'}
+    //     }
+    // }
 }
 
 const state = reactive({ countReactive: 0 })
