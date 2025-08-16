@@ -1,5 +1,6 @@
 <script setup>
-import { ref, nextTick } from 'vue'
+// 简单的通过响应式来修改图，因为vueflow可能对vue的响应式有点不太兼容，个人不推荐
+import { ref } from 'vue'
 import { VueFlow, Panel } from '@vue-flow/core'
 
 const nodes = ref([
@@ -13,39 +14,30 @@ const nodes = ref([
   },
 ])
 
-async function onSomeEvent(nodeId) {
-  // filter的响应会失效，需要写成传统的for循环
-  // const node = nodes.value.find((node) => node.id === nodeId)
+function onSomeEvent(nodeId) {
+  const node = nodes.value.find((node) => node.id === nodeId)
 
-  // node.data = {
-  //   // ...nodes.value[0].data,
-  //   hello: 'world',
-  //   label: 'hello'
-  // }
+  // this won't work
+  node.data = {
+    hello: 'world',
+    label: 'new'
+  }
+  // but this will work
+  // node.data.label="new"
 
   // // you can also mutate properties like `selectable` or `draggable`
   // node.selectable = false
   // node.draggable = false
 
-  // 需要这么写
-  for (let node of nodes.value) {
-    if (node.id === nodeId) {
-      // node.data = {
-      //   hello: 'world',
-      //   label: 'hello11'
-      // }
-      node.data.label = 'ass'
-      // node.selectable = false
-      // node.draggable = false
-      console.log(node)
-
-    }
-  }
 }
 </script>
 
 <template>
-  <div :style="{ height: '100vh', width: '100vw' }">
+  <div>
+    {{ nodes }}
+  </div>
+
+  <div :style="{ height: '400px', width: '400px' }">
     <VueFlow :nodes="nodes">
       <Panel>
         <button type="button" @click="onSomeEvent('1')">Update Node 1</button>

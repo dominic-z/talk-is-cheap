@@ -12,6 +12,7 @@ const props = defineProps({
     required: true,
   }
 })
+console.log(props)
 
 const x = computed(() => `${Math.round(props.position.x)}px`)
 const y = computed(() => `${Math.round(props.position.y)}px`)
@@ -28,7 +29,3 @@ const y = computed(() => `${Math.round(props.position.y)}px`)
     <Handle type="source" :position="Position.Bottom" />
   </div>
 </template>
-
-<style lang="css" scoped>
-
-</style>

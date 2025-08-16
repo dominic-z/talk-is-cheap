@@ -1,6 +1,6 @@
 <script setup>
 
-// 通过useVueFlow来修改节点
+// 通过useVueFlow来修改图，从而次改节点，useXX是vue中会产生副作用的函数，useVueFlow就是获取这个图，并对节点进行一些处理
 import { VueFlow, Panel, useVueFlow } from '@vue-flow/core'
 import { ref } from 'vue'
 
@@ -49,11 +49,3 @@ function updateNode() {
     </VueFlow>
   </div>
 </template>
-
-<style lang="css" scoped>
-/* import the necessary styles for Vue Flow to work */
-@import '@vue-flow/core/dist/style.css';
-
-/* import the default theme, this is optional but generally recommended */
-@import '@vue-flow/core/dist/theme-default.css';
-</style>

@@ -1,6 +1,6 @@
 <!-- 来自于https://vueflow.dev/guide/getting-started.html的play online -->
  <!-- 作了点小修改，比如参照项目的index.css引入了css ，还要安装几个vue-flow的包，建readme-->
-
+<!-- 一个入门小flow，初步展示vue-flow的功能 -->
 
 <script setup>
 import { h, ref } from 'vue'
@@ -56,14 +56,7 @@ onConnect((params) => {
     </VueFlow>
   </div>
 </template>
-<style lang="css" >
-/* import the necessary styles for Vue Flow to work */
-@import '@vue-flow/core/dist/style.css';
-
-/* import the default theme, this is optional but generally recommended */
-@import '@vue-flow/core/dist/theme-default.css';
-@import '@vue-flow/controls/dist/style.css';
-@import '@vue-flow/minimap/dist/style.css';
+<style>
 
 
 

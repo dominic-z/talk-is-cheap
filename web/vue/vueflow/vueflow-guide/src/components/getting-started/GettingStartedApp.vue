@@ -1,3 +1,4 @@
+<!-- 一个入门小flow，初步展示vue-flow的功能 -->
 <!-- 按照https://vueflow.dev/guide/getting-started.html章节提供的代码实现的，但需要在这个代码基础上做些修改 -->
 <!-- 1：需要给vueflow新增一个容器并设定一个长度和宽度 -->
 <!-- 2：specialNode里面漏了一个prop -->
@@ -101,11 +102,3 @@ const edges = ref([
   </VueFlow>
   </div>
 </template>
-
-<style>
-/* import the necessary styles for Vue Flow to work */
-@import '@vue-flow/core/dist/style.css';
-
-/* import the default theme, this is optional but generally recommended */
-@import '@vue-flow/core/dist/theme-default.css';
-</style>
