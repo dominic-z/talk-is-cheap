@@ -14,11 +14,12 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Date;
+import java.lang.IllegalArgumentException;
 
 /**
 * 定制化的service层，用于弥补mbg生成的mapper过于灵活导致可能出现的业务漏洞，例如越过deleted字段查询、更新updateTime等
 * @author dominiczhu
-* @date 2024/01/18
+* @date 2025/08/16
 */
 @Service
 public class RoleService{
@@ -31,7 +32,7 @@ public class RoleService{
 
     // 基于RoleMapper
 
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class )
     public int create(Role record) {
         if (record == null) {
             return 0;
@@ -60,7 +61,7 @@ public class RoleService{
         if (record == null || example == null) {
             return 0;
         }
-//        record.setUpdateTime(new Date());
+        // record.setUpdateTime(new Date()); // 通过数据库触发器实现
         return roleMapper.updateByExampleSelective(record, example);
     }
 
@@ -79,9 +80,17 @@ public class RoleService{
         return roleMapper.selectByExample(example);
     }
 
-    // 基于roleDao
-    public List<Role> selectById(List<Integer> ids) {
-
-        return roleDao.selectByIds(ids);
+    // 深度分页的service接口
+    public List<Role> selectByExampleDeepPaging(RoleExample example) {
+        if (example == null) {
+            return new ArrayList<>();
+        }
+        if (example.getLimit() == null || example.getOffset() == null){
+            throw new IllegalArgumentException("limit or offset can't be null");
+        }
+        return roleMapper.selectByExampleDeepPagingByIdSubQuery(example);
     }
+
+    // 基于roleDao
+
 }

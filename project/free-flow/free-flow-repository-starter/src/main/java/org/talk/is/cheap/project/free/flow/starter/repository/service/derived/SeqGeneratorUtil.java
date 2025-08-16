@@ -47,7 +47,7 @@ public class SeqGeneratorUtil {
                 if (nextAtomic.compareAndSet(next, next + 1)) {
                     return next + 1;
                 }
-                log.info("自增并发失败");
+//                log.info("自增并发失败");
             } else {
                 acquire(name);
             }
@@ -70,6 +70,10 @@ public class SeqGeneratorUtil {
     }
 
 
+    /**
+     * 更新boundary
+     * @param name
+     */
     private void acquire(String name) {
 
         synchronized (getLock(name)) {
@@ -111,11 +115,10 @@ public class SeqGeneratorUtil {
 
                 int updated = seqGeneratorService.updateByExampleSelective(seqGenerator, updateExample);
                 if (updated != 0) {
-                    nextAtomic.set(next.longValue());
                     boundaryAtomic.set(boundary.longValue());
                     return;
                 }
-                log.info("修改数据库并发失败，重试");
+//                log.info("修改数据库并发失败，重试");
             }
         }
 

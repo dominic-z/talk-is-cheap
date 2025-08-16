@@ -1,16 +1,21 @@
 package codegen.generator.mbg.plugin.bussinesssql;
 
 import lombok.extern.slf4j.Slf4j;
+import org.mybatis.generator.api.CompositePlugin;
 import org.mybatis.generator.api.IntrospectedColumn;
 import org.mybatis.generator.api.IntrospectedTable;
+import org.mybatis.generator.api.Plugin;
 import org.mybatis.generator.api.PluginAdapter;
 import org.mybatis.generator.api.dom.java.FullyQualifiedJavaType;
 import org.mybatis.generator.api.dom.java.TopLevelClass;
+import org.mybatis.generator.config.Context;
 
+import java.lang.reflect.Field;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Set;
 
 /**
  * 收集mbg运行时的信息，用于传递给外层使用
@@ -24,15 +29,50 @@ import java.util.Objects;
 @Slf4j
 public class MbgRunningDataCollectorPlugin extends PluginAdapter {
 
-    private static final Map<String, FullyQualifiedJavaType> tablePrimaryKeyMap = new HashMap<>();
+    private static final Map<String, FullyQualifiedJavaType> TALBEL_PRIMARY_KEY_MAP = new HashMap<>();
+    private static final Set<Class<?>> PLUGIN_CLASSES = new HashSet<>();
 
     public static FullyQualifiedJavaType getByTableName(String tableName) {
-        return tablePrimaryKeyMap.get(tableName);
+        return TALBEL_PRIMARY_KEY_MAP.get(tableName);
+    }
+
+    public static boolean containsPlugin(Class<?> pluginClass){
+        return PLUGIN_CLASSES.contains(pluginClass);
     }
 
     @Override
     public boolean validate(List<String> warnings) {
         return true;
+    }
+
+    @Override
+    public void initialized(IntrospectedTable introspectedTable) {
+
+        // 来自豆包的胡诌八扯改的
+        try {
+            // 1. 获取当前上下文的Generator实例（通过反射，因为Generator未直接暴露）
+            Context context = introspectedTable.getContext();
+            CompositePlugin pluginAggregator = (CompositePlugin) context.getPlugins();
+
+            // 3. 获取所有已加载的插件
+            Field pluginsField = CompositePlugin.class.getDeclaredField("plugins");
+            pluginsField.setAccessible(true);
+
+
+            List<Plugin> allPlugins = (List<Plugin>) pluginsField.get(pluginAggregator);
+
+            // 4. 打印插件信息（可根据需求处理）
+            System.out.println("当前运行中的MyBatis Generator插件列表：");
+            for (Plugin plugin : allPlugins) {
+                log.debug("plugin class {}", plugin.getClass());
+                PLUGIN_CLASSES.add(plugin.getClass());
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        super.initialized(introspectedTable);
     }
 
     /**
@@ -47,7 +87,7 @@ public class MbgRunningDataCollectorPlugin extends PluginAdapter {
     public boolean modelPrimaryKeyClassGenerated(TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
         // table configuration字段指的是写在xml里的配置
         log.info("{} has a PrimaryKeyClass", introspectedTable.getFullyQualifiedTableNameAtRuntime());
-        tablePrimaryKeyMap.put(introspectedTable.getFullyQualifiedTableNameAtRuntime(), topLevelClass.getType());
+        TALBEL_PRIMARY_KEY_MAP.put(introspectedTable.getFullyQualifiedTableNameAtRuntime(), topLevelClass.getType());
 
 
         System.out.println(introspectedTable.getTableConfiguration().getTableName());
@@ -66,9 +106,9 @@ public class MbgRunningDataCollectorPlugin extends PluginAdapter {
     @Override
     public boolean modelBaseRecordClassGenerated(TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {
         String tableName = introspectedTable.getFullyQualifiedTableNameAtRuntime();
-        if (!tablePrimaryKeyMap.containsKey(tableName) && introspectedTable.getPrimaryKeyColumns().size() == 1) {
+        if (!TALBEL_PRIMARY_KEY_MAP.containsKey(tableName) && introspectedTable.getPrimaryKeyColumns().size() == 1) {
             final IntrospectedColumn primaryKeyCol = introspectedTable.getPrimaryKeyColumns().get(0);
-            tablePrimaryKeyMap.put(tableName, primaryKeyCol.getFullyQualifiedJavaType());
+            TALBEL_PRIMARY_KEY_MAP.put(tableName, primaryKeyCol.getFullyQualifiedJavaType());
         }
 
         return super.modelBaseRecordClassGenerated(topLevelClass, introspectedTable);

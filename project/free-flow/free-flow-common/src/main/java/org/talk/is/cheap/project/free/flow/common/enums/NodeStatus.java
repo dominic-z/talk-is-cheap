@@ -1,7 +1,12 @@
-package org.talk.is.cheap.project.free.flow.starter.repository.domain.enums;
+package org.talk.is.cheap.project.free.flow.common.enums;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.util.HashMap;
+import java.util.Map;
+
+@AllArgsConstructor
 public enum NodeStatus {
 
     // 流转RUNNABLE->QUIT_RUNNABLE->TERMINATING->TERMINATED
@@ -15,17 +20,15 @@ public enum NodeStatus {
     @Getter
     private final String desc;
 
-    NodeStatus(Integer status, String desc) {
-        this.status = status;
-        this.desc = desc;
+
+    private final static Map<Integer,NodeStatus> STATUS_MAP = new HashMap<>();
+    static {
+        for (NodeStatus nodeStatus : NodeStatus.values()) {
+            STATUS_MAP.put(nodeStatus.getStatus(),nodeStatus);
+        }
     }
 
     public static NodeStatus getByStatus(Integer status) {
-        for (NodeStatus e : NodeStatus.values()) {
-            if (e.status.equals(status)) {
-                return e;
-            }
-        }
-        return null;
+        return STATUS_MAP.get(status);
     }
 }

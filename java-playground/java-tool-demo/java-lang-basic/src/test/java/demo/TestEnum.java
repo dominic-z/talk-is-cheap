@@ -12,7 +12,9 @@ import org.junit.Test;
 public class TestEnum {
     @Test
     public void testValueOf(){
-        EA ea1=EA.valueOf("EA1");
-        System.out.println(ea1);
+//        EA ea1=EA.valueOf("EA1");
+//        System.out.println(ea1);
+
+        System.out.println(EA.getByName("ea1"));
     }
 }

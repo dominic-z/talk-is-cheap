@@ -2,6 +2,7 @@ package codegen.generator.impl;
 
 import codegen.config.CodeGeneratorConfig;
 import codegen.generator.CodeGenerator;
+import codegen.generator.mbg.plugin.MysqlDeepPagingBySubQueryPlugin;
 import codegen.generator.mbg.plugin.bussinesssql.MbgRunningDataCollectorPlugin;
 import codegen.model.TableInfo;
 import codegen.util.FreemarkerUtil;
@@ -37,6 +38,10 @@ public class ServiceGenerator implements CodeGenerator {
             final String primaryKeyFullyQualifiedName = primaryType.getFullyQualifiedName();
             data.put("primaryKeyFullyQualifiedName", primaryKeyFullyQualifiedName);
         }
+        if(MbgRunningDataCollectorPlugin.containsPlugin(MysqlDeepPagingBySubQueryPlugin.class)){
+            data.put("deepPaging", true);
+        }
+
         data.put("primaryKeyShortName", primaryType.getShortName());
 
 

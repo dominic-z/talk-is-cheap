@@ -42,7 +42,7 @@ public class InsertBatchSqlPlugin extends PluginAdapter {
 
         sqlMapInsertBatch(document, introspectedTable);
 
-        return true;
+        return super.sqlMapDocumentGenerated(document,introspectedTable);
     }
 
     @Override

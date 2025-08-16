@@ -30,16 +30,23 @@ public class TaskStartupParamService {
     @Autowired
     private SeqGeneratorUtil seqGeneratorUtil;
 
+    /**
+     *
+     * @param taskStartupParam
+     * @return id
+     * @throws IOException id重复报错
+     */
     public String create(TaskStartupParam taskStartupParam) throws IOException {
         IndexRequest<TaskStartupParam> req =
                 new IndexRequest.Builder<TaskStartupParam>()
                         .opType(OpType.Create)
-                        .index(INDEX_NAME).id(Long.toString(seqGeneratorUtil.getNextId(SEQ_NAME)))
+                        .index(INDEX_NAME)
+                        .id(Long.toString(seqGeneratorUtil.getNextId(SEQ_NAME)))
                         .document(taskStartupParam)
                         .build();
 
         IndexResponse resp = esClient.index(req);
-        log.info("resp:{}, result {}",resp, resp.result());
+//        log.info("resp:{}, result {}", resp, resp.result());
         return resp.id();
     }
 }
