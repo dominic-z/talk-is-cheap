@@ -105,7 +105,7 @@ countApp.config.errorHandler = (err) => {
 // // 全局属性
 // templateSyntaxApp.config.globalProperties.globalMsg = 'hello'
 
-// createApp(ReactivityFundamentals2).mount('#myApp')
+createApp(ReactivityFundamentals2).mount('#myApp')
 // createApp(TemplateSyntaxAndRef).mount('#myApp')
 // createApp(Computed).mount('#myApp')
 
@@ -153,7 +153,7 @@ countApp.config.errorHandler = (err) => {
 // createApp(RedirectAliasApp).use(RedirectAliasRouter).mount("#myApp")
 // createApp(PassingPropsApp).use(passingPropsRouter).mount("#myApp")
 // createApp(ActiveLinkApp).use(activeLinkRouter).mount("#myApp")
-createApp(HistoryModeApp).use(historyModeRouter).mount("#myApp")
+// createApp(HistoryModeApp).use(historyModeRouter).mount("#myApp")
 
 // const app = createApp(NavigationGuardsApp)
 // app.provide('global', 'hello injections')
