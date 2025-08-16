@@ -13,8 +13,8 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.talk.is.cheap.project.free.flow.common.enums.EnvType;
 import org.talk.is.cheap.project.free.flow.common.utils.IPUtil;
-import org.talk.is.cheap.project.free.flow.starter.repository.domain.enums.NodeStatus;
-import org.talk.is.cheap.project.free.flow.starter.repository.domain.enums.NodeType;
+import org.talk.is.cheap.project.free.flow.common.enums.NodeStatus;
+import org.talk.is.cheap.project.free.flow.common.enums.NodeType;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNodeLog;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.ClusterNodeLogService;
 

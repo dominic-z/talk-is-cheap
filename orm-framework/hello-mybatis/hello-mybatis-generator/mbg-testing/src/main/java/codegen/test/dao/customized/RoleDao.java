@@ -3,7 +3,9 @@ package codegen.test.dao.customized;
 import codegen.test.domain.pojo.Role;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
@@ -25,21 +27,15 @@ import java.util.Map;
 *  }
 *
 * @author dominiczhu
-* @date 2024/01/18
+* @date 2025/08/14
 */
-@Component
+@Repository
 public class RoleDao {
 
     private static final String TABLE = "codegen.test.dao.customized.RoleDao";
 
     @Autowired
+    
     private SqlSessionTemplate sqlSessionTemplate;
-
-
-    public List<Role> selectByIds(List<Integer> ids){
-        Map<String,Object> params = new HashMap<>();
-        params.put("ids",ids);
-        return sqlSessionTemplate.selectList(TABLE+".select_by_ids",params);
-    }
 
 }

@@ -44,7 +44,7 @@ public class RemoveByDeletedSqlPlugin extends PluginAdapter {
 
         sqlMapRemoveByPrimaryKeys(document, introspectedTable);
 
-        return true;
+        return super.sqlMapDocumentGenerated(document, introspectedTable);
     }
 
     @Override

@@ -9,6 +9,7 @@
         <plugin type="org.mybatis.generator.plugins.EqualsHashCodePlugin"/>
         <plugin type="org.mybatis.generator.plugins.RowBoundsPlugin"/>
         <plugin type="codegen.generator.mbg.plugin.MysqlLimitPlugin"/>
+        <plugin type="codegen.generator.mbg.plugin.MysqlDeepPagingBySubQueryPlugin"/>
         <plugin type="codegen.generator.mbg.plugin.CommentPlugin"/>
         <plugin type="codegen.generator.mbg.plugin.AddColumnNameToModelPlugin"/>
         <plugin type="codegen.generator.mbg.plugin.AddEnumToModelPlugin"/>

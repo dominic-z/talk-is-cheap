@@ -1,5 +1,6 @@
 package codegen.test;
 
+import codegen.test.dao.mbg.RoleMapper;
 import codegen.test.domain.pojo.Menu;
 import codegen.test.domain.query.example.MenuExample;
 import codegen.test.domain.query.example.RoleExample;
@@ -13,6 +14,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import java.util.Arrays;
+import java.util.List;
 
 @SpringBootApplication
 @Slf4j
@@ -24,6 +26,9 @@ public class Application implements CommandLineRunner {
 
     @Autowired
     RoleService roleService;
+
+    @Autowired
+    RoleMapper roleMapper;
     @Autowired
     MenuService menuService;
 
@@ -31,18 +36,23 @@ public class Application implements CommandLineRunner {
     public void run(String... args) throws Exception {
         RoleExample roleExample = new RoleExample();
 
-        roleExample.createCriteria().andIdEqualTo(10);
-        log.info("{}", roleService.selectByExample(roleExample));
-        log.info("{}", roleService.selectById(Arrays.asList(10, 11)));
+//        roleExample.createCriteria().andIdEqualTo(10);
+//        log.info("{}", roleService.selectByExample(roleExample));
+//        log.info("{}", roleService.selectById(Arrays.asList(10, 11)));
 
 
-        val menuExample = new MenuExample();
-        val menus = menuService.selectByExample(menuExample);
-        log.info("{}", menus);
+//        val menuExample = new MenuExample();
+//        val menus = menuService.selectByExample(menuExample);
+//        log.info("{}", menus);
+//
+//        for (Menu menu : menus) {
+//            val pid = Menu.PidEnum.getByValue(menu.getPid());
+//            log.info("pidEnum: {}, value: {}, pidDescription: {}", pid, pid.getValue(), pid.getDescription());
+//        }
 
-        for (Menu menu : menus) {
-            val pid = Menu.PidEnum.getByValue(menu.getPid());
-            log.info("pidEnum: {}, value: {}, pidDescription: {}", pid, pid.getValue(), pid.getDescription());
-        }
+        roleExample.createCriteria().andNameIn(List.of("管理员","运维"));
+        roleExample.setLimit(3);
+        roleExample.setOffset(0);
+        log.info("selectByExampleDeepPagingByIdSubQuery: {}",roleService.selectByExampleDeepPaging(roleExample));
     }
 }

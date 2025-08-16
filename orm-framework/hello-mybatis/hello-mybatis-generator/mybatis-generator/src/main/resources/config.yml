@@ -6,7 +6,7 @@ datasource:
   password: root
 
 ## gen table
-# 表名、列名都需要以下划线格式
+## 表名、列名都需要以下划线格式
 #tables:
 #  - id: 1
 #    name: menu
@@ -30,10 +30,16 @@ datasource:
 #  ## code-package
 #basePackage: codegen.test
 
+# 以下可选，设置freemarker自定义的一些变量
+#freemarker:
+#  service:
+#    #    自定义service中transactionManager的beanname
+#    transactionManager: repositoryStarterTransactionManager
+#  dao:
+#    #    自定义dao中sqlSessionTemplate的beanname
+#    sqlSessionTemplate: repositoryStarterSqlSessionTemplate
 
 
-# gen table
-# 表名、列名都需要以下划线格式
 tables:
   - id: 1
     name: cluster_node_log

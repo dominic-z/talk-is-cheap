@@ -23,13 +23,13 @@ public class TaskDefinitionBO {
 
     // stage定义
     @Builder.Default
-    private Map<String, StageDefinitionBO> stageDefinitionBOMap = new HashMap<>();
+    private final Map<String, StageDefinitionBO> stageDefinitionBOMap = new HashMap<>();
 
     // stage的链接情况
     @Builder.Default
-    private Map<String, List<String>> pointOutGraph = new HashMap<>();
+    private final Map<String, List<String>> pointOutGraph = new HashMap<>();
 
     // 图的根节点
     @Builder.Default
-    private List<String> roots = new ArrayList<>();
+    private final List<String> roots = new ArrayList<>();
 }

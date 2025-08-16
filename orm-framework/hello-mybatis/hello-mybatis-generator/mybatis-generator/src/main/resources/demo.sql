@@ -22,6 +22,7 @@ insert into role(id, name) values
     (11, '运维'),
     (12, '顾客');
 
+
 insert into menu(id, label, pid, icon, route_path, route_element) values
     (101, '菜单1',  0,   'EditOutlined',          '/student',    'A8MainStudent'),
     (102, '菜单2',  0,   'AreaChartOutlined',    '/teacher',    'A8MainTeacher'),

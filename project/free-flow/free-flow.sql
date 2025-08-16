@@ -346,7 +346,7 @@ INSERT into seq_generator(seq_name,`next`) values ('stage_startup_param','1');
 INSERT into seq_generator(seq_name,`next`) values ('stage_execution_biz_log','1');
 SELECT * from seq_generator sg ;
 
-UPDATE seq_generator set next=100001 where seq_name ='task_startup_param';
+UPDATE seq_generator set next=1 where seq_name ='task_startup_param';
 
 
 
