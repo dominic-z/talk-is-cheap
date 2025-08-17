@@ -1,7 +1,7 @@
 <script setup>
 import { storeToRefs } from 'pinia';
 import { useCounterOptionStore } from './CounterOptionStore';
-import { useCounterSetupStore } from '@/pinja/core-concept/CounterSetupStore';
+import { useCounterSetupStore } from '@/pinia/core-concept/CounterSetupStore';
 
 const counterOptionStore = useCounterOptionStore()
 const counterSetupStore = useCounterSetupStore()

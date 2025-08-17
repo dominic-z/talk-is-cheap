@@ -1,4 +1,5 @@
 <script setup>
+// 模板中如何进行条件渲染
 import { ref } from 'vue';
 let awesome = ref(false)
 let ok = ref(true)
