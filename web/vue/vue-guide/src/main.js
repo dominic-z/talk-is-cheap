@@ -1,22 +1,22 @@
 import './assets/main.css'
 
 import { createApp } from 'vue'
-import List from './components/guide-essentials/List.vue'
+import List from './components/guide-essentials/list/List.vue'
 import Forms from './components/guide-essentials/Forms.vue'
 import EventHandling from './components/guide-essentials/EventHandling.vue'
-import Lifecycle from './components/guide-essentials/Lifecycle.vue'
-import Watchers1 from './components/guide-essentials/Watchers1.vue'
-import Watchers2 from './components/guide-essentials/Watchers2.vue'
+import Lifecycle from './components/guide-essentials/lifecycle/Lifecycle.vue'
+import Watchers1 from './components/guide-essentials/watchers/Watchers1.vue'
+import Watchers2 from './components/guide-essentials/watchers/Watchers2.vue'
 import TemplateSyntax from './components/guide-essentials/TemplateSyntax.vue'
 import Computed from './components/guide-essentials/Computed.vue'
 import TemplateRefs from './components/guide-essentials/TemplateRefs.vue'
-import TemplateSyntaxAndRef from './components/guide-essentials/TemplateSyntaxAndRef.vue'
-import ComponentBasic from './components/guide-essentials/ComponentBasic.vue'
-import ClassAndStyle from './components/guide-essentials/ClassAndStyle.vue'
+import TemplateSyntaxAndRef from './components/guide-essentials/reactivity-fundamentals/TemplateSyntaxAndRef.vue'
+import ComponentBasic from './components/guide-essentials/component-basics/ComponentBasic.vue'
+import ClassAndStyle from './components/guide-essentials/class-and-style/ClassAndStyle.vue'
 import Conditional from './components/guide-essentials/Conditional.vue'
-import DynamicComponent from './components/guide-essentials/DynamicComponent.vue'
-import ReactivityFundamentals1 from './components/guide-essentials/ReactivityFundamentals1.vue'
-import ReactivityFundamentals2 from './components/guide-essentials/ReactivityFundamentals2.vue'
+import DynamicComponent from './components/guide-essentials/component-basics/DynamicComponent.vue'
+import ReactivityFundamentals1 from './components/guide-essentials/reactivity-fundamentals/ReactivityFundamentals1.vue'
+import ReactivityFundamentals2 from './components/guide-essentials/reactivity-fundamentals/ReactivityFundamentals2.vue'
 
 import FetchingData from './components/examples/FetchingData.vue'
 import Attr from './components/components/attrs/Attr.vue'
@@ -28,7 +28,7 @@ import Slots from './components/components/slots/Slots.vue'
 import ProviderInject from './components/components/provide-inject/ProviderInject.vue'
 import AsyncComponent from './components/components/async/AysncComponent.vue'
 
-import Composable from './components/reusability/Composable.vue'
+import Composable from './components/reusability/composable/Composable.vue'
 import TransitionGroupNumList from './components/built-in/transition-group/TransitionGroupNumList.vue'
 import TransitionGroupNameFilter from './components/built-in/transition-group/TransitionGroupNameFilter.vue'
 
@@ -75,12 +75,12 @@ import AppLinkApp from './router/advanced/extending-router-link/AppLinkApp.vue'
 import { appLinkRouter } from './router/advanced/extending-router-link/AppLinkRouter'
 
 
-import PiniaCounter from './pinja/introduction/store/PiniaCounter.vue'
+import PiniaCounter from './pinia/introduction/store/PiniaCounter.vue'
 import { createPinia } from 'pinia'
-import DefineStore from './pinja/core-concept/DefineStore.vue'
-import StateStore from './pinja/core-concept/state/StateStore.vue'
-import GetterStore from './pinja/core-concept/getter/GetterStore.vue'
-import ActionStore from './pinja/core-concept/action/ActionStore.vue'
+import DefineStore from './pinia/core-concept/DefineStore.vue'
+import StateStore from './pinia/core-concept/state/StateStore.vue'
+import GetterStore from './pinia/core-concept/getter/GetterStore.vue'
+import ActionStore from './pinia/core-concept/action/ActionStore.vue'
 import CompareModelAndBindApp from './components/guide-essentials/compare-model-bind/CompareModelAndBindApp.vue'
 
 
@@ -110,7 +110,7 @@ countApp.config.errorHandler = (err) => {
 // createApp(CompareModelAndBindApp).mount('#myApp')
 
 
-// createApp(TemplateSyntaxAndRef).mount('#myApp')
+createApp(TemplateSyntaxAndRef).mount('#myApp')
 // createApp(Computed).mount('#myApp')
 
 // createApp(ClassAndStyle).mount('#myApp')

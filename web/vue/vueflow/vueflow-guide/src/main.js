@@ -32,6 +32,9 @@ import UpdateEdgeApp from './components/edge/UpdateEdgeApp.vue'
 import EdgeTypeApp from './components/edge/edge-type/EdgeTypeApp.vue'
 import EdgeEventApp from './components/edge/EdgeEventApp.vue'
 import HandleApp from './components/handle/HandleApp.vue'
+import FlowChangeApp from './components/controlled-flow/FlowChangeApp.vue'
+import ValidatingChangesApp from './components/controlled-flow/ValidatingChangesApp.vue'
+import VModelNodesAndEdgesApp from './components/controlled-flow/VModelNodesAndEdgesApp.vue'
 
 // createApp(App).mount('#app')
 
@@ -57,4 +60,9 @@ import HandleApp from './components/handle/HandleApp.vue'
 // createApp(UpdateEdgeApp).mount('#app')
 // createApp(EdgeTypeApp).mount('#app')
 // createApp(EdgeEventApp).mount('#app')
-createApp(HandleApp).mount('#app')
+// createApp(HandleApp).mount('#app')
+
+//  Composables的https://vueflow.dev/guide/composables.html就是一些可以操作flow和node的方法，用到再说。
+// createApp(FlowChangeApp).mount('#app')
+// createApp(ValidatingChangesApp).mount('#app')
+createApp(VModelNodesAndEdgesApp).mount('#app')

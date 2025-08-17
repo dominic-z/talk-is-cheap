@@ -16,6 +16,7 @@ const objs = ref([{
 
 
 async function mutateDeeply() {
+    // 在script中使用ref需要手动指定value
     // 以下都会按照期望工作
     obj.value.nested.count++
     // await nextTick()执行完成之后，相当于本次事件循环完成了，就是说这次调用之前的变更都完成了。
@@ -64,6 +65,7 @@ log(refC)
 
 <template>
 
+    <div>无需使用obj.value，在template中会自动揭包{{ obj }}</div>
     <div>{{ obj.nested }}</div>
     <div>{{ obj.arr }}</div>
     <div>{{ obj.forReplace }}</div>

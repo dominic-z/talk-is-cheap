@@ -1,4 +1,5 @@
 <script setup>
+// 计算属性，是一个基于某个响应式变量创建的变量，响应式变量变化的时候，会让这个计算属性的值也跟着响应式地变化
 import { reactive, computed ,ref} from 'vue'
 
 const author = reactive({

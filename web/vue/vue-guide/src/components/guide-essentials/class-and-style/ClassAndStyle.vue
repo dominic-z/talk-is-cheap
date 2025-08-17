@@ -1,4 +1,5 @@
 <script setup>
+// 描述vue中如何使用class和style
 import ClassAndStyle2 from './ClassAndStyle2.vue'
 import { ref } from 'vue'
 const classObject = ref({

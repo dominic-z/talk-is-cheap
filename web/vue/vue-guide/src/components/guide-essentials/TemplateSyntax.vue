@@ -1,4 +1,6 @@
 <script setup>
+// https://cn.vuejs.org/guide/essentials/template-syntax.html
+// 描述模板语法
 let num = 1;
 
 let id=5;
