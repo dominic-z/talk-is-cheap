@@ -38,7 +38,8 @@ function onSomeEvent(nodeId) {
   </div>
 
   <div :style="{ height: '400px', width: '400px' }">
-    <VueFlow :nodes="nodes">
+    <!-- 这里要通过v-model来绑定，而不能通过v-bind来绑定 -->
+    <VueFlow v-model:nodes="nodes">
       <Panel>
         <button type="button" @click="onSomeEvent('1')">Update Node 1</button>
       </Panel>

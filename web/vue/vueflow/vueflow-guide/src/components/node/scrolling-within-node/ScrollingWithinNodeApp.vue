@@ -1,4 +1,4 @@
-<!-- 滚轮不会触发缩放，而是会进行滚动 -->
+<!-- 滚轮不会触发缩放，而是会进行滚动，但是我没看出来noWheel这个class有啥用，我没加这个class只加了个滚动的样式也没发现什么问题 -->
 <script setup>
 
 import { ref } from 'vue'
@@ -12,6 +12,11 @@ const nodes = ref([
     // this will create the node-type `custom`
     type: 'custom',
     position: { x: 150, y: 50 },
+  },
+  {
+    id: '2',
+    data: { label: 'Node 2' },
+    position: { x: 150, y: 250 },
   }
 ])
 
@@ -21,8 +26,7 @@ const nodes = ref([
 
   <div :style="{ width: '100vw', height: '100vh' }" >
 
-    <VueFlow :nodes=nodes :no-wheel-class-name="my-nowheel">
-      <!-- 含义是，一个type的custom的node的组件是CustomNode，并且其参数会被叫做customNodeProps，其实就是id='4'的那个obj -->
+    <VueFlow :nodes=nodes >
       <template #node-custom="customNodeProps">
         <CustomNode v-bind="customNodeProps" />
       </template>
@@ -31,13 +35,3 @@ const nodes = ref([
   </div>
 </template>
 
-<style>
-.my-nowheel{
-  background-color: orange;
-  height: 100px;
-  width: 200px;
-  /* scroll */
-
-  overflow-y: auto;
-}
-</style>

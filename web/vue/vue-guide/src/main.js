@@ -81,6 +81,7 @@ import DefineStore from './pinja/core-concept/DefineStore.vue'
 import StateStore from './pinja/core-concept/state/StateStore.vue'
 import GetterStore from './pinja/core-concept/getter/GetterStore.vue'
 import ActionStore from './pinja/core-concept/action/ActionStore.vue'
+import CompareModelAndBindApp from './components/guide-essentials/compare-model-bind/CompareModelAndBindApp.vue'
 
 
 // createApp(App).mount('#app')
@@ -105,7 +106,10 @@ countApp.config.errorHandler = (err) => {
 // // 全局属性
 // templateSyntaxApp.config.globalProperties.globalMsg = 'hello'
 
-createApp(ReactivityFundamentals2).mount('#myApp')
+// createApp(ReactivityFundamentals2).mount('#myApp')
+// createApp(CompareModelAndBindApp).mount('#myApp')
+
+
 // createApp(TemplateSyntaxAndRef).mount('#myApp')
 // createApp(Computed).mount('#myApp')
 

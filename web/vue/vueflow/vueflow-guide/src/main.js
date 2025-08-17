@@ -26,6 +26,12 @@ import NodeEventComponentApp from './components/node/node-event/NodeEventCompone
 
 import ScrollingWithinNodeApp from './components/node/scrolling-within-node/ScrollingWithinNodeApp.vue'
 import PreventDragNodeApp from './components/node/prevent-drag-node/PreventDragNodeApp.vue'
+import AddEdgeApp from './components/edge/AddEdgeApp.vue'
+import RemoveEdgeApp from './components/edge/RemoveEdgeApp.vue'
+import UpdateEdgeApp from './components/edge/UpdateEdgeApp.vue'
+import EdgeTypeApp from './components/edge/edge-type/EdgeTypeApp.vue'
+import EdgeEventApp from './components/edge/EdgeEventApp.vue'
+import HandleApp from './components/handle/HandleApp.vue'
 
 // createApp(App).mount('#app')
 
@@ -44,4 +50,11 @@ import PreventDragNodeApp from './components/node/prevent-drag-node/PreventDragN
 // createApp(NodeEventComponentApp).mount('#app')
 // createApp(MultiVueFlowApp).mount('#app')
 // createApp(ScrollingWithinNodeApp).mount('#app')
-createApp(PreventDragNodeApp).mount('#app')
+// createApp(PreventDragNodeApp).mount('#app')
+
+// createApp(AddEdgeApp).mount('#app')
+// createApp(RemoveEdgeApp).mount('#app')
+// createApp(UpdateEdgeApp).mount('#app')
+// createApp(EdgeTypeApp).mount('#app')
+// createApp(EdgeEventApp).mount('#app')
+createApp(HandleApp).mount('#app')
