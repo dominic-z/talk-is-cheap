@@ -9,7 +9,7 @@ const nodes = ref([
     {
         id: '1',
         position: { x: 50, y: 50 },
-        data: { label: 'Node 1', },
+        data: { label: 'Node 11', },
     }
 ]);
 
@@ -21,6 +21,7 @@ function addNode() {
         position: { x: 150, y: 50 },
         data: { label: `Node ${id}`, },
     })
+    console.log("ref push",nodes.value)
 }
 
 function updateNode() {
@@ -40,11 +41,14 @@ function generateRandomNode() {
 function onAddNode() {
     // add a single node to the graph
     addNodes(generateRandomNode())
+    // 你会发现通过这种方式新增的node，本身并不会被放入我们定义的nodes中
+    console.log("addNodes",nodes.value)
 }
 
 function onAddNodes() {
     // add multiple nodes to the graph
     addNodes(Array.from({ length: 10 }, generateRandomNode))
+    console.log("addNodes",nodes.value)
 }
 </script>
 
@@ -53,11 +57,14 @@ function onAddNodes() {
         <input type="text" v-model="inputValue"></input>
         <button type="button" @click="updateNode">updateNode</button>
     </div>
-    <VueFlow :nodes="nodes">
+    <div :style="{ height: '1000px', width: '1000px', border: '1px solid' }">
+
+        <VueFlow :nodes="nodes">
         <Panel>
             <button type="button" @click="addNode">Add a node</button>
             <button type="button" @click="onAddNode">Add a node</button>
             <button type="button" @click="onAddNodes">Add multiple nodes</button>
         </Panel>
     </VueFlow>
+    </div>
 </template>

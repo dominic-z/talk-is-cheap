@@ -6,9 +6,19 @@ const listItems = ref(Array.from({ length: 100 }, (_, i) => i))
 
 <template>
   <div class="custom-node-container">
-    <ul class="my-nowheel">
+    <ul class="nowheel scroll">
       <li v-for="item in listItems" :key="item">Item {{ item }}</li>
     </ul>
   </div>
 </template>
 
+<style>
+.scroll{
+  background-color: orange;
+  height: 100px;
+  width: 200px;
+  /* scroll */
+
+  overflow-y: auto;
+}
+</style>
