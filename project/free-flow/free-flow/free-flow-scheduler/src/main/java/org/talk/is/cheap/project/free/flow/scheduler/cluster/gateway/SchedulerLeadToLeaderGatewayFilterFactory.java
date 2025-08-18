@@ -22,7 +22,7 @@ import java.net.URI;
 import static org.springframework.cloud.gateway.support.ServerWebExchangeUtils.GATEWAY_ROUTE_ATTR;
 
 /**
- * 一个简单的网关，用于将请求引导至Scheduler集群的主节点。
+ * 没有搞独立的网关了，在每个scheduler身上都搞了个一个简单的网关，用于将请求引导至Scheduler集群的主节点。本来想让所有worker不需要关注谁是leader的，但实际没用上。。。。
  * todo: 优化选举算法，能链接上最多的worker的scheduler才能称为leader
  */
 @Component

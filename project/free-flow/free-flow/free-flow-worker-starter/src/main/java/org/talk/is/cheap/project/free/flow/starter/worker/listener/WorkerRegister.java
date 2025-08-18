@@ -4,7 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationStartedEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.ConfigurableApplicationContext;
-import org.talk.is.cheap.project.free.flow.starter.worker.service.ClusterService;
+import org.talk.is.cheap.project.free.flow.starter.worker.cluster.service.ClusterService;
 
 
 /**

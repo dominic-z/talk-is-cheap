@@ -6,19 +6,20 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.common.message.impl.RegistryWorkerReq;
+import org.talk.is.cheap.project.free.flow.common.router.URIs;
 
 public interface ClusterController {
 
-    @RequestMapping(path = "/scheduler/id", method = RequestMethod.GET)
+    @RequestMapping(path = URIs.SchedulerClusterURIs.ID, method = RequestMethod.GET)
     @ResponseBody
     HttpBody<String> getSchedulerId();
 
 
-    @RequestMapping(path = "/scheduler/leader", method = RequestMethod.GET)
+    @RequestMapping(path = URIs.SchedulerClusterURIs.LEADER, method = RequestMethod.GET)
     @ResponseBody
     HttpBody<String> getLeaderId();
 
-    @RequestMapping(path = "/scheduler/registry-worker", method = RequestMethod.POST)
+    @RequestMapping(path = URIs.SchedulerClusterURIs.REGISTRY_WORKER, method = RequestMethod.POST)
     @ResponseBody
     HttpBody<String> registryWorker(@RequestBody RegistryWorkerReq req);
 

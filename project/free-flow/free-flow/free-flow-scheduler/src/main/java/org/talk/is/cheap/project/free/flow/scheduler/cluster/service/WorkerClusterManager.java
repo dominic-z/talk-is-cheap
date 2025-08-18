@@ -36,7 +36,9 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 负责管理worker集群
+ * 负责管理worker集群，负责：
+ * 1. 执行worker的心跳监听
+ * 2. 管理worker的状态，worker的状态变化的数据源均来自监听zookeeper，即scheduler只信任来自zookeeper的关于worker的的信息。
  */
 @Service
 @Slf4j

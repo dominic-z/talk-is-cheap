@@ -11,12 +11,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
-import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.common.message.ResultCode;
 import org.talk.is.cheap.project.free.flow.common.message.impl.QueryTaskDefinitionReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.QueryTaskDefinitionResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.vo.StageDefinitionVO;
 import org.talk.is.cheap.project.free.flow.common.message.impl.vo.TaskDefinitionVO;
+import org.talk.is.cheap.project.free.flow.common.router.URIs;
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.StageDefinition;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskDefinition;
@@ -30,11 +30,16 @@ import org.talk.is.cheap.project.free.flow.starter.repository.service.TaskGraphD
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+
+/**
+ * 用于读取任务定义的controller
+ */
 @RestController
-@RequestMapping(path = "/scheduler/definition")
 public class DefinitionController {
 
 
@@ -47,7 +52,7 @@ public class DefinitionController {
     @Autowired
     private TaskGraphDefinitionService taskGraphDefinitionService;
 
-    @RequestMapping(path = "/query-task-definition", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(path = URIs.SchedulerDefinitionURIs.QUERY_TASK_DEFINITION, method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public QueryTaskDefinitionResp getTaskDefinitionResp(@RequestBody QueryTaskDefinitionReq req) {
         QueryTaskDefinitionResp queryTaskDefinitionResp = new QueryTaskDefinitionResp();
@@ -59,7 +64,7 @@ public class DefinitionController {
 
             if (reqData.getQueries() != null) {
                 for (QueryTaskDefinitionReq.QueryTaskDefinitionReqData.Query query : reqData.getQueries()) {
-                    VerifyUtil.isNotBlank(query.getTaskName(), "task name in query can not be blank");
+                    VerifyUtil.shallNotBeBlank(query.getTaskName(), "task name in query can not be blank");
                     TaskDefinitionExample.Criteria criteria = example.or();
                     criteria.andTaskNameEqualTo(query.getTaskName());
                     if (query.getVersion() != null) {
@@ -121,13 +126,16 @@ public class DefinitionController {
 
             // 写入时校验，读取就不校验了
             Map<String, StageDefinitionVO> stageDefinitionVOMap = new HashMap<>();
-            List<String> roots = new ArrayList<>();
+            Set<String> roots = new HashSet<>();
             Map<Long, StageDefinitionVO> idStageDefinitionVOMap = new HashMap<>();
+            Map<String, Set<String>> pointOutGraph = new HashMap<>();
+
             for (StageDefinition stageDefinition : stageDefinitions) {
                 StageDefinitionVO vo = new StageDefinitionVO();
                 BeanUtils.copyProperties(stageDefinition, vo);
+                // 确保pointOutGraph中包含了所有的stage，即使这个stage没有pointOut的stage，这个是为了与StageDefinitionBO保持逻辑相同
+                pointOutGraph.putIfAbsent(stageDefinition.getStageName(),new HashSet<>());
                 stageDefinitionVOMap.put(vo.getStageName(), vo);
-
                 if (vo.getIsStartingStage()) {
                     roots.add(vo.getStageName());
                 }
@@ -136,7 +144,6 @@ public class DefinitionController {
             taskDefinitionVO.setRoots(roots);
             taskDefinitionVO.setStageDefinitionVOMap(stageDefinitionVOMap);
 
-            Map<String, List<String>> pointOutGraph = new HashMap<>();
             for (TaskGraphDefinition taskGraphDefinition : taskGraphDefinitions) {
                 if (!idStageDefinitionVOMap.containsKey(taskGraphDefinition.getFromStageId()) || !idStageDefinitionVOMap.containsKey(taskGraphDefinition.getToStageId())) {
                     // 因为没校验，如果数据库变更可能导致报错，规避一下
@@ -144,11 +151,10 @@ public class DefinitionController {
                 }
                 String fromStageName = idStageDefinitionVOMap.get(taskGraphDefinition.getFromStageId()).getStageName();
                 String toStageName = idStageDefinitionVOMap.get(taskGraphDefinition.getToStageId()).getStageName();
-                if (!pointOutGraph.containsKey(fromStageName)) {
-                    pointOutGraph.put(fromStageName, new ArrayList<>());
-                }
                 pointOutGraph.get(fromStageName).add(toStageName);
             }
+
+
             taskDefinitionVO.setPointOutGraph(pointOutGraph);
 
             taskDefinitionVOS.add(taskDefinitionVO);

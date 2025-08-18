@@ -8,6 +8,10 @@ import org.springframework.stereotype.Component;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.SchedulerClusterManager;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.WorkerClusterManager;
 
+
+/**
+ * 启动应用后开始选举以及监听
+ */
 //@Component
 @Slf4j
 public class SchedulerStartedApplicationEventListener implements ApplicationListener<ApplicationStartedEvent> {

@@ -1,11 +1,14 @@
 package org.talk.is.cheap.project.free.flow.starter.worker.client;
 
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
+import org.talk.is.cheap.project.free.flow.common.message.impl.QueryTaskDefinitionReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.QueryTaskDefinitionResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.RegistryWorkerReq;
 import org.talk.is.cheap.project.free.flow.common.router.URIs;
 
@@ -13,24 +16,16 @@ import java.net.URI;
 
 
 @FeignClient(
-        name = "scheduler-cluster-client",
+        name = "scheduler-task-definition-client",
         url = "None"
 )
-public interface SchedulerClusterClient {
+public interface SchedulerTaskDefinitionClient {
 
-    String CLIENT_NAME = "scheduler-cluster-client";
+    String CLIENT_NAME = "scheduler-task-definition-client";
 
-    @RequestMapping(path = URIs.SchedulerClusterURIs.ID, method = RequestMethod.GET)
+    @RequestMapping(path = URIs.SchedulerDefinitionURIs.QUERY_TASK_DEFINITION, method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
-    HttpBody<String> getSchedulerId(URI host);
+    QueryTaskDefinitionResp queryTaskDefinition(URI host,@RequestBody QueryTaskDefinitionReq req);
 
 
-    @RequestMapping(path = URIs.SchedulerClusterURIs.ID, method = RequestMethod.GET)
-    @ResponseBody
-    HttpBody<String> getLeaderId(URI host);
-
-
-    @RequestMapping(path = URIs.SchedulerClusterURIs.REGISTRY_WORKER, method = RequestMethod.POST)
-    @ResponseBody
-    HttpBody<String> registryWorker(URI host, @RequestBody RegistryWorkerReq req);
 }

@@ -50,4 +50,18 @@ public @interface RunnableStage {
      */
     boolean isStartingStage() default false;
 
+
+    /**
+     * 重试次数
+     * @return
+     */
+    int maxRetryCount() default 3;
+
+
+    /**
+     * 超时时间，默认不生效
+     * @return
+     */
+    int timeout() default -1;
+
 }
