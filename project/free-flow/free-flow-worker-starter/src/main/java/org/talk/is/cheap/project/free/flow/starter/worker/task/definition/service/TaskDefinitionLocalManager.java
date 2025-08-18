@@ -7,11 +7,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import org.talk.is.cheap.project.free.flow.common.task.definition.codec.InputCodec;
+import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.starter.worker.task.definition.annotaion.stage.RunnableStage;
 import org.talk.is.cheap.project.free.flow.starter.worker.task.definition.annotaion.task.Task;
 import org.talk.is.cheap.project.free.flow.common.task.definition.bo.StageDefinitionBO;
 import org.talk.is.cheap.project.free.flow.common.task.definition.bo.TaskDefinitionBO;
-import org.talk.is.cheap.project.free.flow.starter.worker.task.definition.exception.IllegalTaskDefinitionException;
+import org.talk.is.cheap.project.free.flow.common.exception.IllegalTaskDefinitionException;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
@@ -25,7 +26,7 @@ import java.util.Set;
 
 
 /**
- * 本地task的管理器
+ * 本地(当前应用）的task的管理器
  */
 @Slf4j
 @Service
@@ -51,7 +52,7 @@ public class TaskDefinitionLocalManager {
 
         for (String beanName : taskBeans.keySet()) {
             Object taskBean = taskBeans.get(beanName);
-            TaskDefinitionBO taskDefinitionBO = getTaskDefinitionBO(taskBean);
+            TaskDefinitionBO taskDefinitionBO = getAndValidateTaskDefinitionBO(taskBean);
 
             if (taskDefinitionBOMap.containsKey(taskDefinitionBO.getName())) {
                 throw new IllegalTaskDefinitionException(String.format("Found a task name that is duplicated: %s", taskDefinitionBO.getName()));
@@ -67,7 +68,7 @@ public class TaskDefinitionLocalManager {
      * @return
      * @throws IllegalTaskDefinitionException
      */
-    private TaskDefinitionBO getTaskDefinitionBO(Object taskBean) throws IllegalTaskDefinitionException {
+    private TaskDefinitionBO getAndValidateTaskDefinitionBO(Object taskBean) throws IllegalTaskDefinitionException {
         Class<?> taskClass = taskBean.getClass();
         Task taskAnnotation = taskClass.getAnnotation(Task.class);
         String taskName = taskAnnotation.name();

@@ -12,7 +12,7 @@ public class TT {
 
     }
 
-    @RunnableStage(name = "method1", version = 1, to = "method2", isStartingStage = true)
+    @RunnableStage(name = "method1", version = 1, toStageName = "method2", isStartingStage = true)
     public void method1() {
 
     }
