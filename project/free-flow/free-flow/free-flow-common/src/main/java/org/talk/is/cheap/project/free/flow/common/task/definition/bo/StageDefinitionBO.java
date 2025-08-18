@@ -9,6 +9,7 @@ import org.talk.is.cheap.project.free.flow.common.task.definition.codec.InputCod
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @Data
 @NoArgsConstructor
@@ -20,8 +21,11 @@ public class StageDefinitionBO {
     private Integer version;
     private Class<? extends InputCodec<?>> inputCodecClass;
     private Boolean isStartingStage;
-    private List<String> toStageNames; 
-    private List<String> fromStageNames;
+    private Set<String> toStageNames;
+    private Set<String> fromStageNames;
+
+    private int maxRetryCount;
+    private int timeout;
 
     // 用于反射
     private String methodName;

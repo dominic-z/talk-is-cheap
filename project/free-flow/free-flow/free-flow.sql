@@ -110,7 +110,7 @@ create table if not exists stage_definition(
 `version` int not null comment '版本' default 0,
 `stage_type` int not null comment '阶段类型',
 `is_starting_stage` bool not null comment '是否是一个task的起始stage',
-`timeout` bigint not null default 0 comment '以秒标识的超时时间',
+`timeout` int not null default 0 comment '以秒标识的超时时间',
 `max_retry_count` int not null comment '最大重试次数',
 `revision` bigint not null default 0 comment '并发控制编号',
 `create_time` datetime not null default now() comment '创建日期',

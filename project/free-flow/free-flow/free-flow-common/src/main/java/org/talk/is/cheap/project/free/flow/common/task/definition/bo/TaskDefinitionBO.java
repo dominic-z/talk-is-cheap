@@ -7,8 +7,10 @@ import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Data
 @NoArgsConstructor
@@ -27,9 +29,9 @@ public class TaskDefinitionBO {
 
     // stage的链接情况
     @Builder.Default
-    private final Map<String, List<String>> pointOutGraph = new HashMap<>();
+    private final Map<String, Set<String>> pointOutGraph = new HashMap<>();
 
     // 图的根节点
     @Builder.Default
-    private final List<String> roots = new ArrayList<>();
+    private final Set<String> roots = new HashSet<>();
 }

@@ -13,7 +13,7 @@ import org.talk.is.cheap.project.free.flow.scheduler.cluster.controller.ClusterC
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.SchedulerClusterManager;
 
 @RestController
-@RequestMapping(path = "/cluster")
+@RequestMapping
 @Slf4j
 public class ClusterControllerImpl implements ClusterController {
 

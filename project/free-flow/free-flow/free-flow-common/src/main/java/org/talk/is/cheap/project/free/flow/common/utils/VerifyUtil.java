@@ -8,18 +8,18 @@ public class VerifyUtil {
     private VerifyUtil() {
     }
 
-    public static void isTrue(boolean bool, String errorMsg) {
+    public static void shallBeTrue(boolean bool, String errorMsg) {
         if (!bool) {
             throw new VerifyException(errorMsg);
         }
     }
 
-    public static void isNotBlank(String s, String errorMsg) {
-        isTrue(StringUtils.isNotBlank(s), errorMsg);
+    public static void shallNotBeBlank(String s, String errorMsg) {
+        shallBeTrue(StringUtils.isNotBlank(s), errorMsg);
     }
 
-    public static void isNotNull(Object o, String errorMsg) {
-        isTrue(o != null, errorMsg);
+    public static void shallNotBeNull(Object o, String errorMsg) {
+        shallBeTrue(o != null, errorMsg);
     }
 
 

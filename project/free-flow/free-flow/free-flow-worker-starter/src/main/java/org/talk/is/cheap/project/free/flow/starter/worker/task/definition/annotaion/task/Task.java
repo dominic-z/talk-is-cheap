@@ -45,6 +45,6 @@ public @interface Task {
      * 超时时间，默认不生效
      * @return
      */
-    int timeoutInSeconds() default -1;
+    int timeout() default -1;
 
 }

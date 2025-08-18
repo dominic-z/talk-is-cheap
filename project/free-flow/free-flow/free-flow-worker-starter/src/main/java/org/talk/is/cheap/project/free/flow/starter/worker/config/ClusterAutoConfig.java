@@ -9,8 +9,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.talk.is.cheap.project.free.flow.starter.worker.client.SchedulerClusterClient;
-import org.talk.is.cheap.project.free.flow.starter.worker.contoller.impl.ClusterControllerImpl;
-import org.talk.is.cheap.project.free.flow.starter.worker.service.ClusterService;
+import org.talk.is.cheap.project.free.flow.starter.worker.cluster.contoller.impl.ClusterControllerImpl;
+import org.talk.is.cheap.project.free.flow.starter.worker.cluster.service.ClusterService;
 
 import java.util.stream.Collectors;
 
