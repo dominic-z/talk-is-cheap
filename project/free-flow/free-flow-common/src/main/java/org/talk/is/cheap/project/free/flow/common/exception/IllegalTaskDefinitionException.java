@@ -1,4 +1,4 @@
-package org.talk.is.cheap.project.free.flow.starter.worker.task.definition.exception;
+package org.talk.is.cheap.project.free.flow.common.exception;
 
 public class IllegalTaskDefinitionException extends Exception{
 
