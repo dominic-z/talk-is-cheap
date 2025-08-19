@@ -17,9 +17,7 @@ import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.common.utils.IPUtil;
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.starter.worker.client.SchedulerClusterClient;
-import org.talk.is.cheap.project.free.flow.starter.worker.cluster.event.WorkerRegisteredEvent;
 import org.talk.is.cheap.project.free.flow.starter.worker.config.properties.ZKConfigProperties;
-import org.talk.is.cheap.project.free.flow.starter.worker.domain.enums.WorkerStatus;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -62,16 +60,13 @@ public class ClusterService {
     @Getter
     private String selfAbsoluteZKPath;
 
-    @Getter
-    private WorkerStatus workerStatus = WorkerStatus.PENDING;
-
 
     public URI getSchedulerLeaderUri() {
         VerifyUtil.shallNotBeBlank(schedulerLeaderId, "schedulerLeaderId is blank");
         return UriComponentsBuilder.fromHttpUrl("http://" + schedulerLeaderId).build().toUri();
     }
 
-    public void registryWorker() {
+    public void registryToZK() {
 
         // worker需要自己注册到zk里，这样才能通过zk的心跳机制确保zk中记录的节点都是存活的
         try {
@@ -85,10 +80,9 @@ public class ClusterService {
             throw new RuntimeException(e);
         }
 
-        listenSchedulerLeaderChange();
-        updateSchedulerLeader();
 
-        applicationEventPublisher.publishEvent(new WorkerRegisteredEvent(getWorkerId()));
+        listenAndSetSchedulerLeader();
+
     }
 
 
@@ -107,7 +101,9 @@ public class ClusterService {
         return workerId;
     }
 
-    public void updateSchedulerLeader() {
+    public void listenAndSetSchedulerLeader() {
+        listenSchedulerLeaderChange();
+
         try {
             String randomSchedulerId = getRandomSchedulerId();
             log.info("random scheduler: {}", randomSchedulerId);
@@ -120,7 +116,6 @@ public class ClusterService {
             throw new RuntimeException(e);
         }
 
-        workerStatus = WorkerStatus.RUNNABLE;
     }
 
     /**
@@ -161,7 +156,7 @@ public class ClusterService {
                     @Override
                     public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception {
                         log.info("leader election event: {}", event);
-                        updateSchedulerLeader();
+                        listenAndSetSchedulerLeader();
                     }
                 }).build();
 
@@ -180,7 +175,6 @@ public class ClusterService {
                     .withMode(CreateMode.EPHEMERAL)
                     .forPath(Paths.get(zkConfigProperties.getZookeeper().getPath().getWorker().getTerminating(), getSelfZKWorkerPath()).toString(),
                             getWorkerId().getBytes(StandardCharsets.UTF_8));
-            this.workerStatus = WorkerStatus.TERMINATING;
 
         } catch (Exception e) {
             log.error("error when terminate", e);

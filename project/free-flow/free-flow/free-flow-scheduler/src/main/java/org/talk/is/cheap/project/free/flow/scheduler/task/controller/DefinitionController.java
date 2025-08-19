@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.talk.is.cheap.project.free.flow.common.message.ResultCode;
 import org.talk.is.cheap.project.free.flow.common.message.impl.QueryTaskDefinitionReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.QueryTaskDefinitionResp;
+import org.talk.is.cheap.project.free.flow.common.message.impl.ReportTaskDefinitionReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.ReportTaskDefinitionResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.vo.StageDefinitionVO;
 import org.talk.is.cheap.project.free.flow.common.message.impl.vo.TaskDefinitionVO;
 import org.talk.is.cheap.project.free.flow.common.router.URIs;
@@ -86,7 +88,7 @@ public class DefinitionController {
 
 
             queryTaskDefinitionResp.setCode(ResultCode.SUCCESS.getCode());
-            queryTaskDefinitionResp.setData(QueryTaskDefinitionResp.GetTaskDefinitionRespData.builder()
+            queryTaskDefinitionResp.setData(QueryTaskDefinitionResp.QueryTaskDefinitionRespData.builder()
                     .total(count)
                     .page(page)
                     .pageSize(pageSize)

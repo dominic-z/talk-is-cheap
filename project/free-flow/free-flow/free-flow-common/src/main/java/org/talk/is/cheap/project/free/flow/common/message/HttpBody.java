@@ -18,4 +18,18 @@ public class HttpBody<T> {
     public boolean isSuccess(){
         return ResultCode.SUCCESS.getCode().equals(code);
     }
+
+    public void success(T data,String msg){
+        this.code = ResultCode.SUCCESS.getCode();
+        this.data = data;
+    }
+
+    public void success(T data){
+        success(data,null);
+    }
+
+    public void fail(ResultCode resultCode,String msg){
+        this.code = resultCode.getCode();
+        this.msg = msg;
+    }
 }

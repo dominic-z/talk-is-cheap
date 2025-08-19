@@ -7,6 +7,7 @@ public class URIs {
         private static final String PREFIX = "/scheduler/definition";
         public static final String QUERY_TASK_DEFINITION = PREFIX + "/query-task-definition";
 
+
     }
 
     public static class SchedulerClusterURIs {
@@ -24,5 +25,11 @@ public class URIs {
 
         public static final String PING = PREFIX + "/ping";
         public static final String TERMINATE = PREFIX + "/terminate";
+    }
+
+    public static class WorkerDefinitionURIs{
+        private static final String  PREFIX= "/worker/definition";
+
+        public static final String GET_TASK_DEFINITION = PREFIX+"/get-task-definition";
     }
 }

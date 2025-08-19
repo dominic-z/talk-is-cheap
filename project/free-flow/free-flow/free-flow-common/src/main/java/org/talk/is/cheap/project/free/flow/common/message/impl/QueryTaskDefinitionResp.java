@@ -9,11 +9,11 @@ import java.util.List;
 
 
 
-public class QueryTaskDefinitionResp extends HttpBody<QueryTaskDefinitionResp.GetTaskDefinitionRespData> {
+public class QueryTaskDefinitionResp extends HttpBody<QueryTaskDefinitionResp.QueryTaskDefinitionRespData> {
 
     @Data
     @Builder
-    public static class GetTaskDefinitionRespData {
+    public static class QueryTaskDefinitionRespData {
 
         private Integer page;
         private Integer pageSize;

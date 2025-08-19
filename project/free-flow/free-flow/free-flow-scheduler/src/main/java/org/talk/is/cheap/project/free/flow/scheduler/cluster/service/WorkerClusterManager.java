@@ -190,7 +190,7 @@ public class WorkerClusterManager {
                     new ClusterNodeLog()
                             .withNodeId(workerId)
                             .withNodeType(NodeType.WORKER.getType())
-                            .withNodeStatus(NodeStatus.QUIT_RUNNABLE.getStatus()));
+                            .withNodeStatus(NodeStatus.RUNNABLE_TERMINATING.getStatus()));
         } else if (StringUtils.equals(parentPath, zkTerminatingWorkerPath)) {
             // 如果是terminating下的节点
             log.info("remove terminating worker, path: {}, workerId: {}", zkPath, workerId);
