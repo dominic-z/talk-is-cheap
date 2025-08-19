@@ -5,9 +5,10 @@ import io.vavr.Tuple2;
 import io.vavr.control.Option;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.talk.is.cheap.project.free.flow.common.exception.IllegalTaskDefinitionException;
 import org.talk.is.cheap.project.free.flow.common.message.impl.vo.StageDefinitionVO;
@@ -15,7 +16,6 @@ import org.talk.is.cheap.project.free.flow.common.message.impl.vo.TaskDefinition
 import org.talk.is.cheap.project.free.flow.common.task.definition.bo.StageDefinitionBO;
 import org.talk.is.cheap.project.free.flow.common.task.definition.bo.TaskDefinitionBO;
 import org.talk.is.cheap.project.free.flow.common.task.definition.codec.InputCodec;
-import org.talk.is.cheap.project.free.flow.starter.worker.cluster.event.WorkerRegisteredEvent;
 import org.talk.is.cheap.project.free.flow.starter.worker.task.definition.annotaion.stage.RunnableStage;
 import org.talk.is.cheap.project.free.flow.starter.worker.task.definition.annotaion.task.Task;
 
@@ -38,7 +38,7 @@ import java.util.Set;
  */
 @Slf4j
 @Service
-public class LocalTaskDefinitionManager {
+public class LocalTaskDefinitionService {
 
     @Autowired
     private ApplicationContext applicationContext;
@@ -47,6 +47,7 @@ public class LocalTaskDefinitionManager {
     private RemoteTaskDefinitionService remoteTaskDefinitionService;
 
     private final Map<String, TaskDefinitionBO> taskDefinitionBOMap = new HashMap<>();
+
 
     private static void shallBeTrue(boolean bool, String errorMsg) throws IllegalTaskDefinitionException {
         if (!bool) {
@@ -68,8 +69,7 @@ public class LocalTaskDefinitionManager {
      *
      * @throws IllegalTaskDefinitionException
      */
-    @EventListener(WorkerRegisteredEvent.class)
-    public void prepareAndValidateTaskDefinition(WorkerRegisteredEvent workerRegisteredEvent) throws IllegalTaskDefinitionException {
+    public void prepareAndValidateTaskDefinition() throws IllegalTaskDefinitionException {
         Map<String, Object> taskBeans = applicationContext.getBeansWithAnnotation(Task.class);
 
         for (String beanName : taskBeans.keySet()) {
@@ -331,5 +331,35 @@ public class LocalTaskDefinitionManager {
         }
     }
 
+
+    /**
+     * 以下是针对taskDefinitionBOMap的一些get方法，避免这个map暴露出去
+     */
+
+    /**
+     * 是否具备某个name的task
+     * @param taskName
+     * @param version 如果为null，则不关心版本
+     * @return
+     */
+    public boolean hasTask(String taskName,Integer version){
+        if(!taskDefinitionBOMap.containsKey(taskName)){
+            return false;
+        }
+        if(version==null){
+            return true;
+        }else{
+            return taskDefinitionBOMap.get(taskName).getVersion().equals(version);
+        }
+    }
+
+
+    public Set<String> getTaskNames(){
+        return taskDefinitionBOMap.keySet();
+    }
+
+    public TaskDefinitionBO getTaskDefinitionBO(String name){
+        return taskDefinitionBOMap.get(name);
+    }
 
 }

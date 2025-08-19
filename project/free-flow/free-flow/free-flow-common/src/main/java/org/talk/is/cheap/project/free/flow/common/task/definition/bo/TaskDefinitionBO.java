@@ -24,14 +24,11 @@ public class TaskDefinitionBO {
     private Integer timeoutInSecond;
 
     // stage定义
-    @Builder.Default
-    private final Map<String, StageDefinitionBO> stageDefinitionBOMap = new HashMap<>();
+    private Map<String, StageDefinitionBO> stageDefinitionBOMap = new HashMap<>();
 
     // stage的链接情况
-    @Builder.Default
-    private final Map<String, Set<String>> pointOutGraph = new HashMap<>();
+    private Map<String, Set<String>> pointOutGraph = new HashMap<>();
 
     // 图的根节点
-    @Builder.Default
-    private final Set<String> roots = new HashSet<>();
+    private Set<String> roots = new HashSet<>();
 }
