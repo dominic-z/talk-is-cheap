@@ -16,4 +16,9 @@ npm create vite@latest  --registry=https://registry.npmmirror.com
 include: **/*.{test,spec}.?(c|m)[jt]s?(x)
 exclude:  **/node_modules/**, **/dist/**, **/cypress/**, **/.{idea,git,cache,output,temp}/**, **/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*, e2e/**
 ```
-执行单元测试时`npm run test:unit`会触发所有单测，`npm run test:unit src/components/a-crash-course/TodoApp.test.js`会执行这个脚本中的单测
+执行单元测试时`npm run test:unit`会触发所有单测，`npm run test:unit src/components/a-crash-course/TodoApp.test.js`会执行这个脚本中的单测。并且都支持热部署！nice
+
+
+## 其他
+
+感觉前端的测试，和python写爬虫太像了。。
