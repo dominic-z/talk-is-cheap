@@ -4,7 +4,7 @@ import TodoApp from './TodoApp.vue'
 //  需要引入test，抄的HelloWorld.spec.js
 import { test,expect } from 'vitest'
 
-
+// 简单的测试
 test('renders a todo', async () => {
   const wrapper = mount(TodoApp)
 
