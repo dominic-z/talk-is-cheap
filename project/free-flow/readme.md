@@ -7,3 +7,4 @@
 npm create vite@latest  --registry=https://registry.npmmirror.com
 
 ```
+feature选择了pinia/router和unit test
