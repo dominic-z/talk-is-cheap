@@ -42,6 +42,13 @@ cnpm install vuetify
 
 ```
 
+安装icon，vuetify本身没icon，但是在[图标字体](https://vuetifyjs.com/zh-Hans/features/icon-fonts/)提到了他默认兼容4个常见icon集，比如使用material design icon(简称mdi)
+```shell
+cnpm install @mdi/font
+```
+
+并且在createVuetify中引入，详见官网或者main.js，引入之后，`<v-app-bar-nav-icon></v-app-bar-nav-icon>`的图标才能展示出来。
+
 # 功能
 
 ## 节点查询

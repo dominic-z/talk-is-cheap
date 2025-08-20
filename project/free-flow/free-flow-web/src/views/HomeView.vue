@@ -1,27 +1,35 @@
 <script setup>
 
-import HomeNav from '@/views/HomeNav.vue';
-import {ref} from 'vue'
+// import HomeNav from '@/views/HomeNav.vue';
+import { ref } from 'vue'
 
 
+// import {VAppBarNavIcon} from '@/vuetify'
 
 </script>
 
 <template>
-  <v-app class="rounded rounded-md border">
-    <HomeNav></HomeNav>
+  <v-app id="inspire">
+    <v-app-bar >
+      <v-app-bar-nav-icon></v-app-bar-nav-icon>
 
-    <v-app-bar title="Application bar"></v-app-bar>
+      <v-app-bar-title>Application</v-app-bar-title>
 
-    <v-main class="d-flex align-center justify-center" height="300">
+      <v-btn icon="mdi-dots-vertical">
+      </v-btn>
+    </v-app-bar>
+
+    <v-main>
       <v-container>
-        <v-sheet
-          border="dashed md"
-          color="surface-light"
-          height="200"
-          rounded="lg"
-          width="100%"
-        ></v-sheet>
+        <v-row>
+          <v-col
+            v-for="n in 24"
+            :key="n"
+            cols="4"
+          >
+            <v-card height="200"></v-card>
+          </v-col>
+        </v-row>
       </v-container>
     </v-main>
   </v-app>
