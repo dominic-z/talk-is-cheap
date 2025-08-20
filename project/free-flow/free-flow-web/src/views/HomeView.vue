@@ -1,13 +1,15 @@
 <script setup>
+
+import HomeNav from '@/views/HomeNav.vue';
+import {ref} from 'vue'
+
+
+
 </script>
 
 <template>
-  <v-layout class="rounded rounded-md border">
-    <v-navigation-drawer>
-      <v-list nav>
-        <v-list-item title="Navigation drawer" link></v-list-item>
-      </v-list>
-    </v-navigation-drawer>
+  <v-app class="rounded rounded-md border">
+    <HomeNav></HomeNav>
 
     <v-app-bar title="Application bar"></v-app-bar>
 
@@ -22,5 +24,5 @@
         ></v-sheet>
       </v-container>
     </v-main>
-  </v-layout>
+  </v-app>
 </template>
