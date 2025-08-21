@@ -14,6 +14,7 @@ public class URIs {
         private static final String PREFIX = "/scheduler/cluster";
 
         public static final String ID = PREFIX+"/id";
+        public static final String IDS = PREFIX+"/ids";
         public static final String LEADER = PREFIX+"/leader";
         public static final String REGISTRY_WORKER = PREFIX+"/registry-worker";
 
