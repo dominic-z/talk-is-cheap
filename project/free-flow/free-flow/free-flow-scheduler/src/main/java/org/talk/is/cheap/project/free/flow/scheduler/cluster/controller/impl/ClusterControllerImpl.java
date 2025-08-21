@@ -22,7 +22,7 @@ public class ClusterControllerImpl implements ClusterController {
 
     @Override
     public HttpBody<String> getSchedulerId() {
-        return HttpBody.<String>builder().msg(schedulerClusterManager.getSchedulerId()).code(0).build();
+        return HttpBody.<String>builder().data(schedulerClusterManager.getSchedulerId()).code(0).build();
     }
 
     @Override
