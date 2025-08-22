@@ -12,11 +12,17 @@ import * as directives from 'vuetify/directives'
 import '@mdi/font/css/materialdesignicons.css' // Ensure you are using css-loader
 import { useDisplay } from 'vuetify'
 
+import { aliases, mdi } from 'vuetify/iconsets/mdi-svg'
+
 const vuetify = createVuetify({
   components,
   directives,
   icons: { // 引入icon
     defaultSet: 'mdi', // This is already the default value - only for display purposes
+    aliases,
+    sets: {
+      mdi,
+    },
   },
 
   // 来自https://www.doubao.com/thread/wc07fda06bc2c5808，但是指引是错的，看个思路

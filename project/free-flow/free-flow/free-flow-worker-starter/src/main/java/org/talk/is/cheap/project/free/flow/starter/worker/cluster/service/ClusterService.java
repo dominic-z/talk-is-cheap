@@ -11,6 +11,7 @@ import org.apache.zookeeper.CreateMode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.talk.is.cheap.project.free.flow.common.enums.EnvType;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
@@ -32,6 +33,7 @@ import java.util.Random;
  * 2. 本worker的状态流转
  */
 @Slf4j
+@Service
 public class ClusterService {
 
     @Autowired
