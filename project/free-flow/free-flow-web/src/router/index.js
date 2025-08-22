@@ -1,10 +1,14 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
+import ClusterManageView from '../views/ClusterManageView.vue'
 
 export const namedRouter = {
   index: {
     name: 'index',
-    path: ''/''
+    path: '/'
+  },
+  clusterManage: {
+    name: 'clusterManage',
+    path: '/cluster-manage'
   }
 }
 
@@ -13,8 +17,14 @@ const router = createRouter({
   routes: [
     {
       path: namedRouter.index.path,
-      name: namedRouter.index.name,
-      component: HomeView,
+      redirect: {
+        name: namedRouter.clusterManage.name
+      }
+    },
+    {
+      path: namedRouter.clusterManage.path,
+      name: namedRouter.clusterManage.name,
+      component: ClusterManageView,
     },
   ]
 })

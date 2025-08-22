@@ -1,6 +1,7 @@
 <script setup>
 
 // import HomeNav from '@/views/HomeNav.vue';
+import GlobalNav from '@/components/nav/GlobalNav.vue';
 import { ref } from 'vue'
 
 
@@ -10,14 +11,7 @@ import { ref } from 'vue'
 
 <template>
   <v-app id="inspire">
-    <v-app-bar >
-      <v-app-bar-nav-icon></v-app-bar-nav-icon>
-
-      <v-app-bar-title>Application</v-app-bar-title>
-
-      <v-btn icon="mdi-dots-vertical">
-      </v-btn>
-    </v-app-bar>
+    <GlobalNav></GlobalNav>
 
     <v-main>
       <v-container>
