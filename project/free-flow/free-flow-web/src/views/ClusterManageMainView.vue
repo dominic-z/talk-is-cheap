@@ -21,10 +21,8 @@ const itemsPerPage = ref(2)
 
 
 
-const a = computed(() => props.nodeType)
 async function loadItems() {
 
-    console.log(a)
     loading.value = true
     serverItems.value = []
     // 模拟个读取
@@ -35,7 +33,7 @@ async function loadItems() {
                 console.log(res)
                 serverItems.value = [{
                     nodeID: res,
-                    nodeType: a.value,
+                    nodeType: props.nodeType,
                     launchTime: "2020-08-08"
                 }]
             })
@@ -45,7 +43,7 @@ async function loadItems() {
 
 }
 
-watch(a, loadItems, { immediate: true })
+watch(computed(() => props.nodeType), loadItems, { immediate: true })
 
 function myAlert() {
     alert("aaaa")
