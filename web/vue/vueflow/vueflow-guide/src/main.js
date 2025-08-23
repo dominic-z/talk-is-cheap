@@ -4,37 +4,36 @@ import './assets/main.css'
 
 
 import { createApp } from 'vue'
-import App from './App.vue'
 
-import SimpleGraph from '@/components/getting-started/SimpleGraph.vue'
-
+import SimpleGraph from '@/guide/getting-started/SimpleGraph.vue'
 
 
-import GettingStartedApp from '@/components/getting-started/GettingStartedApp.vue'
-import GettingStartedCustomApp from '@/components/getting-started/GettingStartedCustomApp.vue'
-import ThemingApp from '@/components/theming/ThemingApp.vue'
-import AddNodeApp from '@/components/node/AddNodeApp.vue'
-import RemoveNodeApp from '@/components/node/RemoveNodeApp.vue'
-import UpdateNodeUseVueFlowApp from '@/components/node/update-node/UpdateNodeUseVueFlowApp.vue'
 
-import UpdateNodeUseNodeApp from '@/components/node/update-node/UpdateNodeUseNodeApp.vue'
-import UpdateNodeVModelApp from '@/components/node/update-node/UpdateNodeVModelApp.vue'
-import NodeTypeApp from './components/node/node-types/NodeTypeApp.vue'
-import MultiVueFlowApp from './components/node/MultiVueFlowApp.vue'
-import NodeEventUseVueFlowApp from './components/node/node-event/NodeEventUseVueFlowApp.vue'
-import NodeEventComponentApp from './components/node/node-event/NodeEventComponentApp.vue'
+import GettingStartedApp from '@/guide/getting-started/GettingStartedApp.vue'
+import GettingStartedCustomApp from '@/guide/getting-started/GettingStartedCustomApp.vue'
+import ThemingApp from '@/guide/theming/ThemingApp.vue'
+import AddNodeApp from '@/guide/node/AddNodeApp.vue'
+import RemoveNodeApp from '@/guide/node/RemoveNodeApp.vue'
+import UpdateNodeUseVueFlowApp from '@/guide/node/update-node/UpdateNodeUseVueFlowApp.vue'
 
-import ScrollingWithinNodeApp from './components/node/scrolling-within-node/ScrollingWithinNodeApp.vue'
-import PreventDragNodeApp from './components/node/prevent-drag-node/PreventDragNodeApp.vue'
-import AddEdgeApp from './components/edge/AddEdgeApp.vue'
-import RemoveEdgeApp from './components/edge/RemoveEdgeApp.vue'
-import UpdateEdgeApp from './components/edge/UpdateEdgeApp.vue'
-import EdgeTypeApp from './components/edge/edge-type/EdgeTypeApp.vue'
-import EdgeEventApp from './components/edge/EdgeEventApp.vue'
-import HandleApp from './components/handle/HandleApp.vue'
-import FlowChangeApp from './components/controlled-flow/FlowChangeApp.vue'
-import ValidatingChangesApp from './components/controlled-flow/ValidatingChangesApp.vue'
-import VModelNodesAndEdgesApp from './components/controlled-flow/VModelNodesAndEdgesApp.vue'
+import UpdateNodeUseNodeApp from '@/guide/node/update-node/UpdateNodeUseNodeApp.vue'
+import UpdateNodeVModelApp from '@/guide/node/update-node/UpdateNodeVModelApp.vue'
+import NodeTypeApp from './guide/node/node-types/NodeTypeApp.vue'
+import MultiVueFlowApp from './guide/node/MultiVueFlowApp.vue'
+import NodeEventUseVueFlowApp from './guide/node/node-event/NodeEventUseVueFlowApp.vue'
+import NodeEventComponentApp from './guide/node/node-event/NodeEventComponentApp.vue'
+
+import ScrollingWithinNodeApp from './guide/node/scrolling-within-node/ScrollingWithinNodeApp.vue'
+import PreventDragNodeApp from './guide/node/prevent-drag-node/PreventDragNodeApp.vue'
+import AddEdgeApp from './guide/edge/AddEdgeApp.vue'
+import RemoveEdgeApp from './guide/edge/RemoveEdgeApp.vue'
+import UpdateEdgeApp from './guide/edge/UpdateEdgeApp.vue'
+import EdgeTypeApp from './guide/edge/edge-type/EdgeTypeApp.vue'
+import EdgeEventApp from './guide/edge/EdgeEventApp.vue'
+import HandleApp from './guide/handle/HandleApp.vue'
+import FlowChangeApp from './guide/controlled-flow/FlowChangeApp.vue'
+import ValidatingChangesApp from './guide/controlled-flow/ValidatingChangesApp.vue'
+import VModelNodesAndEdgesApp from './guide/controlled-flow/VModelNodesAndEdgesApp.vue'
 
 // createApp(App).mount('#app')
 

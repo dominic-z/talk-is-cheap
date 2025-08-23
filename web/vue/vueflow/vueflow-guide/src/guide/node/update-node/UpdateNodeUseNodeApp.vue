@@ -1,7 +1,7 @@
 <script setup>
 
 // 通过useVueNode来修改节点，useXX是vue中会产生副作用的函数，useVueNode就是获取这个节点，并对节点进行一些处理
-import CustomNode from '@/components/node/update-node/CustomNode.vue';
+import CustomNode from '@/guide/node/update-node/CustomNode.vue';
 import { VueFlow, Panel, useVueFlow } from '@vue-flow/core'
 import { ref } from 'vue'
 
