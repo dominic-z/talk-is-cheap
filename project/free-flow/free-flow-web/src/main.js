@@ -2,7 +2,7 @@ import './assets/main.css'
 
 import { createApp,ref } from 'vue'
 import { createPinia } from 'pinia'
-import vuetify from './VuetifyConfiguration.js'
+import vuetify from './vuetifyConfiguration.js'
 
 
 

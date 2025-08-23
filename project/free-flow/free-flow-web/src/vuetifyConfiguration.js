@@ -3,14 +3,13 @@
 // 
 
 // Vuetify
-import 'vuetify/styles'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
+import 'vuetify/styles'
 
 // 引入icon
-import '@mdi/font/css/materialdesignicons.css' // Ensure you are using css-loader
-import { useDisplay } from 'vuetify'
+import '@mdi/font/css/materialdesignicons.css'; // Ensure you are using css-loader
 
 import { aliases, mdi } from 'vuetify/iconsets/mdi-svg'
 
@@ -33,6 +32,5 @@ const vuetify = createVuetify({
   }
 })
 
-console.log(vuetify.display.mobileBreakpoint)
 
 export default vuetify
