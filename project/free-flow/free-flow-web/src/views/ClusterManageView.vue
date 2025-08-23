@@ -1,41 +1,39 @@
 <script setup>
 
 // import HomeNav from '@/views/HomeNav.vue';
-import GlobalNav from '@/components/nav/GlobalNav.vue';
 
-import ClusterManageMainView from './ClusterManageMainView.vue';
+import ClusterManageMainView from '../components/cluster-manage/ClusterManageMain.vue';
 
-import { mdiMagnify,mdiArrowCollapseVertical } from '@mdi/js'
-import { ref } from 'vue'
+import { useClusterManageStore } from '@/stores/clusterManageStore';
+import { mdiArrowCollapseVertical } from '@mdi/js';
+import { ref } from 'vue';
 
-const expand = ref(false)
+
+const clusterManageStore = useClusterManageStore()
+
 const nodeType = ref('Scheduler')
 function updateTab(e) {
-  // console.log(e)
-  // console.log(nodeType.value)
+  console.log(nodeType.value)
 }
+
 
 </script>
 
 <template>
-  <v-app id="inspire">
-    <GlobalNav>
-      <v-btn :icon="mdiMagnify" @click="expand = !expand">
-      </v-btn>
-    </GlobalNav>
 
     <ClusterManageMainView :nodeType="nodeType">
 
+      <!-- 其实好像没必要用slot的，但是懒得改了 -->
       <template v-slot:search>
         <v-expand-transition>
-          <v-card v-if="expand">
+          <v-card v-if="clusterManageStore.expand">
             <v-toolbar class="text-black">
               <v-tabs v-model="nodeType" @update:modelValue="updateTab">
                 <v-tab value="Scheduler">Scheduler</v-tab>
                 <v-tab value="Worker">Worker</v-tab>
               </v-tabs>
 
-              <v-btn :icon="mdiArrowCollapseVertical" class="position-absolute right-0" @click="expand = !expand"></v-btn>
+              <v-btn :icon="mdiArrowCollapseVertical" class="position-absolute right-0" @click="clusterManageStore.changeExpand"></v-btn>
 
             </v-toolbar>
           </v-card>
@@ -45,5 +43,4 @@ function updateTab(e) {
 
 
     </ClusterManageMainView>
-  </v-app>
 </template>

@@ -1,50 +1,60 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import ClusterManageView from '../views/ClusterManageView.vue'
+import TaskDefinitionView from '@/views/TaskDefinitionView.vue'
+import IndexView from '@/views/IndexView.vue'
 
-export const namedRouter = {
+export const namedRoutes = {
   index: {
     name: 'index',
-    path: '/'
+    path: '/',
+    component: IndexView,
+    clusterManage: {
+      name: 'clusterManage',
+      path: 'cluster-manage',
+      component: ClusterManageView
+    },
+    taskDefinitionManage: {
+      name: 'taskDefinitionManage',
+      path: 'task-definition-manage',
+      component: TaskDefinitionView
+    },
+    taskStartupManage: {
+      name: 'taskStartupManage',
+      path: 'task-startup-manage',
+      component: ClusterManageView
+    }
   },
-  clusterManage: {
-    name: 'clusterManage',
-    path: '/cluster-manage'
-  },
-  taskDefinitionManage: {
-    name: 'taskDefinitionManage',
-    path: '/task-definition-manage'
-  },
-  taskStartupManage: {
-    name: 'taskStartupManage',
-    path: '/task-startup-manage'
-  }
+
 }
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
-      path: namedRouter.index.path,
-      redirect: {
-        name: namedRouter.clusterManage.name
-      }
+      path: namedRoutes.index.path,
+      component: namedRoutes.index.component,
+      children: [
+        {
+          path: '',
+          redirect: namedRoutes.index.clusterManage.name
+        },
+        {
+          path: namedRoutes.index.clusterManage.path,
+          name: namedRoutes.index.clusterManage.name,
+          component: namedRoutes.index.clusterManage.component,
+        },
+        {
+          path: namedRoutes.index.taskDefinitionManage.path,
+          name: namedRoutes.index.taskDefinitionManage.name,
+          component: namedRoutes.index.taskDefinitionManage.component,
+        },
+        {
+          path: namedRoutes.index.taskStartupManage.path,
+          name: namedRoutes.index.taskStartupManage.name,
+          component: namedRoutes.index.taskStartupManage.component,
+        },
+      ]
     },
-    {
-      path: namedRouter.clusterManage.path,
-      name: namedRouter.clusterManage.name,
-      component: ClusterManageView,
-    },
-    {
-      path: namedRouter.taskDefinitionManage.path,
-      name: namedRouter.taskDefinitionManage.name,
-      component: ClusterManageView,
-    },
-    {
-      path: namedRouter.taskStartupManage.path,
-      name: namedRouter.taskStartupManage.name,
-      component: ClusterManageView,
-    },
-
   ]
 })
 

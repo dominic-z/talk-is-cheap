@@ -1,5 +1,5 @@
 <script setup>
-import { namedRouter } from '@/router';
+import { namedRoutes } from '@/router';
 import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 const route = useRoute()
@@ -11,34 +11,29 @@ const menus = ref([
   {
     id: '1',
     title: '节点查询',
-    routePath: namedRouter.clusterManage.path
+    routeName: namedRoutes.index.clusterManage.name
   },
   {
     id: '2',
     title: '任务定义查询',
-    routePath: namedRouter.taskDefinitionManage.path
+    routeName: namedRoutes.index.taskDefinitionManage.name
     
   },
   {
     id: '3',
     title: '任务执行查询',
-    routePath: namedRouter.taskStartupManage.path
+    routeName: namedRoutes.index.taskStartupManage.name
   },
 ])
 
 
 const title = computed(()=>{
   for(let menu of menus.value){
-    if(menu.routePath === route.path){
+    if(menu.routeName === route.name){
       return menu.title
     }
   }
 })
-
-function pushRoute(path){
-  console.log(path)
-  router.replace(path)
-}
 
 const drawer = ref(false)
 
@@ -57,8 +52,8 @@ const drawer = ref(false)
 
   <v-navigation-drawer v-model="drawer" :location="$vuetify.display.mobile ? 'bottom' : 'left'" temporary>
     <v-list>
-      <v-list-item class="border-b-thin" v-for="(m, index) in menus" :index="index" :key="m.id" :title="m.routePath"
-        link @click="()=>pushRoute(m.routePath)"></v-list-item>
+      <v-list-item class="border-b-thin" v-for="(m, index) in menus" :index="index" :key="m.id" :title="m.title"
+        link @click="$router.push({name:m.routeName})"></v-list-item>
     </v-list>
   </v-navigation-drawer>
 
