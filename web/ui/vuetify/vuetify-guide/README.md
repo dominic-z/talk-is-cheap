@@ -49,3 +49,10 @@ cnpm install @mdi/js -D
 
 
 我理解`@mdi/font`是通过css的形式引入icon，而`@mdi/js`是通过js的形式引入icon，[区别](https://www.doubao.com/thread/w6076e23113f55dcf)
+
+
+# component
+
+
+# styles
+vuetify里内置了很多常用的class，有需要直接从里面捞就可以，不需要自己再写麻烦的css

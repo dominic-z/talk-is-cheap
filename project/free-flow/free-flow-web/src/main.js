@@ -8,10 +8,11 @@ import vuetify from './vuetifyConfiguration.js'
 
 import App from './App.vue'
 import router from './router'
-import ClusterView from './views/ClusterView.vue'
+import ClusterView from './views/ClusterManageMainView.vue'
+import GlobalNav from './components/nav/GlobalNav.vue'
 
-// const app = createApp(App)
-const app = createApp(ClusterView)
+const app = createApp(App)
+// const app = createApp(GlobalNav)
 
 
 app.use(createPinia())
