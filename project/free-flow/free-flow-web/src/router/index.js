@@ -9,6 +9,14 @@ export const namedRouter = {
   clusterManage: {
     name: 'clusterManage',
     path: '/cluster-manage'
+  },
+  taskDefinitionManage: {
+    name: 'taskDefinitionManage',
+    path: '/task-definition-manage'
+  },
+  taskStartupManage: {
+    name: 'taskStartupManage',
+    path: '/task-startup-manage'
   }
 }
 
@@ -26,6 +34,17 @@ const router = createRouter({
       name: namedRouter.clusterManage.name,
       component: ClusterManageView,
     },
+    {
+      path: namedRouter.taskDefinitionManage.path,
+      name: namedRouter.taskDefinitionManage.name,
+      component: ClusterManageView,
+    },
+    {
+      path: namedRouter.taskStartupManage.path,
+      name: namedRouter.taskStartupManage.name,
+      component: ClusterManageView,
+    },
+
   ]
 })
 
