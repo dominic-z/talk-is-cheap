@@ -32,6 +32,12 @@ const vuetify = createVuetify({
       mdi,
     },
   },
+  // 来自https://www.doubao.com/thread/wc07fda06bc2c5808，但是指引是错的，看个思路
+  // 来自https://next.vuetifyjs.com/zh-Hans/features/display-and-platform/#section-5173952e70b959275c0f548c9608503c
+  // 很好理解 ，下列配置的含义，sm大小及以下的设备是为移动端，会影响全局的useDiplay().mobile
+  display: {
+    mobileBreakpoint: 'sm',
+  }
 })
 
 export default vuetify
