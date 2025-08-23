@@ -110,7 +110,7 @@ countApp.config.errorHandler = (err) => {
 // createApp(CompareModelAndBindApp).mount('#myApp')
 
 
-createApp(TemplateSyntaxAndRef).mount('#myApp')
+// createApp(TemplateSyntaxAndRef).mount('#myApp')
 // createApp(Computed).mount('#myApp')
 
 // createApp(ClassAndStyle).mount('#myApp')
@@ -155,7 +155,7 @@ createApp(TemplateSyntaxAndRef).mount('#myApp')
 // createApp(NavigationApp).use(navigationRouter).mount("#myApp")
 // createApp(NamedViewApp).use(namedViewRouter).mount("#myApp")
 // createApp(RedirectAliasApp).use(RedirectAliasRouter).mount("#myApp")
-// createApp(PassingPropsApp).use(passingPropsRouter).mount("#myApp")
+createApp(PassingPropsApp).use(passingPropsRouter).mount("#myApp")
 // createApp(ActiveLinkApp).use(activeLinkRouter).mount("#myApp")
 // createApp(HistoryModeApp).use(historyModeRouter).mount("#myApp")
 
