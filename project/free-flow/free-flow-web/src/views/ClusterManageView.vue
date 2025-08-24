@@ -2,7 +2,7 @@
 
 // import HomeNav from '@/views/HomeNav.vue';
 
-import ClusterManageMainView from '../components/cluster-manage/ClusterManageMain.vue';
+import ClusterManageNodeDataTable from '../components/cluster-manage/ClusterManageNodeDataTable.vue';
 
 import { useClusterManageStore } from '@/stores/clusterManageStore';
 import { mdiArrowCollapseVertical } from '@mdi/js';
@@ -21,26 +21,27 @@ function updateTab(e) {
 
 <template>
 
-    <ClusterManageMainView :nodeType="nodeType">
+  <v-main style="height: 100vh;">
 
-      <!-- 其实好像没必要用slot的，但是懒得改了 -->
-      <template v-slot:search>
-        <v-expand-transition>
-          <v-card v-if="clusterManageStore.expand">
-            <v-toolbar class="text-black">
-              <v-tabs v-model="nodeType" @update:modelValue="updateTab">
-                <v-tab value="Scheduler">Scheduler</v-tab>
-                <v-tab value="Worker">Worker</v-tab>
-              </v-tabs>
+    <v-expand-transition>
+      <v-card v-if="clusterManageStore.expand">
+        <v-toolbar class="text-black">
+          <v-tabs v-model="nodeType" @update:modelValue="updateTab">
+            <v-tab value="Scheduler">Scheduler</v-tab>
+            <v-tab value="Worker">Worker</v-tab>
+          </v-tabs>
 
-              <v-btn :icon="mdiArrowCollapseVertical" class="position-absolute right-0" @click="clusterManageStore.changeExpand"></v-btn>
+          <v-btn :icon="mdiArrowCollapseVertical" class="position-absolute right-0"
+            @click="clusterManageStore.changeExpand"></v-btn>
 
-            </v-toolbar>
-          </v-card>
+        </v-toolbar>
+      </v-card>
 
-        </v-expand-transition>
-      </template>
+    </v-expand-transition>
 
+    <ClusterManageNodeDataTable :nodeType="nodeType">
+    </ClusterManageNodeDataTable>
 
-    </ClusterManageMainView>
+  </v-main>
+
 </template>

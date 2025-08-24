@@ -110,7 +110,7 @@
     }
     const itemsPerPage = ref(5)
     const headers = ref([
-      { title: 'Car Model', key: 'name', align: 'start', headerProps: {class: 'font-weight-bold'}}, // 传递给默认的header的属性，这些属性会直接挂载表格的header组件属性上}
+      { title: 'Car Model', key: 'name', align: 'start', headerProps: {class: 'font-weight-bold'}}, // 传递给默认的header的属性，这些属性会直接挂载表格的header组件属性上} 而key属性代表着使用key指定的字段去items对象里找到对应的属性，例如这一行key是name，那么就要去item里找item.name作为这一列的数据
       { title: 'Horsepower', key: 'horsepower', align: 'end' },
       { title: 'Fuel Type', key: 'fuel', align: 'start' },
       { title: 'Origin', key: 'origin', align: 'start' },
