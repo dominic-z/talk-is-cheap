@@ -2,6 +2,7 @@
 
 // import HomeNav from '@/views/HomeNav.vue';
 import GlobalNav from '@/components/nav/IndexNav.vue';
+import TaskDefinitionDataTable from '@/components/task-definition/TaskDefinitionDataTable.vue';
 
 
 import { mdiMagnify } from '@mdi/js';
@@ -18,8 +19,6 @@ function updateTab(e) {
 
 <template>
   <VMain>
-    <div>
-    haha
-  </div>
+    <TaskDefinitionDataTable></TaskDefinitionDataTable>
   </VMain>
 </template>

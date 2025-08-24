@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import ClusterManageView from '../views/ClusterManageView.vue'
 import TaskDefinitionView from '@/views/TaskDefinitionView.vue'
 import IndexView from '@/views/IndexView.vue'
+import TaskDefinitionDetailView from '@/views/TaskDefinitionDetailView.vue'
 
 export const namedRoutes = {
   index: {
@@ -25,6 +26,12 @@ export const namedRoutes = {
     }
   },
 
+  taskDefinitionDetail:{
+    name: 'taskDefinitionDetail',
+    path: '/task-definition/:taskId',
+    component: TaskDefinitionDetailView,
+    props: true,
+  }
 }
 
 const router = createRouter({
@@ -36,7 +43,9 @@ const router = createRouter({
       children: [
         {
           path: '',
-          redirect: namedRoutes.index.clusterManage.name
+          redirect: {
+            name: namedRoutes.index.clusterManage.name
+          }
         },
         {
           path: namedRoutes.index.clusterManage.path,
@@ -55,6 +64,12 @@ const router = createRouter({
         },
       ]
     },
+    {
+      name: namedRoutes.taskDefinitionDetail.name,
+      path: namedRoutes.taskDefinitionDetail.path,
+      component: namedRoutes.taskDefinitionDetail.component,
+      props: namedRoutes.taskDefinitionDetail.props
+    }
   ]
 })
 

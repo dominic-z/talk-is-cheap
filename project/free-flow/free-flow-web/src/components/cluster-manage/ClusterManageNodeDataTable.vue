@@ -56,13 +56,12 @@ function myAlert() {
 <template>
 
 
-    <v-main style="height: 100vh;">
+    
 
-        <slot name="search"></slot>
 
         <v-data-table-server v-model:items-per-page="itemsPerPage" v-model:page="page" :headers="headers"
             :items="serverItems" :items-length="itemLength" :loading="loading" @update:page="loadItems"
-            :show-current-page="true" :disable-sort="true" hover>
+            :show-current-page="true" :disable-sort="true" hover item-value="nodeID">
 
 
             <template v-slot:item="{ item }">
@@ -77,5 +76,4 @@ function myAlert() {
 
             </template>
         </v-data-table-server>
-    </v-main>
 </template>
