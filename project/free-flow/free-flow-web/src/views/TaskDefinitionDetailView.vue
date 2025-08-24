@@ -18,24 +18,29 @@ const props = defineProps(['taskId'])
     </v-app-bar>
 
 
-    <v-navigation-drawer >
-      <div class="d-flex mt-2 ml-2 mr-2 ga-2">
+    <v-navigation-drawer>
+      <div class="d-flex mt-2 ml-2 mr-2 mb-0">
         <v-text-field label="taskVersion"></v-text-field>
         <v-btn :icon="mdiMagnify" variant="plain"></v-btn>
       </div>
 
       <v-divider></v-divider>
+      <v-list-item class="pa-1">
+        <v-card class="ma-1" hover>
+          <v-card-title>版本</v-card-title>
+          <v-card-subtitle>发布日期</v-card-subtitle>
+        </v-card>
+
+      </v-list-item>
 
 
-      <v-card class="ma-2 pa-1" hover>
-        <v-card-title>版本</v-card-title>
-        <v-card-subtitle>发布日期</v-card-subtitle>
-      </v-card>
+      <v-list-item class="pa-1">
+        <v-card class="ma-1" hover>
+          <v-card-title>版本</v-card-title>
+          <v-card-subtitle>发布日期</v-card-subtitle>
+        </v-card>
 
-      <v-card class="ma-2 pa-1" hover>
-        <v-card-title>版本</v-card-title>
-        <v-card-subtitle>发布日期</v-card-subtitle>
-      </v-card>
+      </v-list-item>
 
     </v-navigation-drawer>
 
