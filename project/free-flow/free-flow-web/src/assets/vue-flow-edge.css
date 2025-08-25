@@ -1,0 +1,8 @@
+/* 全局edge属性 */
+.vue-flow__edge-text {
+    font-size: 1.25rem
+}
+
+.vue-flow__edge {
+    stroke-width: 2
+}

@@ -72,4 +72,10 @@ const edges = ref([
     --vf-connection-path: #9e9ead;
     --vf-handle: #555;
 } */
+
+
+/* 这个类将修改所有edge的默认样式，其他全局类见https://vueflow.dev/guide/theming.html#css-class-names */
+/* .vue-flow__edge{
+
+} */
 </style>
