@@ -42,7 +42,7 @@ import EdgesApp from './example/edges/edges/EdgesApp.vue'
 // createApp(GettingStartedApp).mount("#app")
 // createApp(GettingStartedCustomApp).mount("#app")
 
-// createApp(ThemingApp).mount('#app')
+createApp(ThemingApp).mount('#app')
 // createApp(AddNodeApp).mount('#app')
 // createApp(RemoveNodeApp).mount('#app')
 // createApp(UpdateNodeUseVueFlowApp).mount('#app')
@@ -70,4 +70,4 @@ import EdgesApp from './example/edges/edges/EdgesApp.vue'
 
 
 // examples/edges
-createApp(EdgesApp).mount('#app')
+// createApp(EdgesApp).mount('#app')
