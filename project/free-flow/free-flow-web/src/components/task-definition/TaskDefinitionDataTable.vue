@@ -3,6 +3,7 @@
 import { ref } from 'vue'
 
 import {mdiAccountCowboyHat,mdiDotsVertical} from '@mdi/js'
+import { namedRoutes } from '@/router'
 
 const headers = ref([
     { title: 'Task Name', key: 'taskName', align: 'start', headerProps: { class: 'font-weight-bold' } },
@@ -51,7 +52,7 @@ const items = ref([
 
 
         <template v-slot:item="{ item }">
-            <tr class="text-no-wrap cursor-pointer">
+            <tr class="text-no-wrap cursor-pointer" @click="$router.push({name:namedRoutes.taskDefinitionDetail.name,params:{'taskId':item.id}})">
                 <td><v-icon :icon="`${mdiAccountCowboyHat}`" />{{ item.taskName }}</td>
                 <td class="text-end">{{ item.taskVersion }}</td>
                 <td class="text-end">{{ item.releaseTime }}</td>

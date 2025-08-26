@@ -24,7 +24,7 @@ const nodes = ref([
 
         type: "RunnableStage",
 
-        data: { label: 'Node 3' },
+        data: { label: 'Node 3', status: 'running' },
     }
 ])
 
@@ -34,9 +34,9 @@ const edges = ref([
         source: '1',
         target: '2',
         markerEnd: {
-            type: MarkerType.ArrowClosed,
-            color: 'black',
-            strokeWidth: 3,
+            type: MarkerType.Arrow,
+            color: 'gray',
+            strokeWidth: 1.5,
         },
     },
 
@@ -45,11 +45,10 @@ const edges = ref([
         source: '1',
         target: '3',
         animated: true,
-        label:'11',
         markerEnd: {
             type: MarkerType.Arrow,
             color: 'gray',
-            strokeWidth: 3,
+            strokeWidth: 1.5,
         },
     }
 ])
@@ -60,6 +59,8 @@ function onNodeClick({ event, node }) {
     if (!draw.value) {
         draw.value = !draw.value;
     }
+    nodes.value[2].data.status = ''
+
 
 }
 
@@ -76,7 +77,14 @@ const draw = ref(false)
                 <VueFlow :nodes="nodes" :edges="edges" @node-click="onNodeClick" fit-view-on-init>
 
                     <template #node-RunnableStage="runnableStageProps">
-                        <RunnableStageNode v-bind="runnableStageProps" />
+                        <RunnableStageNode v-bind="runnableStageProps">
+                            <template v-slot:content>
+                                <v-progress-circular v-if="runnableStageProps.data.status === 'running'" class="mr-2"
+                                    color="primary" indeterminate></v-progress-circular>
+                                <v-progress-circular v-else color="blue-grey" model-value="100"></v-progress-circular>
+                                {{ runnableStageProps.data.label }}
+                            </template>
+                        </RunnableStageNode>
                     </template>
 
 
