@@ -11,18 +11,18 @@ const menus = ref([
   {
     id: '1',
     title: '节点查询',
-    routeName: namedRoutes.index.clusterManage.name
+    routeName: namedRoutes.index.clusterNodeList.name
   },
   {
     id: '2',
     title: '任务定义查询',
-    routeName: namedRoutes.index.taskDefinitionManage.name
+    routeName: namedRoutes.index.taskDefinitionList.name
     
   },
   {
     id: '3',
-    title: '任务执行查询',
-    routeName: namedRoutes.index.taskStartupManage.name
+    title: '任务启动查询',
+    routeName: namedRoutes.index.taskStartupList.name
   },
 ])
 
