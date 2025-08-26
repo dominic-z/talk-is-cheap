@@ -37,6 +37,10 @@ async function loadItems() {
                     launchTime: "2020-08-08"
                 }]
             })
+            .catch(e=>{
+                console.error(e)
+                loading.value = false
+            })
         itemLength.value = 10
         loading.value = false;
     }, 500)

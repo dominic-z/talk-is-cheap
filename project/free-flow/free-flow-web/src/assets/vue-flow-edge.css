@@ -3,6 +3,8 @@
     font-size: 1.25rem
 }
 
-.vue-flow__edge {
-    stroke-width: 2
+
+/* edge的连接线是svg的,修改svg默认样式需要这个SVG path for edge elements */
+.vue-flow__edge-path {
+    stroke-width: 3px
 }

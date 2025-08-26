@@ -11,7 +11,8 @@ console.log(props)
     <!-- x轴的margin是6 -->
     <div class="text-h6 mx-6 my-3 cursor-pointer">
         <Handle type="target" :position="Position.Top" :style="{ width: '15px', height: '15px' }"></Handle>
-        <div>{{ props.data.label }}</div>
+        <slot name="content"></slot>
+        <div v-if="!$slots.content">{{ props.data.label }}</div>
         <Handle type="source" :position="Position.Bottom" :style="{ width: '15px', height: '15px' }"></Handle>
     </div>
 

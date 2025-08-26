@@ -78,4 +78,12 @@ const edges = ref([
 /* .vue-flow__edge{
 
 } */
+
+
+
+
+/* edge的连接线是svg的,修改svg默认样式需要这个SVG path for edge elements */
+/* .vue-flow__edge-path {
+    stroke-width: 3px
+} */
 </style>
