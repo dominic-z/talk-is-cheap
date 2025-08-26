@@ -1,28 +1,30 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import ClusterManageView from '../views/ClusterManageView.vue'
-import TaskDefinitionView from '@/views/TaskDefinitionView.vue'
+import ClusterNodeListView from '../views/ClusterNodeListView.vue'
+import TaskDefinitionListView from '@/views/TaskDefinitionListView.vue'
 import IndexView from '@/views/IndexView.vue'
 import TaskDefinitionDetailView from '@/views/TaskDefinitionDetailView.vue'
+import TaskStartupListView from '@/views/TaskStartupListView.vue'
+import TaskStarupDetailView from '@/views/TaskStarupDetailView.vue'
 
 export const namedRoutes = {
   index: {
     name: 'index',
     path: '/',
     component: IndexView,
-    clusterManage: {
+    clusterNodeList: {
       name: 'clusterManage',
       path: 'cluster-manage',
-      component: ClusterManageView
+      component: ClusterNodeListView
     },
-    taskDefinitionManage: {
+    taskDefinitionList: {
       name: 'taskDefinitionManage',
       path: 'task-definition-manage',
-      component: TaskDefinitionView
+      component: TaskDefinitionListView
     },
-    taskStartupManage: {
+    taskStartupList: {
       name: 'taskStartupManage',
       path: 'task-startup-manage',
-      component: ClusterManageView
+      component: TaskStartupListView
     }
   },
 
@@ -31,7 +33,14 @@ export const namedRoutes = {
     path: '/task-definition/:taskId',
     component: TaskDefinitionDetailView,
     props: true,
-  }
+  },
+
+  taskStartupDetail:{
+    name: 'taskStartupDetail',
+    path: '/task-startup/:startupId',
+    component: TaskStarupDetailView,
+    props: true,
+  },
 }
 
 const router = createRouter({
@@ -44,23 +53,23 @@ const router = createRouter({
         {
           path: '',
           redirect: {
-            name: namedRoutes.index.clusterManage.name
+            name: namedRoutes.index.clusterNodeList.name
           }
         },
         {
-          path: namedRoutes.index.clusterManage.path,
-          name: namedRoutes.index.clusterManage.name,
-          component: namedRoutes.index.clusterManage.component,
+          path: namedRoutes.index.clusterNodeList.path,
+          name: namedRoutes.index.clusterNodeList.name,
+          component: namedRoutes.index.clusterNodeList.component,
         },
         {
-          path: namedRoutes.index.taskDefinitionManage.path,
-          name: namedRoutes.index.taskDefinitionManage.name,
-          component: namedRoutes.index.taskDefinitionManage.component,
+          path: namedRoutes.index.taskDefinitionList.path,
+          name: namedRoutes.index.taskDefinitionList.name,
+          component: namedRoutes.index.taskDefinitionList.component,
         },
         {
-          path: namedRoutes.index.taskStartupManage.path,
-          name: namedRoutes.index.taskStartupManage.name,
-          component: namedRoutes.index.taskStartupManage.component,
+          path: namedRoutes.index.taskStartupList.path,
+          name: namedRoutes.index.taskStartupList.name,
+          component: namedRoutes.index.taskStartupList.component,
         },
       ]
     },
@@ -69,7 +78,13 @@ const router = createRouter({
       path: namedRoutes.taskDefinitionDetail.path,
       component: namedRoutes.taskDefinitionDetail.component,
       props: namedRoutes.taskDefinitionDetail.props
-    }
+    },
+    {
+      name: namedRoutes.taskStartupDetail.name,
+      path: namedRoutes.taskStartupDetail.path,
+      component: namedRoutes.taskStartupDetail.component,
+      props: namedRoutes.taskStartupDetail.props
+    },
   ]
 })
 

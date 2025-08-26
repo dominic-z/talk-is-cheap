@@ -75,7 +75,7 @@ const draw = ref(false)
 <template>
     <v-main>
 
-
+        <v-progress-linear color="primary" indeterminate></v-progress-linear>
         <v-sheet class="mx-auto pa-2 pt-6" color="grey-lighten-4">
 
             <div :style="{ height: '100vh', width: '100wh' }">

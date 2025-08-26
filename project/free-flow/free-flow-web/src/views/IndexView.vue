@@ -11,7 +11,7 @@ import { namedRoutes } from '@/router';
 
     <VApp id="index">
         <IndexNav>
-            <ClusterManageIndexNavSlot v-if="$route.name===namedRoutes.index.clusterManage.name"></ClusterManageIndexNavSlot>
+            <ClusterManageIndexNavSlot v-if="$route.name===namedRoutes.index.clusterNodeList.name"></ClusterManageIndexNavSlot>
         </IndexNav>
         <RouterView >
 

@@ -3,36 +3,24 @@ import { Handle, Position } from '@vue-flow/core';
 
 
 const props = defineProps(['data'])
-const items = [
-    {
-      title: 'Item #1',
-      value: 1,
-    },
-    {
-      title: 'Item #2',
-      value: 2,
-    },
-    {
-      title: 'Item #3',
-      value: 3,
-    },
-  ]
-console.log(props)
+
 </script>
 
 <template>
-    <!-- x轴的margin是6 -->
-    <div class="text-h6 mx-6 my-3 cursor-pointer">
-        <Handle type="target" :position="Position.Top" :style="{ width: '15px', height: '15px' }"></Handle>
-        <slot name="content"></slot>
-        <div v-if="!$slots.content">{{ props.data.label }}</div>
-        <Handle type="source" :position="Position.Bottom" :style="{ width: '15px', height: '15px' }"></Handle>
+    <div>
 
+        <!-- x轴的margin是6 -->
+        <div class="text-h6 mx-6 my-3 cursor-pointer">
+            <Handle type="target" :position="Position.Top" :style="{ width: '15px', height: '15px' }"></Handle>
+            <slot name="content"></slot>
+            <div v-if="!$slots.content">{{ props.data.label }}</div>
+            <Handle type="source" :position="Position.Bottom" :style="{ width: '15px', height: '15px' }"></Handle>
+
+        </div>
+
+        <slot name="append"></slot>
     </div>
 
-    <v-card class="mx-auto position-absolute" max-width="300">
-        <v-list :items="items"></v-list>
-    </v-card>
 
 </template>
 
@@ -41,7 +29,7 @@ console.log(props)
 .vue-flow__node-RunnableStage {
     cursor: pointer !important;
     border-radius: 8px;
-    border: 4px solid ;
+    border: 4px solid;
 
     max-width: 400px;
     max-height: 200px;
@@ -62,7 +50,7 @@ console.log(props)
 }
 
 
-.vue-flow__node-RunnableStage:hover{
+.vue-flow__node-RunnableStage:hover {
     box-shadow: 0 8px 12px rgba(0, 0, 0, 0.6);
 }
 </style>
