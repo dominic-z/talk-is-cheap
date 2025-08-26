@@ -8,6 +8,7 @@ import HelloVCardSlot from './component/v-card/HelloVCardSlot.vue'
 import HelloDataTableServer from './component/data-table/HelloDataTableServer.vue'
 import DataTableHeaderSlot from './component/data-table/DataTableHeaderSlot.vue'
 import StaticPosition from './styles/position/StaticPosition.vue'
+import VFadeTransitionApp from '@/styles/transitions/VFadeTransitionApp.vue'
 
 // const app = createApp(HelloVuetifyMdiFont)
 // const app = createApp(HelloVuetifyMdiJS)
@@ -16,6 +17,10 @@ import StaticPosition from './styles/position/StaticPosition.vue'
 // const app = createApp(HelloDataTableServer)
 // const app = createApp(DataTableHeaderSlot)
 
-const app = createApp(StaticPosition)
+
+// styles
+// const app = createApp(StaticPosition)
+// transition
+const app = createApp(VFadeTransitionApp)
 app.use(vuetify)
 app.mount('#app')

@@ -3,7 +3,20 @@ import { Handle, Position } from '@vue-flow/core';
 
 
 const props = defineProps(['data'])
-
+const items = [
+    {
+      title: 'Item #1',
+      value: 1,
+    },
+    {
+      title: 'Item #2',
+      value: 2,
+    },
+    {
+      title: 'Item #3',
+      value: 3,
+    },
+  ]
 console.log(props)
 </script>
 
@@ -14,7 +27,12 @@ console.log(props)
         <slot name="content"></slot>
         <div v-if="!$slots.content">{{ props.data.label }}</div>
         <Handle type="source" :position="Position.Bottom" :style="{ width: '15px', height: '15px' }"></Handle>
+
     </div>
+
+    <v-card class="mx-auto position-absolute" max-width="300">
+        <v-list :items="items"></v-list>
+    </v-card>
 
 </template>
 

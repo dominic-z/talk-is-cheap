@@ -2,8 +2,10 @@
 import { mdiWindowClose } from '@mdi/js';
 import { Background } from '@vue-flow/background';
 import { MarkerType, VueFlow } from '@vue-flow/core';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import RunnableStageNode from '../flow/node/RunnableStageNode.vue';
+import { mdiCheck } from '@mdi/js';
+import { mdiCheckCircle } from '@mdi/js';
 
 const nodes = ref([
     {
@@ -16,12 +18,11 @@ const nodes = ref([
         id: '2',
         position: { x: 50, y: 200 },
         type: "RunnableStage",
-        data: { label: 'myNode 2' },
+        data: { label: 'myNode 2', hasMenu: true },
     },
     {
         id: '3',
         position: { x: 350, y: 200 },
-
         type: "RunnableStage",
 
         data: { label: 'Node 3', status: 'running' },
@@ -53,6 +54,7 @@ const edges = ref([
     }
 ])
 
+
 // Node click event handler
 function onNodeClick({ event, node }) {
     console.log('Node clicked:', node, event);
@@ -72,17 +74,29 @@ const draw = ref(false)
 
 <template>
     <v-main>
+
+
         <v-sheet class="mx-auto pa-2 pt-6" color="grey-lighten-4">
+
             <div :style="{ height: '100vh', width: '100wh' }">
                 <VueFlow :nodes="nodes" :edges="edges" @node-click="onNodeClick" fit-view-on-init>
 
                     <template #node-RunnableStage="runnableStageProps">
                         <RunnableStageNode v-bind="runnableStageProps">
                             <template v-slot:content>
-                                <v-progress-circular v-if="runnableStageProps.data.status === 'running'" class="mr-2"
-                                    color="primary" indeterminate></v-progress-circular>
-                                <v-progress-circular v-else color="blue-grey" model-value="100"></v-progress-circular>
+
+
+                                <VFadeTransition leave-absolute="true">
+                                    <v-progress-circular v-if="runnableStageProps.data.status == 'running'" class="mr-2"
+                                        color="primary" indeterminate>
+                                    </v-progress-circular>
+                                    <v-icon v-else :icon="mdiCheckCircle" :style="{ 'color': 'green' }" />
+
+                                </VFadeTransition>
                                 {{ runnableStageProps.data.label }}
+                                
+
+                                
                             </template>
                         </RunnableStageNode>
                     </template>
@@ -96,6 +110,8 @@ const draw = ref(false)
             </div>
 
         </v-sheet>
+
+
 
 
         <v-navigation-drawer v-model="draw" :location="'right'" :width="navWidth" floating="">
