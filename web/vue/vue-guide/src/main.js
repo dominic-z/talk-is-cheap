@@ -117,7 +117,7 @@ countApp.config.errorHandler = (err) => {
 // createApp(Conditional).mount('#myApp')
 
 // createApp(List).mount('#myApp')
-// createApp(EventHandling).mount('#myApp')
+createApp(EventHandling).mount('#myApp')
 // createApp(Forms).mount('#myApp')
 
 // createApp(Watchers1).mount('#myApp')
@@ -155,7 +155,7 @@ countApp.config.errorHandler = (err) => {
 // createApp(NavigationApp).use(navigationRouter).mount("#myApp")
 // createApp(NamedViewApp).use(namedViewRouter).mount("#myApp")
 // createApp(RedirectAliasApp).use(RedirectAliasRouter).mount("#myApp")
-createApp(PassingPropsApp).use(passingPropsRouter).mount("#myApp")
+// createApp(PassingPropsApp).use(passingPropsRouter).mount("#myApp")
 // createApp(ActiveLinkApp).use(activeLinkRouter).mount("#myApp")
 // createApp(HistoryModeApp).use(historyModeRouter).mount("#myApp")
 

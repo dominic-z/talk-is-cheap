@@ -13,11 +13,11 @@ import RailNavApp from './component/v-navigation-drawer/RailNavApp.vue'
 
 // const app = createApp(HelloVuetifyMdiFont)
 // const app = createApp(HelloVuetifyMdiJS)
-// const app = createApp(HelloVCard)
+const app = createApp(HelloVCard)
 // const app = createApp(HelloVCardSlot)
 // const app = createApp(HelloDataTableServer)
 // const app = createApp(DataTableHeaderSlot)
-const app = createApp(RailNavApp)
+// const app = createApp(RailNavApp)
 
 
 // styles
