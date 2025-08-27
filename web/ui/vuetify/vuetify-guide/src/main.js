@@ -9,6 +9,7 @@ import HelloDataTableServer from './component/data-table/HelloDataTableServer.vu
 import DataTableHeaderSlot from './component/data-table/DataTableHeaderSlot.vue'
 import StaticPosition from './styles/position/StaticPosition.vue'
 import VFadeTransitionApp from '@/styles/transitions/VFadeTransitionApp.vue'
+import RailNavApp from './component/v-navigation-drawer/RailNavApp.vue'
 
 // const app = createApp(HelloVuetifyMdiFont)
 // const app = createApp(HelloVuetifyMdiJS)
@@ -16,11 +17,12 @@ import VFadeTransitionApp from '@/styles/transitions/VFadeTransitionApp.vue'
 // const app = createApp(HelloVCardSlot)
 // const app = createApp(HelloDataTableServer)
 // const app = createApp(DataTableHeaderSlot)
+const app = createApp(RailNavApp)
 
 
 // styles
 // const app = createApp(StaticPosition)
 // transition
-const app = createApp(VFadeTransitionApp)
+// const app = createApp(VFadeTransitionApp)
 app.use(vuetify)
 app.mount('#app')
