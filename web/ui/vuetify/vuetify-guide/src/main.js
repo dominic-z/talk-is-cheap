@@ -10,14 +10,16 @@ import DataTableHeaderSlot from './component/data-table/DataTableHeaderSlot.vue'
 import StaticPosition from './styles/position/StaticPosition.vue'
 import VFadeTransitionApp from '@/styles/transitions/VFadeTransitionApp.vue'
 import RailNavApp from './component/v-navigation-drawer/RailNavApp.vue'
+import ManualExpansionRailNavApp from '@/component/v-navigation-drawer/ManualExpansionRailNavApp.vue'
 
 // const app = createApp(HelloVuetifyMdiFont)
 // const app = createApp(HelloVuetifyMdiJS)
-const app = createApp(HelloVCard)
+// const app = createApp(HelloVCard)
 // const app = createApp(HelloVCardSlot)
 // const app = createApp(HelloDataTableServer)
 // const app = createApp(DataTableHeaderSlot)
-// const app = createApp(RailNavApp)
+const app = createApp(RailNavApp)
+// const app = createApp(ManualExpansionRailNavApp)
 
 
 // styles
