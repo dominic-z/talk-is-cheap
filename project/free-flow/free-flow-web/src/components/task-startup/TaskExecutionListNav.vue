@@ -8,10 +8,11 @@ import { ref } from 'vue';
 
 
 const showTaskStartupDetail = ref(false)
-const rail = ref(true)
+const rail = ref(false)
 const expandOnHover = ref(true)
 const expand = ref(false)
 const cardRef = ref(null)
+const inTransition = ref(false)
 
 
 function updateRail(e) {
@@ -26,22 +27,31 @@ function updateRail(e) {
 
 function updateShowTaskStartupDetail(e) {
     console.log(e)
+    if(inTransition.value){
+        return
+    }
+
     if (showTaskStartupDetail.value) {
         // 也可以通过模板引用获取一个组件的真实位置信息，并将其与鼠标位置进行对比
         // const rect = cardRef.value.getBoundingClientRect();
         console.log(e)
-        console.log(cardRef.value.position)
+        console.log(cardRef.value)
 
         
         showTaskStartupDetail.value = false;
     } else {
         setTimeout(() => showTaskStartupDetail.value = true, 100)
     }
+    inTransition.value = true
 }
 
 function pinNav() {
     rail.value = !rail.value
     expandOnHover.value = !expandOnHover.value
+}
+
+function onTransitionEnd(){
+    inTransition.value = false
 }
 </script>
 
@@ -68,7 +78,7 @@ function pinNav() {
 
 
                 <!-- 见vuetify-guide -->
-                <v-list-item v-if="showTaskStartupDetail" key="2-1" @mouseleave="updateShowTaskStartupDetail" link>
+                <v-list-item v-if="showTaskStartupDetail" key="2-1" @transitionend="onTransitionEnd" @mouseleave="updateShowTaskStartupDetail" link>
                     <template v-slot:default>
                         <div class="v-list-item pa-0">
                             <v-progress-circular color="primary" :model-value="20" :size="25"
@@ -84,7 +94,7 @@ function pinNav() {
                         </v-card>
                     </template>
                 </v-list-item>
-                <v-list-item key="2-2" v-else @mouseenter="updateShowTaskStartupDetail">
+                <v-list-item key="2-2" v-else @mouseenter="updateShowTaskStartupDetail" @transitionend="onTransitionEnd">
                     <div class="v-list-item pa-0">
                         <v-progress-circular color="primary" :model-value="20" :size="25"
                             class="mr-5"></v-progress-circular>
