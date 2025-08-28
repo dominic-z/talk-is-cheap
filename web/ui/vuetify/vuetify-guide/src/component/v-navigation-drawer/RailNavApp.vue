@@ -9,6 +9,7 @@ import { mdiFolder } from '@mdi/js';
 import { ref } from 'vue'
 
 const showCard = ref(false)
+const inTransition = ref(false)
 function updateRail(e) {
     if (e) {
         // 说明nav收拢了
@@ -21,6 +22,11 @@ function updateRail(e) {
 
 
 function updateShowDetail() {
+    console.log()
+    if(inTransition.value){
+        return
+    }
+
     // 反复尝试的结果，展开card的时候设置一个延时，这样可以确保当鼠标直接hover到这个item的时候，展开card在nav展开完成之后。
     // 如果不加延时，那么直接hover上去之后，会跳一下。很突兀。跳一下就是因为nav展开和showCard展示同时发生了。
     // 但如果mouseleave的话就不能延时，否则可能导致card不会被正常删除
@@ -29,13 +35,14 @@ function updateShowDetail() {
     } else {
         setTimeout(() => showCard.value = !showCard.value, 100)
     }
+    inTransition.value = true
 }
 
 const rail = ref(false)
 
 function onTransitionEnd(e) {
     // 动画完成的事件
-
+    inTransition.value = false
     console.log(e, '动画完成')
 }
 
@@ -82,7 +89,7 @@ function onTransitionEnd(e) {
 
                     <!-- todo: 其实还有个bug,在card展开后,如果鼠标从上方移动走,那么这个card并不会正常收起 -->
                     <!-- 这是因为从上方离开的时候,4-1消失而4-2进入,这时候因为鼠标是从上方移开的,那么这时候会触发4-2的mouseenter事件,导致card又展开了 -->
-                    <!-- 初步思路是其实就是通过@transitionend控制动画是否完成,动画完成前不允许一些操作,具体没有尝试了 -->
+                    <!-- 思路是其实就是通过@transitionend控制,动画完成前不允许一些操作,类似于加锁头 -->
                     <v-list-item v-if="showCard" key="4-1" @mouseleave="updateShowDetail" link
                         @transitionend="onTransitionEnd">
                         <template v-slot:default>
@@ -105,7 +112,7 @@ function onTransitionEnd(e) {
 
 
 
-                    <v-list-item key="4-2" v-else @mouseenter="updateShowDetail">
+                    <v-list-item key="4-2" v-else @mouseenter="updateShowDetail" @transitionend="onTransitionEnd">
                         <div class="v-list-item pa-0">
                             <v-progress-circular color="primary" :model-value="20" :size="25"
                                 class="mr-5"></v-progress-circular>
