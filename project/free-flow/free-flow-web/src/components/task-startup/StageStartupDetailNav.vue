@@ -1,44 +1,11 @@
 <script setup>
 import { mdiWindowClose } from '@mdi/js'
 import { ref } from 'vue'
+import StageExecutionLogTable from './StageExecutionLogTable.vue'
 const emitter = defineEmits(['update:draw'])
 
 const props = defineProps(['draw'])
 const navWidth = ref(600)
-
-const items = ref([
-    {
-        name: 'aa',
-        calories: 'aa'
-    },
-    {
-        name: 'aa',
-        calories: 'aa'
-    },
-    {
-        name: 'aa',
-        calories: 'aa'
-    },
-    {
-        name: 'aa',
-        calories: 'aa'
-    },
-    {
-        name: 'aa',
-        calories: 'aa'
-    },
-    {
-        name: 'aa',
-        calories: 'aa'
-    },
-    {
-        name: 'aa',
-        calories: 'aa'
-    }, {
-        name: 'aa',
-        calories: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-    },
-])
 
 
 const executions = ref([
@@ -71,6 +38,7 @@ const logs = ref([
         <v-toolbar density="compact">
 
             <v-btn :icon="mdiWindowClose" @click="$emit('update:draw')"></v-btn>
+            <v-toolbar-title text="阶段信息"></v-toolbar-title>
         </v-toolbar>
 
         <v-card class="border-thin">
@@ -134,15 +102,15 @@ const logs = ref([
 
         <v-divider></v-divider>
 
-        <v-card class="border-thin" :style="{ 'height': '100%' }">
+        <v-card class="border-thin" >
 
 
             <v-card-title>
-                执行信息
+                阶段执行信息
             </v-card-title>
 
             <!-- hide-details会隐藏掉一个小尾巴 -->
-            <v-select :items="executions" item-title="stageExecutionId" label="执行尝试" :hide-details="true">
+            <v-select :items="executions" item-title="stageExecutionId" label="阶段执行实例" :hide-details="true">
                 <template v-slot:item="{ props, item }">
                     <v-list-item v-bind="props" :subtitle="item.raw.launchTime"
                         @click="() => console.log(props)"></v-list-item>
@@ -150,33 +118,12 @@ const logs = ref([
             </v-select>
 
 
-            <v-card class=" border-thin">
+            <v-card class="border-thin" :style="{'height':'100%'}">
                 <v-card-title>日志</v-card-title>
                 <v-card-text>
-                    <v-table density="compact" height="200px" striped="even" fixed-header
-                        class="border-thin text-break">
-                        <!-- 列宽定义区域 -->
-                        <colgroup>
-                            <col style="width: 25%;"> <!-- 第 1 列宽度 -->
-                            <col style="width: 75%;"> <!-- 第 2 列宽度 -->
-                        </colgroup>
-                        <thead>
-                            <tr >
-                                <th class="font-weight-bold">
-                                    时间
-                                </th>
-                                <th class="font-weight-bold">
-                                    内容
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="item in items" :key="item.name">
-                                <td>{{ item.name }}</td>
-                                <td>{{ item.calories }}</td>
-                            </tr>
-                        </tbody>
-                    </v-table>
+                    
+
+                    <StageExecutionLogTable></StageExecutionLogTable>
                 </v-card-text>
             </v-card>
         </v-card>

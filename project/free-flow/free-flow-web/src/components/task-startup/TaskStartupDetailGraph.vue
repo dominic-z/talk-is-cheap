@@ -6,7 +6,7 @@ import { ref, computed } from 'vue';
 import RunnableStageNode from '../flow/node/RunnableStageNode.vue';
 import { mdiCheck } from '@mdi/js';
 import { mdiCheckCircle } from '@mdi/js';
-import StageStartupDetail from './StageStartupDetail.vue';
+import StageStartupDetailNav from './StageStartupDetailNav.vue';
 
 const nodes = ref([
     {
@@ -109,7 +109,7 @@ const draw = ref(false)
 
 
 
-        <StageStartupDetail :draw="draw" @update:draw="()=>draw = !draw"></StageStartupDetail>
+        <StageStartupDetailNav :draw="draw" @update:draw="()=>draw = !draw"></StageStartupDetailNav>
 
 
     </v-main>

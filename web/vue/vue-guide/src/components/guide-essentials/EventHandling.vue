@@ -83,7 +83,7 @@ function handleSelectionMouseLeave(e){
 <!-- 以下为开发过程中遇到的问题 -->
  
     <div @mouseleave="(e) => console.log(e)">
-        突然发现选中文本也会触发mouse leave事件，我觉得可能是因为选中文本后鼠标浏览器会让选择复制还是怎么着的，鼠标此时已经不再dom中了
+        突然发现ubuntu中的edge，选中文本也会触发mouse leave事件，我觉得可能是因为选中文本后鼠标浏览器会让选择复制还是怎么着的，鼠标此时已经不再dom中了，windows里不会
     </div>
 
     <div @mouseleave="handleSelectionMouseLeave" ref="mouseLeaveDiv">
