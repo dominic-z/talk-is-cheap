@@ -1,6 +1,7 @@
 <script setup>
 import TaskExecutionListNav from '@/components/task-startup/TaskExecutionListNav.vue';
 import TaskStartupDetailGraph from '@/components/task-startup/TaskStartupDetailGraph.vue';
+import Loader from '@/components/utils/Loader.vue';
 import { mdiArrowLeft } from '@mdi/js';
 import { mdiPinOutline } from '@mdi/js';
 import { mdiFolder } from '@mdi/js';
@@ -11,14 +12,18 @@ const props = defineProps(['startupId'])
 
 const retryCount = ref([3])
 
-
+const loading = ref(true)
+setTimeout(()=>loading.value = false,1000)
 
 </script>
 
 <template>
 
     <v-app>
-        <v-app-bar color="primary" density="compact" flat class="border-thin"  >
+        <Loader :overlay="loading"></Loader>
+
+        <v-app-bar color="primary" density="compact" flat class="border-thin">
+
             <template v-slot:prepend>
                 <v-btn :icon="mdiArrowLeft" @click="$router.go(-1)"></v-btn>
             </template>
@@ -28,7 +33,7 @@ const retryCount = ref([3])
         </v-app-bar>
 
         <TaskExecutionListNav></TaskExecutionListNav>
- 
+
 
         <TaskStartupDetailGraph></TaskStartupDetailGraph>
 
@@ -36,4 +41,3 @@ const retryCount = ref([3])
     </v-app>
 
 </template>
-
