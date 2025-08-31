@@ -3,7 +3,7 @@ import './assets/main.css'
 import { createPinia } from 'pinia'
 import { createApp } from 'vue'
 import vuetify from './vuetifyConfiguration.js'
-
+import JsonViewer from 'vue-json-viewer'
 
 
 import App from './App.vue'
@@ -16,5 +16,6 @@ const app = createApp(App)
 app.use(createPinia())
 app.use(router)
 app.use(vuetify)
+app.use(JsonViewer)
 
 app.mount('#app')
