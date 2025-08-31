@@ -11,8 +11,8 @@ const props = defineProps(['taskId'])
 <template>
   <v-app id="taskDefinitionDetail">
 
-    <v-app-bar color="grey-lighten-4 border-thin" height="72" flat>
-      <v-btn :icon="mdiArrowLeft" class=" mr-1"></v-btn>
+    <v-app-bar color="grey-lighten-4" class="border-thin"  flat  density="compact" >
+      <v-btn :icon="mdiArrowLeft" class=" mr-1" @click="$router.go(-1)"></v-btn>
       <div class="text-h6">taskDefinitionName</div>
 
     </v-app-bar>
@@ -21,7 +21,7 @@ const props = defineProps(['taskId'])
     <v-navigation-drawer>
       <div class="d-flex mt-2 ml-2 mr-2 mb-0">
         <v-text-field label="taskVersion"></v-text-field>
-        <v-btn :icon="mdiMagnify" variant="plain"></v-btn>
+        <v-btn :icon="mdiMagnify" variant="plain" ></v-btn>
       </div>
 
       <v-divider></v-divider>

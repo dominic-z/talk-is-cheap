@@ -164,7 +164,8 @@ public class LocalTaskDefinitionService {
             if (stageDefinitionBO != null) {
 
                 shallBeFalse(taskDefinitionBO.getStageDefinitionBOMap().containsKey(stageDefinitionBO.getName()),
-                        String.format("Found a stage name that is duplicated: %s", stageDefinitionBO.getName()));
+                        String.format("Found a stage name that is duplicated: %s in task: %s", stageDefinitionBO.getName(),
+                                stageDefinitionBO.getName()));
 
                 taskDefinitionBO.getStageDefinitionBOMap().put(stageDefinitionBO.getName(), stageDefinitionBO);
                 if (stageDefinitionBO.getIsStartingStage()) {
@@ -207,10 +208,11 @@ public class LocalTaskDefinitionService {
 
 
         // 图是否是连通的
-        shallBeFalse(
-                connectedStages.size() != taskDefinitionBO.getStageDefinitionBOMap().size() || connectedStages.containsAll(taskDefinitionBO.getStageDefinitionBOMap().keySet()),
-                String.format("There are unreachable stages: %s",
-                        String.join(",", Sets.difference(taskDefinitionBO.getStageDefinitionBOMap().keySet(), connectedStages))));
+        shallBeTrue(
+                connectedStages.size() == taskDefinitionBO.getStageDefinitionBOMap().size() && connectedStages.containsAll(taskDefinitionBO.getStageDefinitionBOMap().keySet()),
+                String.format("There are unreachable stages: %s in task: %s",
+                        String.join(",", Sets.difference(taskDefinitionBO.getStageDefinitionBOMap().keySet(), connectedStages)),
+                        taskDefinitionBO.getName()));
     }
 
 
@@ -338,27 +340,28 @@ public class LocalTaskDefinitionService {
 
     /**
      * 是否具备某个name的task
+     *
      * @param taskName
-     * @param version 如果为null，则不关心版本
+     * @param version  如果为null，则不关心版本
      * @return
      */
-    public boolean hasTask(String taskName,Integer version){
-        if(!taskDefinitionBOMap.containsKey(taskName)){
+    public boolean hasTask(String taskName, Integer version) {
+        if (!taskDefinitionBOMap.containsKey(taskName)) {
             return false;
         }
-        if(version==null){
+        if (version == null) {
             return true;
-        }else{
+        } else {
             return taskDefinitionBOMap.get(taskName).getVersion().equals(version);
         }
     }
 
 
-    public Set<String> getTaskNames(){
+    public Set<String> getTaskNames() {
         return taskDefinitionBOMap.keySet();
     }
 
-    public TaskDefinitionBO getTaskDefinitionBO(String name){
+    public TaskDefinitionBO getTaskDefinitionBO(String name) {
         return taskDefinitionBOMap.get(name);
     }
 

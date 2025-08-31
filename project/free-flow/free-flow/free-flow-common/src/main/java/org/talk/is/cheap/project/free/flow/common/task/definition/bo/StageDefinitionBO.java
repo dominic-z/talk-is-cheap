@@ -8,6 +8,7 @@ import org.talk.is.cheap.project.free.flow.common.task.definition.codec.InputCod
 
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -21,8 +22,10 @@ public class StageDefinitionBO {
     private Integer version;
     private Class<? extends InputCodec<?>> inputCodecClass;
     private Boolean isStartingStage;
-    private Set<String> toStageNames;
-    private Set<String> fromStageNames;
+    @Builder.Default
+    private Set<String> toStageNames = new HashSet<>();
+    @Builder.Default
+    private Set<String> fromStageNames = new HashSet<>();
 
     private int maxRetryCount;
     private int timeout;
