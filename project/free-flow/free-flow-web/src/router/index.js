@@ -1,10 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import ClusterNodeListView from '../views/ClusterNodeListView.vue'
-import TaskDefinitionListView from '@/views/TaskDefinitionListView.vue'
+import TaskDefinitionListView from '@/views/task-definition/TaskDefinitionListView.vue'
 import IndexView from '@/views/IndexView.vue'
-import TaskDefinitionDetailView from '@/views/TaskDefinitionDetailView.vue'
-import TaskStartupListView from '@/views/TaskStartupListView.vue'
-import TaskStarupDetailView from '@/views/TaskStarupDetailView.vue'
+import TaskDefinitionDetailView from '@/views/task-definition/TaskDefinitionDetailView.vue'
+import TaskStartupListView from '@/views/task-startup/TaskStartupListView.vue'
+import TaskStarupDetailView from '@/views/task-startup/TaskStarupDetailView.vue'
 
 export const namedRoutes = {
   index: {

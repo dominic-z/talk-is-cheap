@@ -5,7 +5,7 @@ import { ref } from 'vue'
 
 
 
-const navWidth = ref(400)
+const navWidth = ref(600)
 // const props = defineProps(['draw'])
 // const emitter = defineEmits(['update:draw'])
 const draw = defineModel('draw')
@@ -23,7 +23,7 @@ const paramsDeifinitionHeaders = ref([
     {'title':'参数类型',key:'paramType',align:'start',minWidth:'150px',headerProps:{class:'font-weight-bold'}},
     {'title':'描述',key:'desc',align:'start',minWidth:'300px',headerProps:{class:'font-weight-bold'}},
 ])
-const paramDetailWidth = ref(500)
+const paramDetailWidth = ref(600)
 
 </script>
 
