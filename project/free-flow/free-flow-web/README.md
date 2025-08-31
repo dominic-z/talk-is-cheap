@@ -55,6 +55,12 @@ cnpm install @mdi/js
 cnpm install @jamescoyle/vue-icon 
 ```
 
+
+安装json查看器
+```shell
+cnpm install vue-json-viewer@3
+```
+
 # 功能
 
 ## 节点查询

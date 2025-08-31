@@ -6,6 +6,7 @@ import { ref, computed } from 'vue';
 import RunnableStageNode from '../flow/node/RunnableStageNode.vue';
 import { mdiCheck } from '@mdi/js';
 import { mdiCheckCircle } from '@mdi/js';
+import StageDefinitionDetailNav from './StageDefinitionDetailNav.vue';
 
 const nodes = ref([
     {
@@ -58,17 +59,14 @@ const edges = ref([
 // Node click event handler
 function onNodeClick({ event, node }) {
     console.log('Node clicked:', node, event);
-    if (!draw.value) {
-        draw.value = !draw.value;
-    }
+    detailNavDraw.value = !detailNavDraw.value;
     nodes.value[2].data.status = ''
 
 
 }
 
-const navWidth = ref(300)
 
-const draw = ref(false)
+const detailNavDraw = ref(false)
 
 </script>
 
@@ -109,32 +107,7 @@ const draw = ref(false)
 
 
 
-        <v-navigation-drawer v-model="draw" :location="'right'" :width="navWidth" floating="">
-            <v-toolbar density="compact">
-
-                <v-btn :icon="mdiWindowClose" @click="draw = !draw"></v-btn>
-            </v-toolbar>
-            <div class="d-flex mt-2 ml-2 mr-2 ga-2">
-                <v-text-field label="taskVersion"></v-text-field>
-                <!-- <v-btn :icon="mdiMagnify" variant="plain"></v-btn> -->
-            </div>
-            <div class="d-flex mt-2 ml-2 mr-2 ga-2">
-                <v-text-field label="taskVersion"></v-text-field>
-                <!-- <v-btn :icon="mdiMagnify" variant="plain"></v-btn> -->
-            </div>
-            <div class="d-flex mt-2 ml-2 mr-2 ga-2">
-                <v-text-field label="taskVersion"></v-text-field>
-                <!-- <v-btn :icon="mdiMagnify" variant="plain"></v-btn> -->
-            </div>
-            <div class="d-flex mt-2 ml-2 mr-2 ga-2">
-                <v-text-field label="taskVersion"></v-text-field>
-                <!-- <v-btn :icon="mdiMagnify" variant="plain"></v-btn> -->
-            </div>
-            <div class="d-flex mt-2 ml-2 mr-2 ga-2">
-                <v-text-field label="taskVersion"></v-text-field>
-                <!-- <v-btn :icon="mdiMagnify" variant="plain"></v-btn> -->
-            </div>
-        </v-navigation-drawer>
+        <StageDefinitionDetailNav v-model:draw="detailNavDraw"></StageDefinitionDetailNav>
 
 
     </v-main>

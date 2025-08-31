@@ -31,13 +31,15 @@ const params =  ref([
     }
 ])
 
+const paramsJson = ref({
+    'key1':'aa',
+    'list1':[1,2,3],
+    'deepObj':{
+        'key2':'1',
+        'list2':[3,4,5]
+    }
+})
 
-const logs = ref([
-    'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
-
-    'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
-    '11'
-])
 </script>
 
 <template>
@@ -78,33 +80,19 @@ const logs = ref([
 
         </v-card>
 
-        <v-card class=" border-thin">
-            <v-card-title>启动参数</v-card-title>
-            <v-card-text>
-                <v-table density="compact" height="200px" striped="even" fixed-header class="border-thin text-break">
-                    <!-- 列宽定义区域 -->
-                    <colgroup>
-                        <col style="width: 25%;"> <!-- 第 1 列宽度 -->
-                        <col style="width: 75%;"> <!-- 第 2 列宽度 -->
-                    </colgroup>
-                    <thead>
 
-                        <tr class="text-h6">
-                            <th class="text-left">
-                                Parameter
-                            </th>
-                            <th class="text-left">
-                                Value
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="kv in params" :key="kv.key">
-                            <td>{{ kv.key }}</td>
-                            <td>{{ kv.value }}</td>
-                        </tr>
-                    </tbody>
-                </v-table>
+        <v-card class=" border-thin">
+            <v-card-title>全局参数快照</v-card-title>
+            <v-card-text>
+                <json-viewer :value="paramsJson" :expand-depth=5 copyable boxed sort></json-viewer>
+            </v-card-text>
+        </v-card>
+
+
+        <v-card class=" border-thin">
+            <v-card-title>当前阶段启动参数</v-card-title>
+            <v-card-text>
+                <json-viewer :value="paramsJson" :expand-depth=5 copyable boxed sort></json-viewer>
             </v-card-text>
         </v-card>
 

@@ -6,6 +6,9 @@
 @import '@vue-flow/core/dist/theme-default.css';
 @import './vue-flow-edge.css';
 
+/* json查看器样式 */
+@import 'vue-json-viewer/style.css';
+
 /* 来自https://www.doubao.com/thread/w18ee7cfa37fe6d85 */
 /* 全局滚动条样式 */
 ::-webkit-scrollbar {
