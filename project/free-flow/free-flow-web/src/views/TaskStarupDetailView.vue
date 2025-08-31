@@ -18,16 +18,13 @@ const retryCount = ref([3])
 <template>
 
     <v-app>
-        <v-app-bar color="primary" density="compact">
+        <v-app-bar color="primary" density="compact" flat class="border-thin"  >
             <template v-slot:prepend>
-                <v-btn :icon="mdiArrowLeft"></v-btn>
+                <v-btn :icon="mdiArrowLeft" @click="$router.go(-1)"></v-btn>
             </template>
 
-            <v-app-bar-title>Photos</v-app-bar-title>
+            <v-app-bar-title>任务启动名称</v-app-bar-title>
 
-            <template v-slot:append>
-                <v-btn :icon="mdiDotsVertical"></v-btn>
-            </template>
         </v-app-bar>
 
         <TaskExecutionListNav></TaskExecutionListNav>

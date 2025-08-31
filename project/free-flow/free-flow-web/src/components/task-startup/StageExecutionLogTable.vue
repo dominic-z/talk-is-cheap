@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref,computed } from 'vue'
 
 const cars = [
     {
@@ -74,29 +74,6 @@ const cars = [
     },
 ]
 
-const FakeAPI = {
-    async fetch({ page, itemsPerPage, sortBy }) {
-        return new Promise(resolve => {
-            setTimeout(() => {
-                const start = (page - 1) * itemsPerPage
-                const end = start + itemsPerPage
-                const items = cars.slice()
-                if (sortBy.length) {
-                    const sortKey = sortBy[0].key
-                    const sortOrder = sortBy[0].order
-                    items.sort((a, b) => {
-                        const aValue = a[sortKey]
-                        const bValue = b[sortKey]
-                        return sortOrder === 'desc' ? bValue - aValue : aValue - bValue
-                    })
-                }
-                const paginated = items.slice(start, end)
-                resolve({ items: paginated, total: items.length })
-            }, 500)
-        })
-    },
-}
-const itemsPerPage = ref(5)
 const headers = ref([
     { title: 'Car Model', key: 'name', align: 'start', headerProps: { class: 'font-weight-bold' } },
     { title: 'Horsepower', key: 'horsepower', align: 'end' },
@@ -104,32 +81,68 @@ const headers = ref([
     { title: 'Origin', key: 'origin', align: 'start' },
     { title: 'Price ($)', key: 'price', align: 'end' },
 ])
-const serverItems = ref([])
+
 const loading = ref(true)
-const totalItems = ref(0)
-function loadItems({ page, itemsPerPage, sortBy }) {
+const showLoadMore = ref(true)
+
+const tablePageInfo = ref({
+    total: 0,
+    itemsPerPage: 4,
+    itemsPerLoad: 4, // 每次加载4个item
+})
+
+const shownItems = ref([])
+const intersector = {
+    handler: loadMore,
+    options: {
+        threshold: 0.5, // 50%
+    }
+}
+
+
+function loadMore(isIntersecting, entries, observer) {
+    // 仅仅修改page信息，具体触发fetch操作通过@update:options
+    console.log("loadmore")
+    if (isIntersecting) {
+        tablePageInfo.value.total = cars.length
+        tablePageInfo.value.itemsPerPage += tablePageInfo.value.itemsPerLoad
+    }
+}
+
+function fetchData(e) {
+    console.log(e)
     loading.value = true
-    FakeAPI.fetch({ page, itemsPerPage, sortBy }).then(({ items, total }) => {
-        serverItems.value = items
-        totalItems.value = total
+    setTimeout(() => {
+        shownItems.value = cars.slice(0, tablePageInfo.value.itemsPerPage)
         loading.value = false
-    })
+        if(tablePageInfo.value.itemsPerPage>cars.length){
+            showLoadMore.value = false
+        }
+    }, 1000)
 }
 </script>
 
 <template>
-    <v-data-table-server class="border-thin" v-model:items-per-page="itemsPerPage" :headers="headers"
-        :hide-default-footer="true" :items="serverItems" :disable-sort="true" :items-length="totalItems"
-        :loading="loading" item-value="name" @update:options="loadItems" density="compact" striped="even" height="100"
-        :fixed-header="true"
-        >
+    <v-data-table-server class="border-thin" v-model:items-per-page="tablePageInfo.itemsPerPage" :headers="headers"
+        :hide-default-footer="true" :items="shownItems" :disable-sort="true" :items-length="tablePageInfo.total"
+        :loading="loading" item-value="name" density="compact" @update:options="fetchData" striped="even" height="150" :fixed-header="true">
 
 
-        <!-- todo：需要实现一个无限下列器，参考https://techblog.geekyants.com/enhancing-vuetify-data-table-performance-with-infinite-scroll -->
-        <template v-slot:item="{item}">
+        <!-- 一个无限下列器 -->
+        <template v-slot:item="{ item }">
             <tr>
                 <td>{{ item.name }}</td>
                 <td>{{ item.horsepower }}</td>
+            </tr>
+        </template>
+
+        <template v-slot:body.append v-if="showLoadMore">
+            <!-- 清空背景色https://www.doubao.com/thread/w8ba1a5ea0b54decf -->
+            <tr v-intersect.quiet="intersector" :style="{ 'background-image': 'initial' }">
+                <td :colspan="headers.length">
+                    <v-skeleton-loader max-width="200" type="list-item"
+                        :style="{ 'left': '50%', 'transform': 'translate(-50%,0)' }" />
+                </td>
             </tr>
         </template>
 

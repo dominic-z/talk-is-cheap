@@ -24,6 +24,14 @@ const executions = ref([
 ])
 
 
+const params =  ref([
+    {
+        'key':'a',
+        'value':'b',
+    }
+])
+
+
 const logs = ref([
     'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
 
@@ -91,9 +99,9 @@ const logs = ref([
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="item in items" :key="item.name">
-                            <td>{{ item.name }}</td>
-                            <td>{{ item.calories }}</td>
+                        <tr v-for="kv in params" :key="kv.key">
+                            <td>{{ kv.key }}</td>
+                            <td>{{ kv.value }}</td>
                         </tr>
                     </tbody>
                 </v-table>

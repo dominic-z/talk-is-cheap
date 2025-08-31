@@ -11,14 +11,18 @@ import StaticPosition from './styles/position/StaticPosition.vue'
 import VFadeTransitionApp from '@/styles/transitions/VFadeTransitionApp.vue'
 import RailNavApp from './component/v-navigation-drawer/RailNavApp.vue'
 import ManualExpansionRailNavApp from '@/component/v-navigation-drawer/ManualExpansionRailNavApp.vue'
+import HelloIntesect from './directives/intersect/HelloIntesect.vue'
+import InfiniteScroll from './directives/intersect/InfiniteScroll.vue'
+import HelloDataTable from './component/data-table/HelloDataTable.vue'
 
 // const app = createApp(HelloVuetifyMdiFont)
 // const app = createApp(HelloVuetifyMdiJS)
 // const app = createApp(HelloVCard)
 // const app = createApp(HelloVCardSlot)
 // const app = createApp(HelloDataTableServer)
+// const app = createApp(HelloDataTable)
 // const app = createApp(DataTableHeaderSlot)
-const app = createApp(RailNavApp)
+// const app = createApp(RailNavApp)
 // const app = createApp(ManualExpansionRailNavApp)
 
 
@@ -26,5 +30,11 @@ const app = createApp(RailNavApp)
 // const app = createApp(StaticPosition)
 // transition
 // const app = createApp(VFadeTransitionApp)
+
+
+// directive
+// const app = createApp(HelloIntesect)
+const app = createApp(InfiniteScroll)
+
 app.use(vuetify)
 app.mount('#app')

@@ -25,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicReference;
 
 
 /**
@@ -57,14 +58,14 @@ public class ClusterService {
     @Autowired
     private SchedulerClusterClient schedulerClusterClient;
 
-    private String schedulerLeaderId;
+    private final AtomicReference<String> schedulerLeaderId = new AtomicReference<String>("");
 
     @Getter
     private String selfAbsoluteZKPath;
 
 
     public URI getSchedulerLeaderUri() {
-        VerifyUtil.shallNotBeBlank(schedulerLeaderId, "schedulerLeaderId is blank");
+        VerifyUtil.shallNotBeBlank(schedulerLeaderId.get(), "schedulerLeaderId is blank");
         return UriComponentsBuilder.fromHttpUrl("http://" + schedulerLeaderId).build().toUri();
     }
 
@@ -83,8 +84,6 @@ public class ClusterService {
         }
 
 
-        listenAndSetSchedulerLeader();
-
     }
 
 
@@ -95,6 +94,7 @@ public class ClusterService {
 
     /**
      * id用来直接做http请求的目的，一般是ip，或者hostname
+     *
      * @return
      */
     public String getWorkerId() {
@@ -106,18 +106,22 @@ public class ClusterService {
     public void listenAndSetSchedulerLeader() {
         listenSchedulerLeaderChange();
 
+        updateSchedulerLeader();
+
+    }
+
+    private void updateSchedulerLeader() {
         try {
             String randomSchedulerId = getRandomSchedulerId();
             log.info("random scheduler: {}", randomSchedulerId);
             URI uri = UriComponentsBuilder.fromHttpUrl("http://" + randomSchedulerId).build().toUri();
             HttpBody<String> resp = schedulerClusterClient.getLeaderId(uri);
             log.info("getLeaderResp: {}", resp);
-            this.schedulerLeaderId = resp.getData();
+            this.schedulerLeaderId.compareAndExchange(this.schedulerLeaderId.get(), resp.getData());
         } catch (Exception e) {
             log.error("error when get to scheduler leader", e);
             throw new RuntimeException(e);
         }
-
     }
 
     /**
@@ -158,7 +162,7 @@ public class ClusterService {
                     @Override
                     public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception {
                         log.info("leader election event: {}", event);
-                        listenAndSetSchedulerLeader();
+                        updateSchedulerLeader();
                     }
                 }).build();
 

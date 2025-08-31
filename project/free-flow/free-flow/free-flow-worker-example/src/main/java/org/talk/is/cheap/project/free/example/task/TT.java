@@ -17,7 +17,7 @@ public class TT {
 
     }
 
-    @RunnableStage(name = "method1", version = 1)
+    @RunnableStage(name = "method2", version = 1)
     public void method2() {
 
     }
