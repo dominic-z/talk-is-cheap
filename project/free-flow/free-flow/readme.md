@@ -53,28 +53,29 @@ docker run --name mysql8 -e TZ=Asia/Shanghai -e MYSQL_ROOT_PASSWORD=root -p 3306
 
 
 ```json
-PUT /task_startup_param
-{
-  "mappings": {
-    "properties": {
-      "task_startup_id":{
-        "type":"keyword"
-      },
-      "startup_param_fully_qualified_class_name":{
-        "type":"text",
-        "analyzer": "ik_max_word"  // 使用IK分词器
-      },
-      "startup_param_encoding": {
-        "type": "text",
-        "analyzer": "ik_max_word"  // 使用IK分词器
-      }
-    }
-  }
-}
+//DELETE /task_startup_param
+//PUT /task_startup_param
+//{
+//  "mappings": {
+//    "properties": {
+//      "task_startup_id":{
+//        "type":"keyword"
+//      },
+//      "startup_param_fully_qualified_class_name":{
+//        "type":"text",
+//        "analyzer": "ik_max_word"  // 使用IK分词器
+//      },
+//      "startup_param_encoding": {
+//        "type": "text",
+//        "analyzer": "ik_max_word"  // 使用IK分词器
+//      }
+//    }
+//  }
+//}
 
 
 
-
+DELETE /stage_startup_param
 PUT /stage_startup_param
 {
   "mappings": {
@@ -82,11 +83,11 @@ PUT /stage_startup_param
       "stage_startup_id":{
         "type":"keyword"
       },
-      "startup_param_fully_qualified_class_name":{
-        "type":"text",
+      "startup_param_encoding": {
+        "type": "text",
         "analyzer": "ik_max_word"  // 使用IK分词器
       },
-      "startup_param_encoding": {
+      "shared_context_encoding_snapshot": {
         "type": "text",
         "analyzer": "ik_max_word"  // 使用IK分词器
       }
@@ -95,7 +96,7 @@ PUT /stage_startup_param
 }
 
 
-
+DELETE /stage_execution_biz_log
 PUT /stage_execution_biz_log
 {
   "settings": {

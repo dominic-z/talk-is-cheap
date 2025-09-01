@@ -30,7 +30,7 @@ public class StageDefinitionBO {
     private int maxRetryCount;
     private int timeout;
 
-    // 用于反射
+    // 用于任务执行时通过反射时调用方法
     private String methodName;
     private Parameter[] parameters;
 }

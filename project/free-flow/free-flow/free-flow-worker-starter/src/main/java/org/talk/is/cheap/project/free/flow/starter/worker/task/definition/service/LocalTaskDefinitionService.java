@@ -85,7 +85,7 @@ public class LocalTaskDefinitionService {
     }
 
     /**
-     * 解析@Task标注的bean，验证有效性并转化为TaskDefinitionBO对象
+     * 解析@Task标注的bean，！充分验证有效性！并转化为TaskDefinitionBO对象
      *
      * @param taskBean
      * @return

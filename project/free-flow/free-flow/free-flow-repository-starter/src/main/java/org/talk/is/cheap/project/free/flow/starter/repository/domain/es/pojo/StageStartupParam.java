@@ -5,6 +5,6 @@ import lombok.Data;
 @Data
 public class StageStartupParam {
     private Long stageStartupId;
-    private String startupParamFullyQualifiedClassName;
     private String startupParamEncoding;
+    private String sharedContextEncodingSnapshot;
 }

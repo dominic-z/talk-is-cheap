@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit;
 public class WorkerTaskDefinitionManager {
 
     // 耗时任务尽可能放在一个独立的线程里，避免影响主线程
-    private final ThreadPoolExecutor taskDefinitionThreadPool = new ThreadPoolExecutor(0,1,1000, TimeUnit.MILLISECONDS,new LinkedBlockingQueue<>());
+    private final ThreadPoolExecutor taskDefinitionThreadPool = new ThreadPoolExecutor(0,4,1000, TimeUnit.MILLISECONDS,new LinkedBlockingQueue<>());
 
 
     /**
@@ -26,6 +26,9 @@ public class WorkerTaskDefinitionManager {
     public void onRunnableWorkerAddEvent(RunnableWorkerAddEvent event) {
         // todo: 多路复用改造
         // todo: 读取task中的任务定义
+
+        // worker启动时候已经充分校验任务，直接存就好了。
+
 
     }
 }

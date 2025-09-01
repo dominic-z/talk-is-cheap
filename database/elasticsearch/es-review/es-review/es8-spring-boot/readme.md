@@ -66,7 +66,7 @@ docker pull crpi-vgj0j6781pn5263n.cn-hangzhou.personal.cr.aliyuncs.com/goose-goo
 docker tag crpi-vgj0j6781pn5263n.cn-hangzhou.personal.cr.aliyuncs.com/goose-good/kibana:8.11.4 goose-good/kibana:8.11.4
 
 docker run -d \
-  --name kibana \
+  --navame kibana \
   --network es-net \
   -p 5601:5601 \
   goose-good/kibana:8.11.4
@@ -75,7 +75,9 @@ docker run -d \
 
 
 
+### 通过token访问
 
+通过token的方式可以完全不需要配置任何链接es的地址之类的信息，所有内容都在token中
 
 ```shell
 docker exec -it es8 /usr/share/elasticsearch/bin/elasticsearch-create-enrollment-token -s kibana
@@ -90,6 +92,8 @@ docker exec -it kibana bin/kibana-verification-code
 
 ### 直接配置https访问
 
+如果不通过token访问，也可以通过地址用户名密码+证书登录
+
 来自[豆包](https://www.doubao.com/thread/w7c5431cb88996f31)和博客
 
 
@@ -101,11 +105,13 @@ docker cp http_ca.crt kibana://usr/share/kibana/config
 docker exec -it kibana bash
 vim /usr/share/kibana/config/kibana.yml 
 
-# 没vi，用sed凑合下
+# 没vi，直接拷贝进去得了。。
 docker cp kibana.yml kibana:/usr/share/kibana/config/
 
 docker restart kibana
 ```
+
+输入登录名密码，ok
 
 ## 安装分词器
 
