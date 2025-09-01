@@ -43,8 +43,8 @@ datasource:
 tables:
 #  - id: 1
 #    name: cluster_node_log
-#  - id: 2
-#    name: task_definition
+  - id: 2
+    name: task_definition
 #  - id: 3
 #    name: schedule_task_definition
   - id: 4

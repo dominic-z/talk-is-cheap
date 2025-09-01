@@ -54,7 +54,7 @@ public class DefinitionController {
 
     @RequestMapping(path = URIs.SchedulerDefinitionURIs.QUERY_TASK_DEFINITION, method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
-    public QueryTaskDefinitionResp getTaskDefinitionResp(@RequestBody QueryTaskDefinitionReq req) {
+    public QueryTaskDefinitionResp queryTaskDefinition(@RequestBody QueryTaskDefinitionReq req) {
         QueryTaskDefinitionResp queryTaskDefinitionResp = new QueryTaskDefinitionResp();
         try {
             TaskDefinitionExample example = new TaskDefinitionExample();
