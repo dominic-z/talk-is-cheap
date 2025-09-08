@@ -6,10 +6,10 @@ import org.springframework.context.ApplicationEvent;
 public class RunnableWorkerAddEvent extends ApplicationEvent {
 
     @Getter
-    private final String workerId;
+    private final String nodeAddress;
 
     public RunnableWorkerAddEvent(String source) {
         super(source);
-        this.workerId = source;
+        this.nodeAddress = source;
     }
 }

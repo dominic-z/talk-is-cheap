@@ -6,13 +6,13 @@ use free_flow;
 drop table if exists cluster_node_log;
 create table if not exists cluster_node_log (
 `id` bigint AUTO_INCREMENT primary key,
-`node_id` varchar(64) not null comment '节点id',
+`node_address` varchar(64) not null comment '节点地址',
 `node_type` int not null default 0 comment '节点类型',
 `node_status` int not null default 0 comment '节点状态',
 `revision` bigint not null default 0 comment '并发控制编号',
 `create_time` datetime not null default now() comment '创建日期',
 `update_time` datetime not null default now() comment '更新日期',
-index idx_node_id_status(node_id,node_status),
+index idx_node_address_status(node_address,node_status),
 index idx_node_type_status(node_type,node_status)
 )
 ENGINE = InnoDB default charset = utf8mb4 comment '集群节点登入登出日志';
@@ -47,15 +47,16 @@ from
 drop table if exists task_definition;
 create table if not exists task_definition(
 `id` bigint AUTO_INCREMENT primary key,
-`task_name` varchar(64) not null comment '任务名称',
+`name` varchar(64) not null comment '任务名称',
 `version` int not null comment '版本',
 `timeout` int not null default 0 comment '以秒标识的超时时间',
 `max_retry_count` int not null comment '最大重试次数',
-`shared_context_fully_qualified_class_name` varchar(128) comment '多节点共享上下文的类全限定名',
+`shared_context_fully_qualified_class_name` varchar(128) comment '各个stage共享的上下文的类全限定名',
+`shared_context_codec_fully_qualified_class_name` varchar(128) comment '各个stage共享的上下文的类的编码器的全限定名',
 `revision` bigint not null default 0 comment '并发控制编号',
 `create_time` datetime not null default now() comment '创建日期',
 `update_time` datetime not null default now() comment '更新日期',
-unique index idx_name_version(task_name,version)
+unique index idx_name_version(name,version)
 )ENGINE = InnoDB default charset = utf8mb4 comment '任务定义主表';
 -- 创建更新触发器
 DROP TRIGGER IF EXISTS task_definition_update_time;
@@ -77,14 +78,14 @@ DELIMITER ;
 drop table if exists schedule_task_definition;
 create table if not exists schedule_task_definition(
 `id` bigint AUTO_INCREMENT primary key,
-`schedule_task_name` varchar(64) not null comment '预约任务名称',
+`name` varchar(64) not null comment '预约任务名称',
 `version` int not null comment '版本' default 0,
 `cron` varchar(32) not null comment '预约任务的cron表达式',
 `target_task_id` bigint not null comment '预约任务的目标任务id',
 `revision` bigint not null default 0 comment '并发控制编号',
 `create_time` datetime not null default now() comment '创建日期',
 `update_time` datetime not null default now() comment '更新日期',
-unique index idx_name_version(schedule_task_name,version),
+unique index idx_name_version(name,version),
 index idx_target_task_id(target_task_id)
 )ENGINE = InnoDB default charset = utf8mb4 comment '预约任务定义主表';
 -- 创建更新触发器
@@ -107,17 +108,18 @@ drop table if exists stage_definition;
 create table if not exists stage_definition(
 `id` bigint AUTO_INCREMENT primary key,
 `task_id` bigint not null comment '任务id',
-`stage_name` varchar(64) not null comment '阶段名称',
+`name` varchar(64) not null comment '阶段名称',
 `version` int not null comment '版本' default 0,
 `stage_type` int not null comment '阶段类型',
+`input_fully_qualified_class_name` varchar(128) comment '该stage的输入的类的全限定名',
+`input_codec_fully_qualified_class_name` varchar(128) comment '该stage的输入的类的编码器的全限定名',
 `is_starting_stage` bool not null comment '是否是一个task的起始stage',
-`param_fully_qualified_class_name` varchar(128) comment '该阶段入参类型全限定名',
 `timeout` int not null default 0 comment '以秒标识的超时时间',
 `max_retry_count` int not null comment '最大重试次数',
 `revision` bigint not null default 0 comment '并发控制编号',
 `create_time` datetime not null default now() comment '创建日期',
 `update_time` datetime not null default now() comment '更新日期',
-unique index idx_name_version(stage_name,version),
+unique index idx_name_version(name,version),
 index idx_task_id(task_id)
 )ENGINE = InnoDB default charset = utf8mb4 comment '阶段定义主表';
 -- 创建更新触发器
@@ -143,6 +145,7 @@ create table if not exists task_graph_definition(
 `task_id` bigint not null comment '任务id',
 `from_stage_id` bigint not null comment '任务id',
 `to_stage_id` bigint not null comment '阶段名称',
+`revision` bigint not null default 0 comment '并发控制编号',
 `create_time` datetime not null default now() comment '创建日期',
 `update_time` datetime not null default now() comment '更新日期',
 index idx_task_id(task_id),

@@ -1,5 +1,6 @@
 package org.talk.is.cheap.project.free.flow.scheduler.cluster.service;
 
+import io.vavr.Tuple2;
 import jakarta.annotation.PreDestroy;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -44,12 +45,6 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class WorkerClusterManager {
 
-    @Data
-    private static class PingWorkerResultBO {
-        private Map<String, String> missingResult;
-        private Map<String, String> connectedResult;
-    }
-
     @Autowired
     private ApplicationEventPublisher publisher;
     @Autowired
@@ -72,17 +67,17 @@ public class WorkerClusterManager {
     private CuratorCache workerCuratorCache;
 
     // 活跃的节点
-    private final Map<String, String> runnableWorkerPathId = new ConcurrentHashMap<>();
+    private final Map<String, String> runnableWorkerPathAddress = new ConcurrentHashMap<>();
 
     // 防止外界get runnableWorkerPathId的时候一直重复读取runnableWorkerPathId，做一个缓存，只是为了加速，不需要线程安全
     private volatile boolean runnableWorkerModified = false;
-    private List<String> cachedRunnableWorkerIds;
+    private List<String> cachedRunnableWorkerAddresses;
     // 关闭中的节点
-    private final Map<String, String> terminatingWorkerPathId = new ConcurrentHashMap<>();
+    private final Map<String, String> terminatingWorkerPathAddress = new ConcurrentHashMap<>();
 
     // ping失败但是没有下线的节点
-    private final Map<String, String> missingRunnableWorkerPathId = new ConcurrentHashMap<>();
-    private final Map<String, String> missingTerminatingWorkerPathId = new ConcurrentHashMap<>();
+    private final Map<String, String> missingRunnableWorkerPathAddress = new ConcurrentHashMap<>();
+    private final Map<String, String> missingTerminatingWorkerPathAddress = new ConcurrentHashMap<>();
 
 
     private final ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(1);
@@ -93,10 +88,10 @@ public class WorkerClusterManager {
      */
     public void manageWorkers() {
 
-        this.runnableWorkerPathId.clear();
-        this.missingTerminatingWorkerPathId.clear();
-        this.terminatingWorkerPathId.clear();
-        this.missingTerminatingWorkerPathId.clear();
+        this.runnableWorkerPathAddress.clear();
+        this.missingTerminatingWorkerPathAddress.clear();
+        this.terminatingWorkerPathAddress.clear();
+        this.missingTerminatingWorkerPathAddress.clear();
 
         watchWorkers();
         pingWorkers();
@@ -131,36 +126,36 @@ public class WorkerClusterManager {
         if (eventData == null) {
             return;
         }
-        String workerId = new String(eventData.getData(), StandardCharsets.UTF_8);
+        String workerNodeAddress = new String(eventData.getData(), StandardCharsets.UTF_8);
         String zkPath = eventData.getPath();
 
         String parentPath = Paths.get(eventData.getPath()).getParent().toString();
         if (StringUtils.equals(parentPath, zkRunnableWorkerPath)) {
             // 如果是runnable下的节点
-            log.info("add runnable worker, path: {}, workerId: {}", zkPath, workerId);
-            runnableWorkerPathId.put(zkPath, workerId);
-            missingRunnableWorkerPathId.remove(zkPath);
+            log.info("add runnable worker, path: {}, workerNodeAddress: {}", zkPath, workerNodeAddress);
+            runnableWorkerPathAddress.put(zkPath, workerNodeAddress);
+            missingRunnableWorkerPathAddress.remove(zkPath);
 
             runnableWorkerModified = true;
 
             clusterNodeLogService.create(
                     new ClusterNodeLog()
-                            .withNodeId(workerId)
+                            .withNodeAddress(workerNodeAddress)
                             .withNodeType(NodeType.WORKER.getType())
                             .withNodeStatus(NodeStatus.RUNNABLE.getStatus()));
 
             // 发布新增worker事件，用于触发读取worker中定义的task定义
-            publisher.publishEvent(new RunnableWorkerAddEvent(workerId));
+            publisher.publishEvent(new RunnableWorkerAddEvent(workerNodeAddress));
 
         } else if (StringUtils.equals(parentPath, zkTerminatingWorkerPath)) {
             // 如果是terminating下的节点
-            log.info("add terminating worker, path: {}, workerId: {}", zkPath, workerId);
-            terminatingWorkerPathId.put(zkPath, workerId);
-            missingTerminatingWorkerPathId.remove(zkPath);
+            log.info("add terminating worker, path: {}, workerNodeAddress: {}", zkPath, workerNodeAddress);
+            terminatingWorkerPathAddress.put(zkPath, workerNodeAddress);
+            missingTerminatingWorkerPathAddress.remove(zkPath);
 
             clusterNodeLogService.create(
                     new ClusterNodeLog()
-                            .withNodeId(workerId)
+                            .withNodeAddress(workerNodeAddress)
                             .withNodeType(NodeType.WORKER.getType())
                             .withNodeStatus(NodeStatus.TERMINATING.getStatus()));
 
@@ -173,35 +168,35 @@ public class WorkerClusterManager {
             return;
         }
 
-        String workerId = new String(eventData.getData(), StandardCharsets.UTF_8);
+        String workerNodeAddress = new String(eventData.getData(), StandardCharsets.UTF_8);
         String zkPath = eventData.getPath();
 
         String parentPath = Paths.get(zkPath).getParent().toString();
         if (StringUtils.equals(parentPath, zkRunnableWorkerPath)) {
             // 如果是runnable下的节点
-            log.info("remove runnable worker, path: {}, workerId: {}", zkPath, workerId);
+            log.info("remove runnable worker, path: {}, workerNodeAddress: {}", zkPath, workerNodeAddress);
             // todo: 有并发问题，如果不加锁在处理event的时候ping操作可能并发操作这两个map，所以可能导致真正下线的worker可能还会留存在missing之中。所以只能加锁，一开始开发的时候没有发现问题，todo就记录一下
             synchronized (this) {
-                runnableWorkerPathId.remove(zkPath);
-                missingRunnableWorkerPathId.remove(zkPath);
+                runnableWorkerPathAddress.remove(zkPath);
+                missingRunnableWorkerPathAddress.remove(zkPath);
             }
             runnableWorkerModified = true;
             clusterNodeLogService.create(
                     new ClusterNodeLog()
-                            .withNodeId(workerId)
+                            .withNodeAddress(workerNodeAddress)
                             .withNodeType(NodeType.WORKER.getType())
                             .withNodeStatus(NodeStatus.RUNNABLE_TERMINATING.getStatus()));
         } else if (StringUtils.equals(parentPath, zkTerminatingWorkerPath)) {
             // 如果是terminating下的节点
-            log.info("remove terminating worker, path: {}, workerId: {}", zkPath, workerId);
+            log.info("remove terminating worker, path: {}, workerNodeAddress: {}", zkPath, workerNodeAddress);
             synchronized (this) {
-                terminatingWorkerPathId.remove(zkPath);
-                missingTerminatingWorkerPathId.remove(zkPath);
+                terminatingWorkerPathAddress.remove(zkPath);
+                missingTerminatingWorkerPathAddress.remove(zkPath);
             }
 
             clusterNodeLogService.create(
                     new ClusterNodeLog()
-                            .withNodeId(workerId)
+                            .withNodeAddress(workerNodeAddress)
                             .withNodeType(NodeType.WORKER.getType())
                             .withNodeStatus(NodeStatus.TERMINATED.getStatus()));
         }
@@ -223,13 +218,13 @@ public class WorkerClusterManager {
             @Override
             public void run() {
 
-                log.info("ping runnable");
-                if (ping(runnableWorkerPathId, missingRunnableWorkerPathId)) {
+                log.debug("ping runnable");
+                if (ping(runnableWorkerPathAddress, missingRunnableWorkerPathAddress)) {
                     runnableWorkerModified = true;
                 }
 
-                log.info("ping terminating");
-                ping(terminatingWorkerPathId, missingTerminatingWorkerPathId);
+                log.debug("ping terminating");
+                ping(terminatingWorkerPathAddress, missingTerminatingWorkerPathAddress);
 
 
                 scheduledThreadPoolExecutor.schedule(this, 10, TimeUnit.SECONDS);
@@ -239,69 +234,77 @@ public class WorkerClusterManager {
     }
 
     /**
-     * @param connectedWorkerPathId 目前处于链接状态的节点
-     * @param missingWorkerPathId   目前失联的节点
+     * 方法的作用：
+     * 1. ping connectedWorkerPathAddress中的节点，将其中ping失败的节点丢进missingWorkerPathAddress中
+     * 2. ping missingWorkerPathAddress中的节点，将其中ping成功的丢进connectedWorkerPathAddress
+     * @param connectedWorkerPathAddress 目前处于链接状态的节点
+     * @param missingWorkerPathAddress   目前失联的节点
      * @return 是否产生了新的已连接的或者丢失的节点
      */
-    private boolean ping(Map<String, String> connectedWorkerPathId, Map<String, String> missingWorkerPathId) {
+    private boolean ping(Map<String, String> connectedWorkerPathAddress, Map<String, String> missingWorkerPathAddress) {
         boolean modified = false;
 
-        // ping连接状态的节点
-        PingWorkerResultBO pingConnectedResult = ping(connectedWorkerPathId);
+        // ping处于连接状态的节点
+        Tuple2<Map<String, String>, Map<String, String>> pingConnectedResult = ping(connectedWorkerPathAddress);
         synchronized (this) {
-            pingConnectedResult.getMissingResult().forEach((path, id) -> {
-                if (connectedWorkerPathId.remove(path) != null) {
+            Map<String, String> pingSuccess = pingConnectedResult._1;
+            pingSuccess.forEach((path, address) -> {
+                if (connectedWorkerPathAddress.remove(path) != null) {
                     // todo: 光加锁还不行，得这样判断一下，因为如果是节点下线导致的ping出现异常，那么这个节点一定会出现在getNewMissingResult里，如果不这样判断一下而是直接往missingWorkerPathId里面put
                     //  ，那还是会出现下线节点一直存在在missing中
                     // 如果remove返回的不是null，说明这个节点已经被其他线程remove了（目前只有节点下线一种情况）
-                    missingWorkerPathId.put(path, id);
+                    missingWorkerPathAddress.put(path, address);
                 }
             });
-            modified = !pingConnectedResult.getMissingResult().isEmpty();
+            modified = !pingConnectedResult._2.isEmpty();
         }
 
 
         // ping失联的节点
-        PingWorkerResultBO pingMissingResult = ping(missingWorkerPathId);
+        Tuple2<Map<String, String>, Map<String, String>> pingMissingResult = ping(missingWorkerPathAddress);
         synchronized (this) {
-            pingMissingResult.getConnectedResult().forEach((path, id) -> {
-                if (missingWorkerPathId.remove(path) != null) {
-                    connectedWorkerPathId.put(path, id);
+            pingMissingResult._1.forEach((path, address) -> {
+                if (missingWorkerPathAddress.remove(path) != null) {
+                    connectedWorkerPathAddress.put(path, address);
                 }
             });
-            modified = modified || !pingConnectedResult.getConnectedResult().isEmpty();
+            modified = modified || !pingConnectedResult._1.isEmpty();
         }
-        log.info("connected worker: {}, missing worker: {}", connectedWorkerPathId.keySet(), missingWorkerPathId.keySet());
+        log.debug("connected worker: {}, missing worker: {}", connectedWorkerPathAddress.keySet(), missingWorkerPathAddress.keySet());
         return modified;
     }
 
     /**
      * ping一些节点并获取ping结果
      *
-     * @param workerPathId 要ping的节点的路径和id
-     * @return
+     * @param workerPathAddress 要ping的节点的路径和地址
+     * @return ping的结果，是一个元组，pingResult[0]是ping成功的，pingResult[1]是ping失败的
      */
-    private PingWorkerResultBO ping(Map<String, String> workerPathId) {
-        Map<String, String> newMissingWorkIdPath = new HashMap<>();
-        Map<String, String> newConnectedWorkerIdPath = new HashMap<>();
+    private Tuple2<Map<String, String>, Map<String, String>> ping(Map<String, String> workerPathAddress) {
+        Map<String, String> newMissingWorkerAddressPath = new HashMap<>();
+        Map<String, String> newConnectedWorkerAddressPath = new HashMap<>();
 
         // todo: 多线程 or 多路复用改造
-        for (Map.Entry<String, String> kv : workerPathId.entrySet()) {
-            URI host = UriComponentsBuilder.fromHttpUrl("http://" + kv.getValue()).build().toUri();
+        for (Map.Entry<String, String> kv : workerPathAddress.entrySet()) {
+            URI host = this.getWorkerURI(kv.getValue());
             try {
                 HttpBody<String> ping = workerClusterClient.ping(host);
-                newConnectedWorkerIdPath.put(kv.getKey(), kv.getValue());
+                newConnectedWorkerAddressPath.put(kv.getKey(), kv.getValue());
             } catch (Exception e) {
                 log.error("error when ping active {}", kv.getValue(), e);
-                newMissingWorkIdPath.put(kv.getKey(), kv.getValue());
+                newMissingWorkerAddressPath.put(kv.getKey(), kv.getValue());
             }
         }
 
-        PingWorkerResultBO pingWorkerResultBO = new PingWorkerResultBO();
-        pingWorkerResultBO.setConnectedResult(newConnectedWorkerIdPath);
-        pingWorkerResultBO.setMissingResult(newMissingWorkIdPath);
+        //
+        Tuple2<Map<String, String>, Map<String, String>> pingResult = new Tuple2<>(newConnectedWorkerAddressPath,
+                newMissingWorkerAddressPath);
 
-        return pingWorkerResultBO;
+//        PingWorkerResultDTO pingWorkerResultBO = new PingWorkerResultDTO();
+//        pingWorkerResultBO.setConnectedResult(newConnectedWorkerAddressPath);
+//        pingWorkerResultBO.setMissingResult(newMissingWorkerAddressPath);
+
+        return pingResult;
     }
 
 
@@ -311,11 +314,16 @@ public class WorkerClusterManager {
      *
      * @return
      */
-    public List<String> getRunnableWorkerIds() {
-        if (this.cachedRunnableWorkerIds == null || runnableWorkerModified) {
-            this.cachedRunnableWorkerIds = new ArrayList<>(this.runnableWorkerPathId.values());
+    public List<String> getRunnableWorkerNodeAddresses() {
+        if (this.cachedRunnableWorkerAddresses == null || runnableWorkerModified) {
+            this.cachedRunnableWorkerAddresses = new ArrayList<>(this.runnableWorkerPathAddress.values());
         }
-        return this.cachedRunnableWorkerIds;
+        return this.cachedRunnableWorkerAddresses;
+    }
+
+
+    public URI getWorkerURI(String workerNodeAddress) {
+        return UriComponentsBuilder.fromHttpUrl("http://" + workerNodeAddress).build().toUri();
     }
 
 }

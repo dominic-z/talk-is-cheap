@@ -5,17 +5,16 @@ import io.vavr.Tuple2;
 import io.vavr.control.Option;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.modelmapper.ModelMapper;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import org.talk.is.cheap.project.free.flow.common.exception.IllegalTaskDefinitionException;
-import org.talk.is.cheap.project.free.flow.common.message.impl.vo.StageDefinitionVO;
-import org.talk.is.cheap.project.free.flow.common.message.impl.vo.TaskDefinitionVO;
+import org.talk.is.cheap.project.free.flow.common.message.impl.dto.StageDefinitionDTO;
+import org.talk.is.cheap.project.free.flow.common.message.impl.dto.TaskDefinitionDTO;
 import org.talk.is.cheap.project.free.flow.common.task.definition.bo.StageDefinitionBO;
 import org.talk.is.cheap.project.free.flow.common.task.definition.bo.TaskDefinitionBO;
 import org.talk.is.cheap.project.free.flow.common.task.definition.codec.InputCodec;
+import org.talk.is.cheap.project.free.flow.common.utils.ReflectUtil;
 import org.talk.is.cheap.project.free.flow.starter.worker.task.definition.annotaion.stage.RunnableStage;
 import org.talk.is.cheap.project.free.flow.starter.worker.task.definition.annotaion.task.Task;
 
@@ -81,6 +80,9 @@ public class LocalTaskDefinitionService {
             taskDefinitionBOMap.put(taskDefinitionBO.getName(), taskDefinitionBO);
         }
 
+        // 批量对比本地和远端的task定义是否匹配，等所有task定义读取完之后再统一对比，否则每个任务就都要请求一次scheduler
+        checkLocalRemoteTaskDefinitionMatch();
+
 
     }
 
@@ -97,6 +99,7 @@ public class LocalTaskDefinitionService {
         String taskName = taskAnnotation.name();
         int version = taskAnnotation.version();
         int maxRetryCount = taskAnnotation.maxRetryCount();
+        Class<? extends InputCodec<?>> sharedContextCodecClass = taskAnnotation.sharedContextCodecClass();
         int timeoutInSeconds = taskAnnotation.timeout();
 
         shallBeFalse(StringUtils.isBlank(taskName), String.format("taskName can't be blank, class: %s", taskClass.getName()));
@@ -105,7 +108,10 @@ public class LocalTaskDefinitionService {
                 .name(taskName)
                 .version(version)
                 .maxRetryCount(maxRetryCount)
-                .timeoutInSecond(timeoutInSeconds).build();
+                .timeoutInSecond(timeoutInSeconds)
+                .sharedContextCodecClass(sharedContextCodecClass)
+                .sharedContextClass(ReflectUtil.getCodecGenericClass(sharedContextCodecClass))
+                .build();
 
         parseStageMethodAndSetStageDefinitionBOs(taskDefinitionBO, taskClass.getDeclaredMethods());
 
@@ -113,8 +119,7 @@ public class LocalTaskDefinitionService {
         // 通过dfs来确定连通性和是否有环
         validateCircleAndConnected(taskDefinitionBO);
 
-        // 对比本地和远端的task定义是否匹配
-        checkLocalRemoteTaskDefinitionMatch();
+
         return taskDefinitionBO;
     }
 
@@ -153,6 +158,7 @@ public class LocalTaskDefinitionService {
                         .version(stageVersion)
                         .isStartingStage(startingStage)
                         .inputCodecClass(inputCodecClass)
+                        .inputClass(ReflectUtil.getCodecGenericClass(inputCodecClass))
                         .toStageNames(Set.of(toStageNames))
                         .maxRetryCount(maxRetryCount)
                         .timeout(timeout)
@@ -257,9 +263,9 @@ public class LocalTaskDefinitionService {
             TaskDefinitionBO taskDefinitionBO = iterator.next();
             taskNameVersions.add(new Tuple2<>(taskDefinitionBO.getName(), taskDefinitionBO.getVersion()));
             if (!iterator.hasNext() || taskNameVersions.size() == batchSize) {
-                List<TaskDefinitionVO> taskDefinitionVOs = remoteTaskDefinitionService.getTaskDefinitionVOs(taskNameVersions);
+                List<TaskDefinitionDTO> taskDefinitionVOs = remoteTaskDefinitionService.getTaskDefinitionVOs(taskNameVersions);
 
-                for (TaskDefinitionVO remoteVO : taskDefinitionVOs) {
+                for (TaskDefinitionDTO remoteVO : taskDefinitionVOs) {
                     checkLocalAndRemoteTaskDefinitionMatch(taskDefinitionBOMap.get(remoteVO.getName()), remoteVO);
                 }
             }
@@ -267,7 +273,7 @@ public class LocalTaskDefinitionService {
     }
 
     // 对比已经存在的task的定义与本身自己的task定义
-    private void checkLocalAndRemoteTaskDefinitionMatch(TaskDefinitionBO localBO, TaskDefinitionVO remoteVO) throws IllegalTaskDefinitionException {
+    private void checkLocalAndRemoteTaskDefinitionMatch(TaskDefinitionBO localBO, TaskDefinitionDTO remoteVO) throws IllegalTaskDefinitionException {
         String taskName = localBO.getName();
         shallBeFalse(remoteVO.getRoots().size() != localBO.getRoots().size() || !remoteVO.getRoots().containsAll(localBO.getRoots()),
                 String.format("Conflicts with the task definition of the remote end. root nodes are not equal.task: %s", taskName));
@@ -290,13 +296,13 @@ public class LocalTaskDefinitionService {
         while (!deque.isEmpty()) {
             String stageName = deque.removeFirst();
 
-            shallBeTrue(remoteVO.getStageDefinitionVOMap().containsKey(stageName) && localBO.getStageDefinitionBOMap().containsKey(stageName),
+            shallBeTrue(remoteVO.getStageDefinitionDTOMap().containsKey(stageName) && localBO.getStageDefinitionBOMap().containsKey(stageName),
                     String.format("""
                                     Conflicts with the task definition of the remote end.
                                     Found a stage that exists only in either the remote end or the local end. stage name: %s""",
                             stageName));
 
-            StageDefinitionVO remoteStageVO = remoteVO.getStageDefinitionVOMap().get(stageName);
+            StageDefinitionDTO remoteStageVO = remoteVO.getStageDefinitionDTOMap().get(stageName);
             StageDefinitionBO localStageBO = localBO.getStageDefinitionBOMap().get(stageName);
 
             shallBeTrue(remoteStageVO.getVersion().equals(localStageBO.getVersion()),

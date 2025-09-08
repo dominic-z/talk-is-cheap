@@ -5,7 +5,7 @@ import java.util.List;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.session.RowBounds;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.StageStartup;
-import org.talk.is.cheap.project.free.flow.starter.repository.domain.query.example.StageStartupExample;
+import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.StageStartupExample;
 
 public interface StageStartupMapper {
     /**

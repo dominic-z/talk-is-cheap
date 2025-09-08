@@ -58,15 +58,15 @@ public class ClusterService {
     @Autowired
     private SchedulerClusterClient schedulerClusterClient;
 
-    private final AtomicReference<String> schedulerLeaderId = new AtomicReference<String>("");
+    private final AtomicReference<String> schedulerLeaderAddress = new AtomicReference<String>("");
 
     @Getter
     private String selfAbsoluteZKPath;
 
 
     public URI getSchedulerLeaderUri() {
-        VerifyUtil.shallNotBeBlank(schedulerLeaderId.get(), "schedulerLeaderId is blank");
-        return UriComponentsBuilder.fromHttpUrl("http://" + schedulerLeaderId).build().toUri();
+        VerifyUtil.shallNotBeBlank(schedulerLeaderAddress.get(), "schedulerLeaderAddress is blank");
+        return getUri(schedulerLeaderAddress.get());
     }
 
     public void registryToZK() {
@@ -77,7 +77,7 @@ public class ClusterService {
                     .creatingParentsIfNeeded()
                     .withMode(CreateMode.EPHEMERAL)
                     .forPath(Paths.get(zkConfigProperties.getZookeeper().getPath().getWorker().getRunnable(), getSelfZKWorkerPath()).toString(),
-                            getWorkerId().getBytes(StandardCharsets.UTF_8));
+                            getWorkerAddress().getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) {
             log.error("error when registry to zk", e);
             throw new RuntimeException(e);
@@ -89,18 +89,18 @@ public class ClusterService {
 
     public String getSelfZKWorkerPath() {
         //                    zookeeper的节点不能有冒号，将192.168.1.1:2222改成192.168.1.1_2222
-        return getWorkerId().replace(":", "_");
+        return getWorkerAddress().replace(":", "_");
     }
 
     /**
-     * id用来直接做http请求的目的，一般是ip，或者hostname
+     *
      *
      * @return
      */
-    public String getWorkerId() {
-        String workerId = EnvType.getByName(envType) == EnvType.CONTAINER ? System.getenv("CONTAINER_NAME") : IPUtil.getMainIP();
-        workerId += ":" + port;
-        return workerId;
+    public String getWorkerAddress() {
+        String address = EnvType.getByName(envType) == EnvType.CONTAINER ? System.getenv("CONTAINER_NAME") : IPUtil.getMainIP();
+        address += ":" + port;
+        return address;
     }
 
     public void listenAndSetSchedulerLeader() {
@@ -112,16 +112,20 @@ public class ClusterService {
 
     private void updateSchedulerLeader() {
         try {
-            String randomSchedulerId = getRandomSchedulerId();
-            log.info("random scheduler: {}", randomSchedulerId);
-            URI uri = UriComponentsBuilder.fromHttpUrl("http://" + randomSchedulerId).build().toUri();
-            HttpBody<String> resp = schedulerClusterClient.getLeaderId(uri);
+            String randomSchedulerAddress = getRandomSchedulerAddress();
+            log.info("random scheduler: {}", randomSchedulerAddress);
+            URI uri = getUri(randomSchedulerAddress);
+            HttpBody<String> resp = schedulerClusterClient.getLeaderAddress(uri);
             log.info("getLeaderResp: {}", resp);
-            this.schedulerLeaderId.compareAndExchange(this.schedulerLeaderId.get(), resp.getData());
+            this.schedulerLeaderAddress.compareAndExchange(this.schedulerLeaderAddress.get(), resp.getData());
         } catch (Exception e) {
             log.error("error when get to scheduler leader", e);
             throw new RuntimeException(e);
         }
+    }
+
+    private static URI getUri(String randomSchedulerAddress) {
+        return UriComponentsBuilder.fromHttpUrl("http://" + randomSchedulerAddress).build().toUri();
     }
 
     /**
@@ -129,7 +133,7 @@ public class ClusterService {
      *
      * @return
      */
-    private String getRandomSchedulerId() {
+    private String getRandomSchedulerAddress() {
         try {
             String schedulerPath = zkConfigProperties.getZookeeper().getPath().getScheduler().getElection();
             List<String> schedulerElectionKeys =
@@ -180,7 +184,7 @@ public class ClusterService {
                     .creatingParentsIfNeeded()
                     .withMode(CreateMode.EPHEMERAL)
                     .forPath(Paths.get(zkConfigProperties.getZookeeper().getPath().getWorker().getTerminating(), getSelfZKWorkerPath()).toString(),
-                            getWorkerId().getBytes(StandardCharsets.UTF_8));
+                            getWorkerAddress().getBytes(StandardCharsets.UTF_8));
 
         } catch (Exception e) {
             log.error("error when terminate", e);

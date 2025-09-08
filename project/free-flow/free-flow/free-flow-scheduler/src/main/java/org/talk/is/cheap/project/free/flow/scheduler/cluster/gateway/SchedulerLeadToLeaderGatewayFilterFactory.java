@@ -3,7 +3,6 @@ package org.talk.is.cheap.project.free.flow.scheduler.cluster.gateway;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
@@ -61,7 +60,7 @@ public class SchedulerLeadToLeaderGatewayFilterFactory extends AbstractGatewayFi
                 try {
 
                     SchedulerClusterManager schedulerClusterManager = applicationContext.getBean(SchedulerClusterManager.class);
-                    String leader = schedulerClusterManager.getLeaderId();
+                    String leader = schedulerClusterManager.getLeaderAddress();
                     ServerHttpRequest request = exchange.getRequest();
                     log.info("leader: {}, origin uri: {}, path: {}", leader,request.getURI(),request.getPath());
 

@@ -1,20 +1,16 @@
 package codegen.test;
 
-import codegen.test.dao.mbg.RoleMapper;
-import codegen.test.domain.pojo.Menu;
-import codegen.test.domain.query.example.MenuExample;
-import codegen.test.domain.query.example.RoleExample;
-import codegen.test.service.MenuService;
-import codegen.test.service.RoleService;
+import codegen.test.dao.StudentMapper;
+import codegen.test.pojo.mbg.Student;
 import lombok.extern.slf4j.Slf4j;
-import lombok.val;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @SpringBootApplication
 @Slf4j
@@ -25,34 +21,23 @@ public class Application implements CommandLineRunner {
     }
 
     @Autowired
-    RoleService roleService;
-
-    @Autowired
-    RoleMapper roleMapper;
-    @Autowired
-    MenuService menuService;
+    private StudentMapper studentMapper;
 
     @Override
     public void run(String... args) throws Exception {
-        RoleExample roleExample = new RoleExample();
 
-//        roleExample.createCriteria().andIdEqualTo(10);
-//        log.info("{}", roleService.selectByExample(roleExample));
-//        log.info("{}", roleService.selectById(Arrays.asList(10, 11)));
+        Student student1 = new Student();
+        student1.setAge((byte) 12);
+        student1.setId(1);
+        student1.setName("ni");
+        student1.setPhoto("ha");
+        Student student2 = new Student();
+        student2.setAge((byte) 1);
+        student2.setId(2);
+        student2.setName("hao");
+        student2.setPhoto("hoho");
 
-
-//        val menuExample = new MenuExample();
-//        val menus = menuService.selectByExample(menuExample);
-//        log.info("{}", menus);
-//
-//        for (Menu menu : menus) {
-//            val pid = Menu.PidEnum.getByValue(menu.getPid());
-//            log.info("pidEnum: {}, value: {}, pidDescription: {}", pid, pid.getValue(), pid.getDescription());
-//        }
-
-        roleExample.createCriteria().andNameIn(List.of("管理员","运维"));
-        roleExample.setLimit(3);
-        roleExample.setOffset(0);
-        log.info("selectByExampleDeepPagingByIdSubQuery: {}",roleService.selectByExampleDeepPaging(roleExample));
+        HashSet<String> excludColNames = new HashSet<>(Set.of(Student.SEX, Student.PHOTO));
+        studentMapper.insertBatchSelective(List.of(student1,student2), excludColNames);
     }
 }

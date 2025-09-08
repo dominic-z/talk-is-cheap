@@ -162,7 +162,7 @@ public class CodeGeneratorConfig {
     }
 
     public String getMbgExamplePackage() {
-        return basePackage + ".domain.query.example";
+        return basePackage + ".dao.mbg.query.example";
     }
 
     public String getMBGMapperPackage() {

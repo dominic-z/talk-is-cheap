@@ -10,14 +10,14 @@ import org.talk.is.cheap.project.free.flow.common.router.URIs;
 
 public interface ClusterController {
 
-    @RequestMapping(path = URIs.SchedulerClusterURIs.ID, method = RequestMethod.GET)
+    @RequestMapping(path = URIs.SchedulerClusterURIs.ADDRESS, method = RequestMethod.GET)
     @ResponseBody
-    HttpBody<String> getSchedulerId();
+    HttpBody<String> getSchedulerAddress();
 
 
     @RequestMapping(path = URIs.SchedulerClusterURIs.LEADER, method = RequestMethod.GET)
     @ResponseBody
-    HttpBody<String> getLeaderId();
+    HttpBody<String> getLeaderAddress();
 
     @RequestMapping(path = URIs.SchedulerClusterURIs.REGISTRY_WORKER, method = RequestMethod.POST)
     @ResponseBody

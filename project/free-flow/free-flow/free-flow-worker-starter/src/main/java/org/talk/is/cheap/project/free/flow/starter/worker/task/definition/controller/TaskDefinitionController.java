@@ -3,6 +3,7 @@ package org.talk.is.cheap.project.free.flow.starter.worker.task.definition.contr
 
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.AbstractConverter;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -12,11 +13,17 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.talk.is.cheap.project.free.flow.common.message.ResultCode;
 import org.talk.is.cheap.project.free.flow.common.message.impl.GetWorkerTaskDefinitionResp;
-import org.talk.is.cheap.project.free.flow.common.message.impl.vo.TaskDefinitionVO;
+import org.talk.is.cheap.project.free.flow.common.message.impl.dto.StageDefinitionDTO;
+import org.talk.is.cheap.project.free.flow.common.message.impl.dto.TaskDefinitionDTO;
 import org.talk.is.cheap.project.free.flow.common.router.URIs;
+import org.talk.is.cheap.project.free.flow.common.task.definition.bo.StageDefinitionBO;
 import org.talk.is.cheap.project.free.flow.common.task.definition.bo.TaskDefinitionBO;
+import org.talk.is.cheap.project.free.flow.common.task.definition.codec.InputCodec;
+import org.talk.is.cheap.project.free.flow.common.task.definition.codec.JsonInputCodec;
 import org.talk.is.cheap.project.free.flow.starter.worker.task.definition.service.LocalTaskDefinitionService;
 
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,9 +39,28 @@ public class TaskDefinitionController {
 
     @PostConstruct
     private void init() {
-//        Tuple2
         // 新发现的对象属性拷贝工具，挺不错
-        modelMapper.typeMap(TaskDefinitionBO.class, TaskDefinitionVO.class);
+        final AbstractConverter<Class<?>, String> classNameConverter = new AbstractConverter<>() {
+            @Override
+            protected String convert(Class<?> source) {
+                return source.getName();
+            }
+        };
+        modelMapper.typeMap(TaskDefinitionBO.class, TaskDefinitionDTO.class)
+                .addMappings(mapper -> {
+                    mapper.using(classNameConverter)
+                            .map(TaskDefinitionBO::getSharedContextClass, TaskDefinitionDTO::setSharedContextFullyQualifiedClassName);
+                    mapper.using(classNameConverter)
+                            .map(TaskDefinitionBO::getSharedContextCodecClass, TaskDefinitionDTO::setSharedContextCodecFullyQualifiedClassName);
+                });
+
+        modelMapper.typeMap(StageDefinitionBO.class, StageDefinitionDTO.class)
+                .addMappings(mapper -> {
+                    mapper.using(classNameConverter)
+                            .map(StageDefinitionBO::getInputClass, StageDefinitionDTO::setInputFullyQualifiedClassName);
+                    mapper.using(classNameConverter)
+                            .map(StageDefinitionBO::getInputCodecClass, StageDefinitionDTO::setInputCodecFullyQualifiedClassName);
+                });
     }
 
     @RequestMapping(path = URIs.WorkerDefinitionURIs.GET_TASK_DEFINITION, method = RequestMethod.GET, produces =
@@ -44,14 +70,15 @@ public class TaskDefinitionController {
         GetWorkerTaskDefinitionResp resp = new GetWorkerTaskDefinitionResp();
 
         try {
-            List<TaskDefinitionVO> taskDefinitionVOS = new ArrayList<>();
+            List<TaskDefinitionDTO> taskDefinitionDTOS = new ArrayList<>();
             for (String taskName : localTaskDefinitionService.getTaskNames()) {
                 TaskDefinitionBO taskDefinitionBO = localTaskDefinitionService.getTaskDefinitionBO(taskName);
 
-                TaskDefinitionVO taskDefinitionVO = modelMapper.map(taskDefinitionBO, TaskDefinitionVO.class);
-
+                TaskDefinitionDTO taskDefinitionDTO = modelMapper.map(taskDefinitionBO, TaskDefinitionDTO.class);
+                taskDefinitionDTOS.add(taskDefinitionDTO);
             }
-            resp.success(taskDefinitionVOS);
+
+            resp.success(taskDefinitionDTOS);
         } catch (Exception e) {
             resp.fail(ResultCode.FAIL, e.getMessage());
         }
