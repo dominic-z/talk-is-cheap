@@ -20,6 +20,8 @@ public class TaskDefinitionBO {
 
     private String name;
     private Integer version;
+    private Class<?> sharedContextCodecClass;
+    private Class<?> sharedContextClass;
     private Integer maxRetryCount;
     private Integer timeoutInSecond;
 

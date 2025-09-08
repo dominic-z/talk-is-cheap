@@ -3,7 +3,7 @@ package org.talk.is.cheap.project.free.flow.starter.repository.service;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.TaskDefinitionMapper;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.customized.TaskDefinitionDao;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskDefinition;
-import org.talk.is.cheap.project.free.flow.starter.repository.domain.query.example.TaskDefinitionExample;
+import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.TaskDefinitionExample;
 
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,14 +12,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
-import java.util.Date;
 import java.lang.IllegalArgumentException;
 
 /**
 * 定制化的service层，用于弥补mbg生成的mapper过于灵活导致可能出现的业务漏洞，例如越过deleted字段查询、更新updateTime等
 * @author dominiczhu
-* @date 2025/09/01
+* @date 2025/09/04
 */
 @Service
 public class TaskDefinitionService{

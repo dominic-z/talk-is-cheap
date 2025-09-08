@@ -9,12 +9,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.talk.is.cheap.project.free.flow.scheduler.App;
 import org.talk.is.cheap.project.free.flow.scheduler.repository.dao.mbg.SchedulerLogMapper;
 import org.talk.is.cheap.project.free.flow.scheduler.repository.domain.query.example.SchedulerLogExample;
-import org.talk.is.cheap.project.free.flow.starter.repository.domain.es.pojo.TaskStartupParam;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.es.pojo.StageStartupParam;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNodeLog;
-import org.talk.is.cheap.project.free.flow.starter.repository.domain.query.example.ClusterNodeLogExample;
+import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.ClusterNodeLogExample;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.ClusterNodeLogService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.SeqGeneratorUtil;
-import org.talk.is.cheap.project.free.flow.starter.repository.service.es.TaskStartupParamService;
+import org.talk.is.cheap.project.free.flow.starter.repository.service.es.StageStartupParamService;
 
 import javax.sql.DataSource;
 import java.io.IOException;
@@ -142,16 +142,15 @@ public class TestSpringApp {
 
 
     @Autowired
-    private TaskStartupParamService taskStartupParamService;
+    private StageStartupParamService stageStartupParamService;
 
     @Test
     public void testEs() throws IOException {
-        TaskStartupParam taskStartupParam = new TaskStartupParam();
-        taskStartupParam.setTaskStartupId(12L);
-        taskStartupParam.setStartupParamFullyQualifiedClassName("a.b.c");
+        StageStartupParam taskStartupParam = new StageStartupParam();
+        taskStartupParam.setStageStartupId(12L);
         taskStartupParam.setStartupParamEncoding("cccc");
 
-        String id = taskStartupParamService.create(taskStartupParam);
+        String id = stageStartupParamService.create(taskStartupParam);
         log.info("create id: {}", id);
     }
 }

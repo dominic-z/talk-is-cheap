@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.HashSet;
 import java.util.Date;
 import java.lang.IllegalArgumentException;
 
@@ -40,13 +41,6 @@ public class ${serviceUpperCamelName}{
         return ${mapperLowerCamelName}.insertSelective(record);
     }
 
-    @Transactional(rollbackFor = Exception.class<#if transactionManager??>,transactionManager = "${transactionManager}"</#if>)
-    public int createBatch(Collection<${domainUpperCamelName}> records) {
-        if (records == null || records.isEmpty()) {
-            return 0;
-        }
-        return ${mapperLowerCamelName}.insertBatch(records);
-    }
 
     @Transactional(rollbackFor = Exception.class<#if transactionManager??>,transactionManager = "${transactionManager}"</#if>)
     public int deleteByExample(${exampleUpperCamelName} example) {
@@ -93,6 +87,24 @@ public class ${serviceUpperCamelName}{
     }
     </#if>
 
+    // insertBatch的service接口
+    <#if insertBatch??>
+    @Transactional(rollbackFor = Exception.class<#if transactionManager??>,transactionManager = "${transactionManager}"</#if>)
+    public int createBatch(Collection<${domainUpperCamelName}> records) {
+        if (records == null || records.isEmpty()) {
+            return 0;
+        }
+        return ${mapperLowerCamelName}.insertBatch(records);
+    }
+
+    @Transactional(rollbackFor = Exception.class<#if transactionManager??>,transactionManager = "${transactionManager}"</#if>)
+    public int createBatchSelective(Collection<${domainUpperCamelName}> records, Collection<String> excludeColNames) {
+        if (records == null || records.isEmpty()) {
+            return 0;
+        }
+        return ${mapperLowerCamelName}.insertBatchSelective(records, new HashSet<String>(excludeColNames));
+    }
+    </#if>
     // 基于${daoLowerCamelName}
 
 }

@@ -1,6 +1,6 @@
 package org.talk.is.cheap.project.free.flow.common.task.definition.codec;
 
-public class SimpleStringInputCodec implements InputCodec<String> {
+public class SimpleStringInputCodec extends InputCodec<String> {
 
     @Override
     public String encode(String obj) {

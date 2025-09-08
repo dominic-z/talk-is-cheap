@@ -3,9 +3,8 @@ package org.talk.is.cheap.project.free.flow.starter.repository.service.derived;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.talk.is.cheap.project.free.flow.common.A;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.SeqGenerator;
-import org.talk.is.cheap.project.free.flow.starter.repository.domain.query.example.SeqGeneratorExample;
+import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.SeqGeneratorExample;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.SeqGeneratorService;
 
 import java.math.BigDecimal;
@@ -13,7 +12,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * 序列生成器

@@ -10,7 +10,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.talk.is.cheap.project.free.flow.starter.repository.config.EsAutoConfig;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.es.pojo.StageStartupParam;
-import org.talk.is.cheap.project.free.flow.starter.repository.domain.es.pojo.TaskStartupParam;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.SeqGeneratorUtil;
 
 import java.io.IOException;

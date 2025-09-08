@@ -3,7 +3,7 @@ package org.talk.is.cheap.project.free.flow.starter.repository.service;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.TaskExecutionMapper;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.customized.TaskExecutionDao;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskExecution;
-import org.talk.is.cheap.project.free.flow.starter.repository.domain.query.example.TaskExecutionExample;
+import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.TaskExecutionExample;
 
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,8 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
-import java.util.Date;
 import java.lang.IllegalArgumentException;
 
 /**

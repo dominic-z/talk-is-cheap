@@ -20,14 +20,14 @@ public interface SchedulerClusterClient {
 
     String CLIENT_NAME = "scheduler-cluster-client";
 
-    @RequestMapping(path = URIs.SchedulerClusterURIs.ID, method = RequestMethod.GET)
+    @RequestMapping(path = URIs.SchedulerClusterURIs.ADDRESS, method = RequestMethod.GET)
     @ResponseBody
-    HttpBody<String> getSchedulerId(URI host);
+    HttpBody<String> getSchedulerAddress(URI host);
 
 
-    @RequestMapping(path = URIs.SchedulerClusterURIs.ID, method = RequestMethod.GET)
+    @RequestMapping(path = URIs.SchedulerClusterURIs.LEADER, method = RequestMethod.GET)
     @ResponseBody
-    HttpBody<String> getLeaderId(URI host);
+    HttpBody<String> getLeaderAddress(URI host);
 
 
     @RequestMapping(path = URIs.SchedulerClusterURIs.REGISTRY_WORKER, method = RequestMethod.POST)

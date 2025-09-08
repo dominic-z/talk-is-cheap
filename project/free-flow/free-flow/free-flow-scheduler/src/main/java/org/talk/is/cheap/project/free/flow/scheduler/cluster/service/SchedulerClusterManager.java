@@ -51,7 +51,7 @@ public class SchedulerClusterManager {
     private LeaderLatch leaderLatch;
 
     // 用做缓存，不需要每次都去查询
-    private String cachedLeaderId;
+    private String cachedLeaderAddress;
 
     @Autowired
     private WorkerClusterManager workerClusterManager;
@@ -74,7 +74,7 @@ public class SchedulerClusterManager {
 
         clusterNodeLogService.create(
                 new ClusterNodeLog()
-                        .withNodeId(getSchedulerId())
+                        .withNodeAddress(getSchedulerAddress())
                         .withNodeType(NodeType.SCHEDULER.getType())
                         .withNodeStatus(NodeStatus.RUNNABLE.getStatus()));
 
@@ -93,15 +93,15 @@ public class SchedulerClusterManager {
         }
 
         // 例如：注册服务到注册中心
-        final String registryId = getSchedulerId();
+        final String schedulerAddress = getSchedulerAddress();
 
-        leaderLatch = new LeaderLatch(curatorZKClient, zkSchedulerElectionPath, registryId, LeaderLatch.CloseMode.NOTIFY_LEADER);
+        leaderLatch = new LeaderLatch(curatorZKClient, zkSchedulerElectionPath, schedulerAddress, LeaderLatch.CloseMode.NOTIFY_LEADER);
         leaderLatch.addListener(new LeaderLatchListener() {
             @Override
             public void isLeader() {
 //                当前节点成为leader的时候更新，说明本节点成为了主节点
-                SchedulerClusterManager.this.cachedLeaderId = registryId;
-                log.info("{} become leader", registryId);
+                SchedulerClusterManager.this.cachedLeaderAddress = schedulerAddress;
+                log.info("{} become leader", schedulerAddress);
 
                 // 称为leader之后开始监听管理worker
                 workerClusterManager.manageWorkers();
@@ -109,7 +109,7 @@ public class SchedulerClusterManager {
 
             @Override
             public void notLeader() {
-                log.info("{} is no longer leader", registryId);
+                log.info("{} is no longer leader", schedulerAddress);
                 workerClusterManager.stopManageWorkers();
             }
         }, SINGLE_EXECUTOR_SERVICE);
@@ -119,7 +119,7 @@ public class SchedulerClusterManager {
     }
 
 
-    public String getSchedulerId() {
+    public String getSchedulerAddress() {
         return (EnvType.CONTAINER == EnvType.getByName(env) ? getContainerName() : IPUtil.getMainIP()) + ":" + port;
     }
 
@@ -137,9 +137,9 @@ public class SchedulerClusterManager {
     }
 
 
-    public String getLeaderId() throws Exception {
-        if (StringUtils.isNotBlank(this.cachedLeaderId)) {
-            return this.cachedLeaderId;
+    public String getLeaderAddress() throws Exception {
+        if (StringUtils.isNotBlank(this.cachedLeaderAddress)) {
+            return this.cachedLeaderAddress;
         }
         if (leaderLatch == null) {
             throw new RuntimeException("leaderLatch is null");
@@ -147,8 +147,8 @@ public class SchedulerClusterManager {
         if (leaderLatch.getLeader() == null) {
             return null;
         }
-        this.cachedLeaderId = leaderLatch.getLeader().getId();
-        return leaderLatch.getLeader().getId();
+        this.cachedLeaderAddress = leaderLatch.getLeader().getId();
+        return this.cachedLeaderAddress;
     }
 
     public boolean isLeader() {

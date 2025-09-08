@@ -3,6 +3,8 @@ package org.talk.is.cheap.project.free.flow.starter.worker.task.definition.annot
 
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
+import org.talk.is.cheap.project.free.flow.common.task.definition.codec.InputCodec;
+import org.talk.is.cheap.project.free.flow.common.task.definition.codec.SimpleStringInputCodec;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -34,6 +36,12 @@ public @interface Task {
      */
     int version();
 
+    
+    /**
+     * 这个task的全局共享上下文的编解码器
+     * @return
+     */
+    Class<? extends InputCodec<?>> sharedContextCodecClass() default SimpleStringInputCodec.class;
     /**
      * 重试次数
      * @return

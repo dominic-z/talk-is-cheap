@@ -3,7 +3,7 @@ package org.talk.is.cheap.project.free.flow.starter.repository.service;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.SeqGeneratorMapper;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.customized.SeqGeneratorDao;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.SeqGenerator;
-import org.talk.is.cheap.project.free.flow.starter.repository.domain.query.example.SeqGeneratorExample;
+import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.SeqGeneratorExample;
 
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,8 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
-import java.util.Date;
 import java.lang.IllegalArgumentException;
 
 /**

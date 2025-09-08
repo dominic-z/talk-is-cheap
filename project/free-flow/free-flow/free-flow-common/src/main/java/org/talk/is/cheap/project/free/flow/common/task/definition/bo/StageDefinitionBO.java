@@ -21,6 +21,7 @@ public class StageDefinitionBO {
     private String name;
     private Integer version;
     private Class<? extends InputCodec<?>> inputCodecClass;
+    private Class<?> inputClass;
     private Boolean isStartingStage;
     @Builder.Default
     private Set<String> toStageNames = new HashSet<>();

@@ -21,14 +21,14 @@ public class ClusterControllerImpl implements ClusterController {
     private SchedulerClusterManager schedulerClusterManager;
 
     @Override
-    public HttpBody<String> getSchedulerId() {
-        return HttpBody.<String>builder().data(schedulerClusterManager.getSchedulerId()).code(0).build();
+    public HttpBody<String> getSchedulerAddress() {
+        return HttpBody.<String>builder().data(schedulerClusterManager.getSchedulerAddress()).code(0).build();
     }
 
     @Override
-    public HttpBody<String> getLeaderId() {
+    public HttpBody<String> getLeaderAddress() {
         try {
-            return HttpBody.<String>builder().data(schedulerClusterManager.getLeaderId()).code(ResultCode.SUCCESS.getCode()).build();
+            return HttpBody.<String>builder().data(schedulerClusterManager.getLeaderAddress()).code(ResultCode.SUCCESS.getCode()).build();
         } catch (Exception e) {
             log.error("error get leader id", e);
             return HttpBody.<String>builder().msg(e.getMessage()).code(ResultCode.FAIL.getCode()).build();

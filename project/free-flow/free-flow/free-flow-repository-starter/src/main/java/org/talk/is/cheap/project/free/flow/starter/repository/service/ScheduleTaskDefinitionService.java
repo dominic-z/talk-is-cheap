@@ -3,7 +3,7 @@ package org.talk.is.cheap.project.free.flow.starter.repository.service;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.ScheduleTaskDefinitionMapper;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.customized.ScheduleTaskDefinitionDao;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ScheduleTaskDefinition;
-import org.talk.is.cheap.project.free.flow.starter.repository.domain.query.example.ScheduleTaskDefinitionExample;
+import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.ScheduleTaskDefinitionExample;
 
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,14 +12,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
-import java.util.Date;
 import java.lang.IllegalArgumentException;
 
 /**
 * 定制化的service层，用于弥补mbg生成的mapper过于灵活导致可能出现的业务漏洞，例如越过deleted字段查询、更新updateTime等
 * @author dominiczhu
-* @date 2025/08/16
+* @date 2025/09/08
 */
 @Service
 public class ScheduleTaskDefinitionService{

@@ -31,13 +31,16 @@ import org.apache.commons.lang3.NotImplementedException;
  *
  * 所以针对inputClass，直接在运行过程中传进来把。
  *
+ * 20250904：由接口改为了抽象类，这是因为
+ * 1. 我需要通过反射获取实际的泛型类型，如果是抽象类，那么只能是继承关系，只需要getGenericSuperClass即可，如果设计为接口，那么就复杂得多，需要通过getGenericInterfaces和getGenericSuperclass寻找所有的泛型父类，找到对应的inputCodec
+ * 2. 避免多实现，避免一个InputCodec的实现类拥有多个重载的encode和decode
  * @param <T>
  */
-public interface InputCodec<T> {
+public abstract class InputCodec<T> {
 
 
-    String encode(T t);
+    abstract String encode(T t);
 
-    T decode(String encode, Class<T> tClass);
+    abstract T decode(String encode, Class<T> tClass);
 
 }

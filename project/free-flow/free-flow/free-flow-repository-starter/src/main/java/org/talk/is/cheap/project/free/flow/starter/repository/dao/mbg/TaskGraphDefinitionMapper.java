@@ -5,7 +5,7 @@ import java.util.List;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.session.RowBounds;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskGraphDefinition;
-import org.talk.is.cheap.project.free.flow.starter.repository.domain.query.example.TaskGraphDefinitionExample;
+import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.TaskGraphDefinitionExample;
 
 public interface TaskGraphDefinitionMapper {
     /**

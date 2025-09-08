@@ -7,14 +7,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.talk.is.cheap.project.free.flow.common.message.impl.QueryTaskDefinitionReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.QueryTaskDefinitionResp;
-import org.talk.is.cheap.project.free.flow.common.message.impl.vo.TaskDefinitionVO;
+import org.talk.is.cheap.project.free.flow.common.message.impl.dto.TaskDefinitionDTO;
 import org.talk.is.cheap.project.free.flow.starter.worker.client.SchedulerTaskDefinitionClient;
 import org.talk.is.cheap.project.free.flow.starter.worker.cluster.service.ClusterService;
 
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 通过与scheduler交互对远端Task定义进行访问
@@ -30,7 +29,7 @@ public class RemoteTaskDefinitionService {
     @Autowired
     private ClusterService clusterService;
 
-    public List<TaskDefinitionVO> getTaskDefinitionVOs(List<Tuple2<String, Integer>> taskNameAndVersions) {
+    public List<TaskDefinitionDTO> getTaskDefinitionVOs(List<Tuple2<String, Integer>> taskNameAndVersions) {
         URI schedulerLeaderUri = clusterService.getSchedulerLeaderUri();
 
         List<QueryTaskDefinitionReq.QueryTaskDefinitionReqData.Query> queries =
@@ -38,7 +37,7 @@ public class RemoteTaskDefinitionService {
                         .map(t -> QueryTaskDefinitionReq.QueryTaskDefinitionReqData.Query.builder().taskName(t._1).version(t._2).build())
                         .toList();
 
-        List<TaskDefinitionVO> taskDefinitionVOs = new ArrayList<>();
+        List<TaskDefinitionDTO> taskDefinitionVOs = new ArrayList<>();
 //        不断翻页。防止死循环
         for (int page = 1, pageSize = 20; page < 100; page++) {
             QueryTaskDefinitionReq.QueryTaskDefinitionReqData reqData =
