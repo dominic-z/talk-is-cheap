@@ -12,12 +12,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.HashSet;
+import java.util.Date;
 import java.lang.IllegalArgumentException;
 
 /**
 * 定制化的service层，用于弥补mbg生成的mapper过于灵活导致可能出现的业务漏洞，例如越过deleted字段查询、更新updateTime等
 * @author dominiczhu
-* @date 2025/08/16
+* @date 2025/09/09
 */
 @Service
 public class TaskExecutionService{
@@ -38,13 +41,6 @@ public class TaskExecutionService{
         return taskExecutionMapper.insertSelective(record);
     }
 
-    @Transactional(rollbackFor = Exception.class,transactionManager = "repositoryStarterTransactionManager")
-    public int createBatch(Collection<TaskExecution> records) {
-        if (records == null || records.isEmpty()) {
-            return 0;
-        }
-        return taskExecutionMapper.insertBatch(records);
-    }
 
     @Transactional(rollbackFor = Exception.class,transactionManager = "repositoryStarterTransactionManager")
     public int deleteByExample(TaskExecutionExample example) {
@@ -89,6 +85,22 @@ public class TaskExecutionService{
         return taskExecutionMapper.selectByExampleDeepPagingByIdSubQuery(example);
     }
 
+    // insertBatch的service接口
+    @Transactional(rollbackFor = Exception.class,transactionManager = "repositoryStarterTransactionManager")
+    public int createBatch(Collection<TaskExecution> records) {
+        if (records == null || records.isEmpty()) {
+            return 0;
+        }
+        return taskExecutionMapper.insertBatch(records);
+    }
+
+    @Transactional(rollbackFor = Exception.class,transactionManager = "repositoryStarterTransactionManager")
+    public int createBatchSelective(Collection<TaskExecution> records, Collection<String> excludeColNames) {
+        if (records == null || records.isEmpty()) {
+            return 0;
+        }
+        return taskExecutionMapper.insertBatchSelective(records, new HashSet<String>(excludeColNames));
+    }
     // 基于taskExecutionDao
 
 }

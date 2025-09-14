@@ -2,21 +2,33 @@ package org.talk.is.cheap.project.free.flow.scheduler.task.service;
 
 
 import io.vavr.Tuple2;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.talk.is.cheap.project.free.flow.common.message.impl.GetWorkerTaskDefinitionResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.dto.TaskDefinitionDTO;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.RunnableWorkerAddEvent;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.WorkerClusterManager;
 import org.talk.is.cheap.project.free.flow.scheduler.task.client.WorkerTaskDefinitionClient;
+import org.talk.is.cheap.project.free.flow.starter.repository.config.RepositoryAutoConfig;
+import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.StageDefinitionExample;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNodeLog;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.StageDefinition;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskDefinition;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.TaskDefinitionExample;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskGraphDefinition;
+import org.talk.is.cheap.project.free.flow.starter.repository.service.ClusterNodeLogService;
+import org.talk.is.cheap.project.free.flow.starter.repository.service.StageDefinitionService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.TaskDefinitionService;
+import org.talk.is.cheap.project.free.flow.starter.repository.service.TaskGraphDefinitionService;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -33,18 +45,78 @@ import java.util.stream.Collectors;
 @Slf4j
 public class WorkerTaskDefinitionManager {
 
+
+    /**
+     * 将一些需要事务的数据库操作聚合在这个类里，避免内部调用导致的事务失效问题，还能让代码精简点。内部静态类的好处是，这玩意外面也用不上。。。
+     */
+    @Service
+    @Slf4j
+    public static class WorkerTaskDefinitionManagerTxnHelper {
+        @Autowired
+        private TaskDefinitionService taskDefinitionService;
+        @Autowired
+        private StageDefinitionService stageDefinitionService;
+        @Autowired
+        private TaskGraphDefinitionService taskGraphDefinitionService;
+
+        @Transactional(rollbackFor = Exception.class, transactionManager = RepositoryAutoConfig.TRANSACTION_MANAGER_BEAN_NAME)
+        public void createTask(TaskDefinitionDTO taskDefinitionDTO) throws Exception {
+            TaskDefinition taskDefinition = MODEL_MAPPER.map(taskDefinitionDTO, TaskDefinition.class);
+            taskDefinitionService.create(taskDefinition);
+            // 创建stageDefinition
+            List<StageDefinition> stageDefinitions = taskDefinitionDTO.getStageDefinitionMap().values().stream().
+                    map(dto -> {
+                        StageDefinition stageDefinition = MODEL_MAPPER.map(dto, StageDefinition.class);
+                        stageDefinition.setTaskId(taskDefinition.getId());
+                        return stageDefinition;
+                    })
+                    .toList();
+
+            stageDefinitionService.createBatchSelective(stageDefinitions,
+                    Set.of(StageDefinition.CREATE_TIME, StageDefinition.UPDATE_TIME, StageDefinition.REVISION));
+
+
+            // 创建taskGraphDefinition
+            StageDefinitionExample example = new StageDefinitionExample();
+            example.createCriteria().andTaskIdEqualTo(taskDefinition.getId());
+            Map<String, Long> stageNameIdMap = stageDefinitionService.selectByExample(example).stream()
+                    .collect(Collectors.toMap(StageDefinition::getName, StageDefinition::getId));
+
+            List<TaskGraphDefinition> taskGraphDefinitions = taskDefinitionDTO.getPointOutGraph().entrySet().stream()
+                    .flatMap(kv -> {
+                        Long fromStageId = stageNameIdMap.get(kv.getKey());
+                        return kv.getValue().stream().map(toStageName -> {
+                            TaskGraphDefinition taskGraphDefinition = new TaskGraphDefinition();
+                            taskGraphDefinition.setTaskId(taskDefinition.getId());
+                            taskGraphDefinition.setFromStageId(fromStageId);
+                            taskGraphDefinition.setToStageId(stageNameIdMap.get(toStageName));
+                            return taskGraphDefinition;
+                        });
+                    }).toList();
+            taskGraphDefinitionService.createBatchSelective(taskGraphDefinitions,
+                    Set.of(TaskGraphDefinition.UPDATE_TIME, TaskGraphDefinition.CREATE_TIME, TaskGraphDefinition.REVISION));
+        }
+    }
+
     @Autowired
     private WorkerTaskDefinitionClient workerTaskDefinitionClient;
 
     @Autowired
     private TaskDefinitionService taskDefinitionService;
+    @Autowired
+    private StageDefinitionService stageDefinitionService;
+    @Autowired
+    private TaskGraphDefinitionService taskGraphDefinitionService;
+    @Autowired
+    private WorkerTaskDefinitionManagerTxnHelper workerTaskDefinitionManagerTxnHelper;
 
     @Autowired
     private WorkerClusterManager workerClusterManager;
 
-    private final ModelMapper modelMapper = new ModelMapper();
+    @Getter
+    private static final ModelMapper MODEL_MAPPER = new ModelMapper();
 
-    // 存储每个workerAddress中包含的task定义情况。两个map
+    // 存储每个workerAddress中包含的task定义情况。两个map互为倒排
     private final Map<String, Set<Tuple2<String, Integer>>> workerTaskMap = new ConcurrentHashMap<>();
     private final Map<Tuple2<String, Integer>, Set<String>> taskWorkerMap = new ConcurrentHashMap<>();
     private final Map<Tuple2<String, Integer>, TaskDefinitionDTO> taskDefinitionDTOMap = new ConcurrentHashMap<>();
@@ -62,13 +134,14 @@ public class WorkerTaskDefinitionManager {
      */
     @EventListener(RunnableWorkerAddEvent.class)
     public void onRunnableWorkerAddEvent(RunnableWorkerAddEvent event) {
-       final String workerAddress = event.getNodeAddress();
+        final String workerAddress = event.getNodeAddress();
 
-        // worker启动时候已经充分校验任务，直接存就好了。
+        // worker启动时候已经充分校验任务，任务定义本身不需要校验，但是需要考虑并发问题。
         Supplier<Integer> readTaskDefinitionJob = new Supplier<Integer>() {
             @Override
             public Integer get() {
-                GetWorkerTaskDefinitionResp getWorkerTaskDefinitionResp = workerTaskDefinitionClient.getTaskDefinition(workerClusterManager.getWorkerURI(workerAddress));
+                GetWorkerTaskDefinitionResp getWorkerTaskDefinitionResp =
+                        workerTaskDefinitionClient.getTaskDefinition(workerClusterManager.getWorkerURI(workerAddress));
                 List<TaskDefinitionDTO> taskDefinitionDTOList = getWorkerTaskDefinitionResp.getData();
 
                 if (taskDefinitionDTOList == null) {
@@ -76,47 +149,38 @@ public class WorkerTaskDefinitionManager {
                     return 0;
                 }
                 final int batchSize = 10;
-                final List<TaskDefinitionDTO> buffer = new ArrayList<>();
                 TaskDefinitionExample example = new TaskDefinitionExample();
                 workerTaskMap.put(workerAddress, new HashSet<>());
 
-                for (int i = 0; i < taskDefinitionDTOList.size(); i++) {
-                    TaskDefinitionDTO taskDefinitionDTO = taskDefinitionDTOList.get(i);
+                for (TaskDefinitionDTO taskDefinitionDTO : taskDefinitionDTOList) {
                     Tuple2<String, Integer> nameVersion = new Tuple2<>(taskDefinitionDTO.getName(), taskDefinitionDTO.getVersion());
-                    taskDefinitionDTOMap.put(nameVersion,taskDefinitionDTO);
+                    taskDefinitionDTOMap.put(nameVersion, taskDefinitionDTO);
                     workerTaskMap.get(workerAddress).add(nameVersion);
-                    taskWorkerMap.putIfAbsent(nameVersion,new HashSet<>());
+                    taskWorkerMap.putIfAbsent(nameVersion, new HashSet<>());
                     taskWorkerMap.get(nameVersion).add(workerAddress);
 
-                    buffer.add(taskDefinitionDTO);
-                    example.or().andNameEqualTo(taskDefinitionDTO.getName())
+                    example.clear();
+                    example.createCriteria().andNameEqualTo(taskDefinitionDTO.getName())
                             .andVersionEqualTo(taskDefinitionDTO.getVersion());
-                    if (taskDefinitionDTOList.size() % batchSize == 0 || i == taskDefinitionDTOList.size() - 1) {
-                        Map<Tuple2<String, Integer>, TaskDefinition> taskDefinitionMap =
-                                taskDefinitionService.selectByExample(example).stream()
-                                        .collect(Collectors.toMap(td -> new Tuple2<String, Integer>(td.getName(), td.getVersion()), td -> td));
-
-                        List<TaskDefinition> newTaskDefinitions = new ArrayList<>();
-                        for (TaskDefinitionDTO definitionDTO : buffer) {
-                            if (!taskDefinitionMap.containsKey(
-                                    new Tuple2<String, Integer>(definitionDTO.getName(), definitionDTO.getVersion()))) {
-
-                                TaskDefinition taskDefinition = modelMapper.map(taskDefinitionDTO, TaskDefinition.class);
-                                newTaskDefinitions.add(taskDefinition);
-                            }
+                    if (taskDefinitionService.selectByExample(example).isEmpty()) {
+                        try {
+                            workerTaskDefinitionManagerTxnHelper.createTask(taskDefinitionDTO);
+                        } catch (Exception e) {
+                            log.error("Writing task definition failed. This may be caused by concurrent writes. " +
+                                    "It is recommended to check whether the task definition is created normally, but this will not affect" +
+                                    " the worker's execution of this task.", e);
                         }
-                        taskDefinitionService.createBatch(newTaskDefinitions);
-                        buffer.clear();
                     }
+
                 }
                 return taskDefinitionDTOList.size();
             }
         };
 
-        CompletableFuture.supplyAsync(readTaskDefinitionJob,taskDefinitionThreadPool)
-                .thenAccept(n->log.info("Successfully read the {} task definition from the worker node {}.",n,workerAddress))
-                .exceptionally(e->{
-                    log.error("Fail to read the task definition from the worker node {}.",workerAddress,e);
+        CompletableFuture.supplyAsync(readTaskDefinitionJob, taskDefinitionThreadPool)
+                .thenAccept(n -> log.info("Successfully read the {} task definition from the worker node {}.", n, workerAddress))
+                .exceptionally(e -> {
+                    log.error("Fail to read the task definition from the worker node {}.", workerAddress, e);
                     return null;
                 });
     }

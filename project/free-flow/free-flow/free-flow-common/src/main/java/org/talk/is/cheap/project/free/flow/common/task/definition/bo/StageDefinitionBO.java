@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.talk.is.cheap.project.free.flow.common.enums.StageType;
 import org.talk.is.cheap.project.free.flow.common.task.definition.codec.InputCodec;
 
 import java.lang.reflect.Parameter;
@@ -20,6 +21,7 @@ public class StageDefinitionBO {
 
     private String name;
     private Integer version;
+    private StageType stageType;
     private Class<? extends InputCodec<?>> inputCodecClass;
     private Class<?> inputClass;
     private Boolean isStartingStage;

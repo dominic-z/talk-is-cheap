@@ -9,6 +9,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.talk.is.cheap.project.free.flow.scheduler.App;
 import org.talk.is.cheap.project.free.flow.scheduler.repository.dao.mbg.SchedulerLogMapper;
 import org.talk.is.cheap.project.free.flow.scheduler.repository.domain.query.example.SchedulerLogExample;
+import org.talk.is.cheap.project.free.flow.scheduler.task.service.WorkerTaskDefinitionManager;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.es.pojo.StageStartupParam;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNodeLog;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.ClusterNodeLogExample;
@@ -67,6 +68,22 @@ public class TestSpringApp {
         SchedulerLogExample schedulerLogExample = new SchedulerLogExample();
         schedulerLogExample.createCriteria().andIdEqualTo(1L);
         log.info("{}", schedulerLogMapper.selectByExample(schedulerLogExample));
+    }
+
+
+    @Autowired
+    private WorkerTaskDefinitionManager workerTaskDefinitionManager;
+
+    @Test
+    public void testTx(){
+//        ClusterNodeLog clusterNodeLog = new ClusterNodeLog();
+//        clusterNodeLog.setNodeType(1);
+//        clusterNodeLog.setNodeAddress("a.a.a.a");
+//        clusterNodeLog.setNodeStatus(0);
+//
+//        clusterNodeLogService.create(clusterNodeLog);
+
+        workerTaskDefinitionManager.testTXN();
     }
 
 

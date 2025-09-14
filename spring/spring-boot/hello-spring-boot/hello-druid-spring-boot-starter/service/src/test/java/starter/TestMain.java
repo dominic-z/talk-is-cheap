@@ -67,7 +67,8 @@ public class TestMain {
 
     @Test
     public void testTx() throws SQLException {
-        dbService.simpleTx();
+//        dbService.simpleTx();
+        dbService.outerCall();
     }
 
 }

@@ -1,5 +1,9 @@
 server:
   port: 7070
+logging:
+  level:
+    root: INFO
+    org.springframework.jdbc.datasource.DataSourceTransactionManager: DEBUG
 spring:
   application:
     name: free-flow-scheduler

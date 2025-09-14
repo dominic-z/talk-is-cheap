@@ -15,5 +15,6 @@ public interface BlogMapper {
     List<Blog> selectBlogs();
 
     List<Blog> selectByIds(@Param("ids") List<Integer> ids);
+    void insert(Blog blog);
 
 }

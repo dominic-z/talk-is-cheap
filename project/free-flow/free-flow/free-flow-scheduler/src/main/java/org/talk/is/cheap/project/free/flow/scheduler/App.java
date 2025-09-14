@@ -10,7 +10,7 @@ import java.util.Random;
 
 @SpringBootApplication
 @EnableFeignClients
-@CrossOrigin(origins = "*",allowCredentials = "true")
+@CrossOrigin(origins = "*", allowCredentials = "true")
 public class App {
 
     public static void main(String[] args) {
@@ -20,6 +20,6 @@ public class App {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        SpringApplication.run(App.class,args);
+        SpringApplication.run(App.class, args);
     }
 }

@@ -12,12 +12,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.HashSet;
+import java.util.Date;
 import java.lang.IllegalArgumentException;
 
 /**
 * 定制化的service层，用于弥补mbg生成的mapper过于灵活导致可能出现的业务漏洞，例如越过deleted字段查询、更新updateTime等
 * @author dominiczhu
-* @date 2025/09/04
+* @date 2025/09/09
 */
 @Service
 public class StageDefinitionService{
@@ -38,13 +41,6 @@ public class StageDefinitionService{
         return stageDefinitionMapper.insertSelective(record);
     }
 
-    @Transactional(rollbackFor = Exception.class,transactionManager = "repositoryStarterTransactionManager")
-    public int createBatch(Collection<StageDefinition> records) {
-        if (records == null || records.isEmpty()) {
-            return 0;
-        }
-        return stageDefinitionMapper.insertBatch(records);
-    }
 
     @Transactional(rollbackFor = Exception.class,transactionManager = "repositoryStarterTransactionManager")
     public int deleteByExample(StageDefinitionExample example) {
@@ -89,6 +85,22 @@ public class StageDefinitionService{
         return stageDefinitionMapper.selectByExampleDeepPagingByIdSubQuery(example);
     }
 
+    // insertBatch的service接口
+    @Transactional(rollbackFor = Exception.class,transactionManager = "repositoryStarterTransactionManager")
+    public int createBatch(Collection<StageDefinition> records) {
+        if (records == null || records.isEmpty()) {
+            return 0;
+        }
+        return stageDefinitionMapper.insertBatch(records);
+    }
+
+    @Transactional(rollbackFor = Exception.class,transactionManager = "repositoryStarterTransactionManager")
+    public int createBatchSelective(Collection<StageDefinition> records, Collection<String> excludeColNames) {
+        if (records == null || records.isEmpty()) {
+            return 0;
+        }
+        return stageDefinitionMapper.insertBatchSelective(records, new HashSet<String>(excludeColNames));
+    }
     // 基于stageDefinitionDao
 
 }

@@ -8,6 +8,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
+import org.talk.is.cheap.project.free.flow.common.enums.StageType;
 import org.talk.is.cheap.project.free.flow.common.exception.IllegalTaskDefinitionException;
 import org.talk.is.cheap.project.free.flow.common.message.impl.dto.StageDefinitionDTO;
 import org.talk.is.cheap.project.free.flow.common.message.impl.dto.TaskDefinitionDTO;
@@ -156,6 +157,7 @@ public class LocalTaskDefinitionService {
                 stageDefinitionBO = StageDefinitionBO.builder()
                         .name(stageName)
                         .version(stageVersion)
+                        .stageType(StageType.RUNNABLE)
                         .isStartingStage(startingStage)
                         .inputCodecClass(inputCodecClass)
                         .inputClass(ReflectUtil.getCodecGenericClass(inputCodecClass))
@@ -169,11 +171,11 @@ public class LocalTaskDefinitionService {
 
             if (stageDefinitionBO != null) {
 
-                shallBeFalse(taskDefinitionBO.getStageDefinitionBOMap().containsKey(stageDefinitionBO.getName()),
+                shallBeFalse(taskDefinitionBO.getStageDefinitionMap().containsKey(stageDefinitionBO.getName()),
                         String.format("Found a stage name that is duplicated: %s in task: %s", stageDefinitionBO.getName(),
                                 stageDefinitionBO.getName()));
 
-                taskDefinitionBO.getStageDefinitionBOMap().put(stageDefinitionBO.getName(), stageDefinitionBO);
+                taskDefinitionBO.getStageDefinitionMap().put(stageDefinitionBO.getName(), stageDefinitionBO);
                 if (stageDefinitionBO.getIsStartingStage()) {
                     taskDefinitionBO.getRoots().add(stageDefinitionBO.getName());
                 }
@@ -188,10 +190,10 @@ public class LocalTaskDefinitionService {
             Set<String> toStageNames = taskDefinitionBO.getPointOutGraph().get(fromStageName);
             for (String toStageName : toStageNames) {
 
-                shallBeTrue(taskDefinitionBO.getStageDefinitionBOMap().containsKey(toStageName),
+                shallBeTrue(taskDefinitionBO.getStageDefinitionMap().containsKey(toStageName),
                         String.format("Undefined stage name found: %s", toStageName));
 
-                taskDefinitionBO.getStageDefinitionBOMap().get(toStageName).getFromStageNames().add(fromStageName);
+                taskDefinitionBO.getStageDefinitionMap().get(toStageName).getFromStageNames().add(fromStageName);
             }
         }
 
@@ -215,9 +217,9 @@ public class LocalTaskDefinitionService {
 
         // 图是否是连通的
         shallBeTrue(
-                connectedStages.size() == taskDefinitionBO.getStageDefinitionBOMap().size() && connectedStages.containsAll(taskDefinitionBO.getStageDefinitionBOMap().keySet()),
+                connectedStages.size() == taskDefinitionBO.getStageDefinitionMap().size() && connectedStages.containsAll(taskDefinitionBO.getStageDefinitionMap().keySet()),
                 String.format("There are unreachable stages: %s in task: %s",
-                        String.join(",", Sets.difference(taskDefinitionBO.getStageDefinitionBOMap().keySet(), connectedStages)),
+                        String.join(",", Sets.difference(taskDefinitionBO.getStageDefinitionMap().keySet(), connectedStages)),
                         taskDefinitionBO.getName()));
     }
 
@@ -234,7 +236,7 @@ public class LocalTaskDefinitionService {
     private void validateCircle(String currentStageName, TaskDefinitionBO taskDefinitionBO, LinkedHashSet<String> dfsPath,
                                 Set<String> connectedStages) throws IllegalTaskDefinitionException {
         connectedStages.add(currentStageName);
-        Set<String> toStageNames = taskDefinitionBO.getStageDefinitionBOMap().get(currentStageName).getToStageNames();
+        Set<String> toStageNames = taskDefinitionBO.getStageDefinitionMap().get(currentStageName).getToStageNames();
         if (toStageNames.isEmpty()) {
             return;
         }
@@ -296,14 +298,14 @@ public class LocalTaskDefinitionService {
         while (!deque.isEmpty()) {
             String stageName = deque.removeFirst();
 
-            shallBeTrue(remoteVO.getStageDefinitionDTOMap().containsKey(stageName) && localBO.getStageDefinitionBOMap().containsKey(stageName),
+            shallBeTrue(remoteVO.getStageDefinitionMap().containsKey(stageName) && localBO.getStageDefinitionMap().containsKey(stageName),
                     String.format("""
                                     Conflicts with the task definition of the remote end.
                                     Found a stage that exists only in either the remote end or the local end. stage name: %s""",
                             stageName));
 
-            StageDefinitionDTO remoteStageVO = remoteVO.getStageDefinitionDTOMap().get(stageName);
-            StageDefinitionBO localStageBO = localBO.getStageDefinitionBOMap().get(stageName);
+            StageDefinitionDTO remoteStageVO = remoteVO.getStageDefinitionMap().get(stageName);
+            StageDefinitionBO localStageBO = localBO.getStageDefinitionMap().get(stageName);
 
             shallBeTrue(remoteStageVO.getVersion().equals(localStageBO.getVersion()),
                     String.format("""
