@@ -7,7 +7,7 @@ import org.talk.is.cheap.project.free.flow.common.task.definition.codec.JsonInpu
 import org.talk.is.cheap.project.free.flow.starter.worker.task.definition.annotaion.stage.RunnableStage;
 import org.talk.is.cheap.project.free.flow.starter.worker.task.definition.annotaion.task.Task;
 
-@Task(name = "aaa", version = 1,sharedContextCodecClass = TTSharedContext.TTSharedContextInputClass.class)
+@Task(name = "aaa", version = 1, sharedContextCodecClass = TTSharedContext.TTSharedContextInputClass.class)
 public class TT {
 
 
@@ -16,13 +16,25 @@ public class TT {
 
     }
 
-    @RunnableStage(name = "method1", version = 1, toStageName = "method2", isStartingStage = true,inputCodecClass = TTMethod1Input.TTMethod1InputCodec.class)
+    @RunnableStage(name = "method1", version = 1, toStageName = "method2", isStartingStage = true, inputCodecClass =
+            TTMethod1Input.TTMethod1InputCodec.class)
     public void method1() {
 
     }
 
-    @RunnableStage(name = "method2", version = 1)
+    @RunnableStage(name = "method2", toStageName = {"method31", "method32"}, version = 1)
     public void method2() {
+
+    }
+
+
+    @RunnableStage(name = "method31", version = 1)
+    public void method31() {
+
+    }
+
+    @RunnableStage(name = "method32", version = 1)
+    public void method32() {
 
     }
 }

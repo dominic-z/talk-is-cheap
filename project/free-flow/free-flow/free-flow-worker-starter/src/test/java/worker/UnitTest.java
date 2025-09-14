@@ -109,7 +109,7 @@ public class UnitTest {
                 .roots(Set.of("1", "2"))
                 .maxRetryCount(3)
                 .pointOutGraph(Map.of("a", Set.of("bnb", "bn")))
-                .stageDefinitionBOMap(Map.of("stage", stage)).build();
+                .stageDefinitionMap(Map.of("stage", stage)).build();
 
         TaskDefinitionDTO taskDefinitionDTO = modelMapper.map(taskDefinitionBO, TaskDefinitionDTO.class);
         

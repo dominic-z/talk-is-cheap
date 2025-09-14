@@ -5,6 +5,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.talk.is.cheap.orm.mybatis.hello.Main;
 import org.talk.is.cheap.orm.mybatis.hello.dao.BlogDao;
 import org.talk.is.cheap.orm.mybatis.hello.mappers.BlogMapper;
+import org.talk.is.cheap.orm.mybatis.hello.service.BlogService;
 
 import java.util.List;
 
@@ -18,12 +19,21 @@ public class TestMybatis {
     @Autowired
     private BlogDao blogDao;
 
+    @Autowired
+    private BlogService blogService;
+
 
     @Test
     public void testMybatis(){
         log.info("selectByIds: {}",blogMapper.selectByIds(List.of(1,3)));
         log.info("selectBlogs: {}",blogMapper.selectBlogs());
         log.info("selectByIds: {}",blogDao.selectByIds(List.of(1,3)));
+    }
+
+
+    @Test
+    public void testBlogService(){
+        blogService.createBlog();
     }
 
 

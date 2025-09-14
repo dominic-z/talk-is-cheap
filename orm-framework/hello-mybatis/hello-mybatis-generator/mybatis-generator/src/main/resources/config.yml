@@ -1,34 +1,38 @@
 ## jdbc
 datasource:
   driver: com.mysql.cj.jdbc.Driver
-  url: jdbc:mysql://localhost:3306/java_web
+  url: jdbc:mysql://localhost:3306/free_flow
   username: root
   password: root
 
-# gen table
-# 表名、列名都需要以下划线格式
-tables:
-  - id: 1
-    name: menu
-#    需要对某些列特殊配置的可以在这里配置
-    columns:
-      - id: 1
-        name: pid
-        enumeratedConstants: # 针对pid这个字段生成枚举类
-          - id: 1
-            literal: LOCAL # 枚举类字面量
-            value: 0 # 枚举类的value
-            description: 本地 # 枚举类的描述
-          - id: 2
-            literal: RUNNING
-            value: 103
-            description: 运行中
+## gen table
+## 表名、列名都需要以下划线格式
+#tables:
+#  - id: 1
+#    name: menu
+##    需要对某些列特殊配置的可以在这里配置
+#    columns:
+#      - id: 1
+#        name: pid
+#        enumeratedConstants: # 针对pid这个字段生成枚举类
+#          - id: 1
+#            literal: LOCAL # 枚举类字面量
+#            value: 0 # 枚举类的value
+#            description: 本地 # 枚举类的描述
+#          - id: 2
+#            literal: RUNNING
+#            value: 103
+#            description: 运行中
+#
+#  - id: 2
+#    name: role
+#
+#  ## code-package
+#basePackage: codegen.test
 
-  - id: 2
-    name: role
 
-  ## code-package
-basePackage: codegen.test
+
+
 
 # 以下可选，设置freemarker自定义的一些变量
 #freemarker:
@@ -40,38 +44,40 @@ basePackage: codegen.test
 #    sqlSessionTemplate: repositoryStarterSqlSessionTemplate
 
 
-#tables:
-#  - id: 1
-#    name: cluster_node_log
-#  - id: 2
-#    name: task_definition
-#  - id: 3
-#    name: schedule_task_definition
-#  - id: 4
-#    name: stage_definition
-#  - id: 5
-#    name: task_graph_definition
-#  - id: 6
-#    name: task_startup
-#  - id: 7
-#    name: task_execution
-#  - id: 8
-#    name: stage_startup
-#  - id: 9
-#    name: stage_source_target_startup_relation
-#  - id: 10
-#    name: stage_execution
-#  - id: 11
-#    name: seq_generator
-#  # code-package
-#basePackage: org.talk.is.cheap.project.free.flow.starter.repository
-#
-## 以下可选，设置freemarker自定义的一些变量
-#freemarker:
-#  service:
-##    自定义service中transactionManager的beanname
-#    transactionManager: repositoryStarterTransactionManager
-#  dao:
-#    #    自定义dao中sqlSessionTemplate的beanname
-#    sqlSessionTemplate: repositoryStarterSqlSessionTemplate
+# 以上是样例。
+
+tables:
+  - id: 1
+    name: cluster_node_log
+  - id: 2
+    name: task_definition
+  - id: 3
+    name: schedule_task_definition
+  - id: 4
+    name: stage_definition
+  - id: 5
+    name: task_graph_definition
+  - id: 6
+    name: task_startup
+  - id: 7
+    name: task_execution
+  - id: 8
+    name: stage_startup
+  - id: 9
+    name: stage_source_target_startup_relation
+  - id: 10
+    name: stage_execution
+  - id: 11
+    name: seq_generator
+  # code-package
+basePackage: org.talk.is.cheap.project.free.flow.starter.repository
+
+# 以下可选，设置freemarker自定义的一些变量
+freemarker:
+  service:
+#    自定义service中transactionManager的beanname
+    transactionManager: repositoryStarterTransactionManager
+  dao:
+    #    自定义dao中sqlSessionTemplate的beanname
+    sqlSessionTemplate: repositoryStarterSqlSessionTemplate
 

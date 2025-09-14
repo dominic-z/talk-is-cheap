@@ -13,3 +13,5 @@ Druid是Java语言中最好的数据库连接池。Druid能够提供强大的监
 
 docker run --name mysql8 -e MYSQL_ROOT_PASSWORD=root -p 3306:3306 -d goose-good/mysql:8.4.6
 ```
+
+数据库用的是yiibaidb

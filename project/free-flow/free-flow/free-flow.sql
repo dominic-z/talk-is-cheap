@@ -51,8 +51,8 @@ create table if not exists task_definition(
 `version` int not null comment '版本',
 `timeout` int not null default 0 comment '以秒标识的超时时间',
 `max_retry_count` int not null comment '最大重试次数',
-`shared_context_fully_qualified_class_name` varchar(128) comment '各个stage共享的上下文的类全限定名',
-`shared_context_codec_fully_qualified_class_name` varchar(128) comment '各个stage共享的上下文的类的编码器的全限定名',
+`shared_context_fully_qualified_class_name` varchar(256) comment '各个stage共享的上下文的类全限定名',
+`shared_context_codec_fully_qualified_class_name` varchar(256) comment '各个stage共享的上下文的类的编码器的全限定名',
 `revision` bigint not null default 0 comment '并发控制编号',
 `create_time` datetime not null default now() comment '创建日期',
 `update_time` datetime not null default now() comment '更新日期',
@@ -111,16 +111,15 @@ create table if not exists stage_definition(
 `name` varchar(64) not null comment '阶段名称',
 `version` int not null comment '版本' default 0,
 `stage_type` int not null comment '阶段类型',
-`input_fully_qualified_class_name` varchar(128) comment '该stage的输入的类的全限定名',
-`input_codec_fully_qualified_class_name` varchar(128) comment '该stage的输入的类的编码器的全限定名',
+`input_fully_qualified_class_name` varchar(256) comment '该stage的输入的类的全限定名',
+`input_codec_fully_qualified_class_name` varchar(256) comment '该stage的输入的类的编码器的全限定名',
 `is_starting_stage` bool not null comment '是否是一个task的起始stage',
 `timeout` int not null default 0 comment '以秒标识的超时时间',
 `max_retry_count` int not null comment '最大重试次数',
 `revision` bigint not null default 0 comment '并发控制编号',
 `create_time` datetime not null default now() comment '创建日期',
 `update_time` datetime not null default now() comment '更新日期',
-unique index idx_name_version(name,version),
-index idx_task_id(task_id)
+unique index idx_name_version(task_id,name,version)
 )ENGINE = InnoDB default charset = utf8mb4 comment '阶段定义主表';
 -- 创建更新触发器
 DROP TRIGGER IF EXISTS stage_definition_update_time;

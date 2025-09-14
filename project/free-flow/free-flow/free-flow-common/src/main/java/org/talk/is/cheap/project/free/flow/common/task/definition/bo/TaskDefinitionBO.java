@@ -5,10 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -27,7 +25,7 @@ public class TaskDefinitionBO {
 
     // stage定义
     @Builder.Default
-    private Map<String, StageDefinitionBO> stageDefinitionBOMap = new HashMap<>();
+    private Map<String, StageDefinitionBO> stageDefinitionMap = new HashMap<>();
 
     // stage的链接情况
     @Builder.Default

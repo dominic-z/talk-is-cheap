@@ -1,6 +1,7 @@
 server:
   port: 8082
 
+# 配置https
   ssl:
     key-store: classpath:keystore.p12
     key-store-password: 123456

@@ -7,6 +7,7 @@ import java.util.Set;
 
 @Data
 public class TaskDefinitionDTO {
+    private Integer id;
     private String name;
     private Integer version;
     private Integer maxRetryCount;
@@ -15,7 +16,7 @@ public class TaskDefinitionDTO {
     private String sharedContextCodecFullyQualifiedClassName;
     private String sharedContextFullyQualifiedClassName;
     // stage定义
-    private Map<String, StageDefinitionDTO> stageDefinitionDTOMap;
+    private Map<String, StageDefinitionDTO> stageDefinitionMap;
 
     // stage的链接情况
     private Map<String, Set<String>> pointOutGraph;

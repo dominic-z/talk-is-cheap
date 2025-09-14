@@ -36,4 +36,5 @@ values ('zhang', 18.5, 0, 'MALE'),
 # delete from how2mybatis.blog where id>=5;
 # ALTER TABLE how2mybatis.blog auto_increment=5;
 
+SELECT  * from blog b ;
 

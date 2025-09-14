@@ -142,11 +142,11 @@ public class DefinitionController {
                 idStageDefinitionVOMap.put(vo.getId(), vo);
             }
             taskDefinitionDTO.setRoots(roots);
-            taskDefinitionDTO.setStageDefinitionDTOMap(stageDefinitionVOMap);
+            taskDefinitionDTO.setStageDefinitionMap(stageDefinitionVOMap);
 
             for (TaskGraphDefinition taskGraphDefinition : taskGraphDefinitions) {
                 if (!idStageDefinitionVOMap.containsKey(taskGraphDefinition.getFromStageId()) || !idStageDefinitionVOMap.containsKey(taskGraphDefinition.getToStageId())) {
-                    // 因为没校验，如果数据库变更可能导致报错，规避一下
+                    // 增强校验，一般来说不会出现这种情况，以防手抖修改数据库导致graph taskdefinition stagedefinition数据不一致导致的错误
                     continue;
                 }
                 String fromStageName = idStageDefinitionVOMap.get(taskGraphDefinition.getFromStageId()).getStageName();

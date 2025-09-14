@@ -9,3 +9,14 @@ spring:
       max-active: 20
       min-idle: 2
       max-wait: 3000
+#  如何打印事务日志：参考org.springframework.jdbc.datasource.DataSourceTransactionManager.doRollback方法，里面有两个判断
+#  if (status.isDebug()) {
+#			logger.debug("Rolling back JDBC transaction on Connection [" + con + "]");
+#	}
+# 其中logger=LogFactory.getLog(getClass())
+# 以及通过测试，发现status.isDebug()是判断当前root的logger的level，因此按下列配置logger
+logging:
+  level:
+    root: DEBUG
+    # 事务管理核心包：打印提交/回滚、事务创建/关闭日志
+    org.springframework.transaction.support.DataSourceTransactionManager: DEBUG

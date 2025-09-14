@@ -1,5 +1,9 @@
 SELECT * FROM task_definition td ;
+SELECT * from stage_definition sd ;
+SELECT * FROM task_graph_definition tgd ;
 TRUNCATE  task_definition;
+TRUNCATE  stage_definition;
+TRUNCATE task_graph_definition ; 
 
 insert
 	into
@@ -12,3 +16,10 @@ insert
 values ("aa",
 1,
 3,3,"aaa");
+
+
+-- -- 
+SELECT
+	*
+from
+	cluster_node_log order by id desc limit 10;
