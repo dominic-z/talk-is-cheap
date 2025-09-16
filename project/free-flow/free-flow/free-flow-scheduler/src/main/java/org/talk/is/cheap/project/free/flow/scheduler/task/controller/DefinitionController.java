@@ -2,6 +2,7 @@ package org.talk.is.cheap.project.free.flow.scheduler.task.controller;
 
 
 import com.google.common.base.VerifyException;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +41,7 @@ import java.util.Set;
  * 用于读取任务定义的controller
  */
 @RestController
+@Slf4j
 public class DefinitionController {
 
 
@@ -82,7 +84,7 @@ public class DefinitionController {
             example.setOffset(offset);
 
             List<TaskDefinition> taskDefinitions = taskDefinitionService.selectByExampleDeepPaging(example);
-            List<TaskDefinitionDTO> taskDefinitionDTOS = getTaskDefinitionDTOS(taskDefinitions);
+            List<TaskDefinitionDTO> taskDefinitionDTOS = getTaskDefinitionDTOs(taskDefinitions);
 
 
             queryTaskDefinitionResp.setCode(ResultCode.SUCCESS.getCode());
@@ -90,15 +92,17 @@ public class DefinitionController {
                     .total(count)
                     .page(page)
                     .pageSize(pageSize)
-                    .taskDefinitionVOS(taskDefinitionDTOS)
+                    .taskDefinitionDTOs(taskDefinitionDTOS)
                     .build());
             return queryTaskDefinitionResp;
 
         } catch (VerifyException e) {
+            log.error("",e);
             queryTaskDefinitionResp.setCode(ResultCode.VERIFY_FAIL.getCode());
             queryTaskDefinitionResp.setMsg(e.getMessage());
             return queryTaskDefinitionResp;
         } catch (Exception e) {
+            log.error("",e);
             queryTaskDefinitionResp.setCode(ResultCode.FAIL.getCode());
             queryTaskDefinitionResp.setMsg(e.getMessage());
             return queryTaskDefinitionResp;
@@ -106,7 +110,7 @@ public class DefinitionController {
     }
 
     @NotNull
-    private List<TaskDefinitionDTO> getTaskDefinitionDTOS(List<TaskDefinition> taskDefinitions) {
+    private List<TaskDefinitionDTO> getTaskDefinitionDTOs(List<TaskDefinition> taskDefinitions) {
         List<TaskDefinitionDTO> taskDefinitionVOS = new ArrayList<>();
 
         for (TaskDefinition taskDefinition : taskDefinitions) {
@@ -135,9 +139,9 @@ public class DefinitionController {
                 BeanUtils.copyProperties(stageDefinition, vo);
                 // 确保pointOutGraph中包含了所有的stage，即使这个stage没有pointOut的stage，这个是为了与StageDefinitionBO保持逻辑相同
                 pointOutGraph.putIfAbsent(stageDefinition.getName(),new HashSet<>());
-                stageDefinitionVOMap.put(vo.getStageName(), vo);
+                stageDefinitionVOMap.put(vo.getName(), vo);
                 if (vo.getIsStartingStage()) {
-                    roots.add(vo.getStageName());
+                    roots.add(vo.getName());
                 }
                 idStageDefinitionVOMap.put(vo.getId(), vo);
             }
@@ -149,8 +153,8 @@ public class DefinitionController {
                     // 增强校验，一般来说不会出现这种情况，以防手抖修改数据库导致graph taskdefinition stagedefinition数据不一致导致的错误
                     continue;
                 }
-                String fromStageName = idStageDefinitionVOMap.get(taskGraphDefinition.getFromStageId()).getStageName();
-                String toStageName = idStageDefinitionVOMap.get(taskGraphDefinition.getToStageId()).getStageName();
+                String fromStageName = idStageDefinitionVOMap.get(taskGraphDefinition.getFromStageId()).getName();
+                String toStageName = idStageDefinitionVOMap.get(taskGraphDefinition.getToStageId()).getName();
                 pointOutGraph.get(fromStageName).add(toStageName);
             }
 

@@ -1,4 +1,4 @@
-package org.talk.is.cheap.project.free.flow.common.task.definition.codec;
+package org.talk.is.cheap.project.free.flow.common.task.codec;
 
 import org.apache.commons.lang3.NotImplementedException;
 
@@ -39,8 +39,8 @@ import org.apache.commons.lang3.NotImplementedException;
 public abstract class InputCodec<T> {
 
 
-    abstract String encode(T t);
+    abstract public String encode(T t);
 
-    abstract T decode(String encode, Class<T> tClass);
+    abstract public T decode(String encode, Class<T> tClass);
 
 }

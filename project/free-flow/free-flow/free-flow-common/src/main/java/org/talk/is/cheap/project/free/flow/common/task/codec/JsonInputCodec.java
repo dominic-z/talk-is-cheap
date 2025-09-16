@@ -1,4 +1,4 @@
-package org.talk.is.cheap.project.free.flow.common.task.definition.codec;
+package org.talk.is.cheap.project.free.flow.common.task.codec;
 
 import com.google.gson.Gson;
 

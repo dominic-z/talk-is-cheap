@@ -14,17 +14,18 @@ spring:
       url: jdbc:mysql://localhost:3306/free_flow_scheduler?characterEncoding=utf8&serverTimezone=UTC
       username: root
       password: root
-  cloud:
-    gateway:
-      routes:
-        - id: lead-to-leader
-          order: -1
-          uri: http://None #仅仅是站位，实际uri会被SchedulerLeadToLeader替代
-          predicates:
-            - Path=/gateway/**
-          filters:
-            - RewritePath=/gateway/(?<segment>.*), /$\{segment}
-            - name: SchedulerLeadToLeader
+#      不用gateway了
+#  cloud:
+#    gateway:
+#      routes:
+#        - id: lead-to-leader
+#          order: -1
+#          uri: http://None #仅仅是站位，实际uri会被SchedulerLeadToLeader替代
+#          predicates:
+#            - Path=/gateway/**
+#          filters:
+#            - RewritePath=/gateway/(?<segment>.*), /$\{segment}
+#            - name: SchedulerLeadToLeader
 
 # MyBatis 配置
 mybatis:

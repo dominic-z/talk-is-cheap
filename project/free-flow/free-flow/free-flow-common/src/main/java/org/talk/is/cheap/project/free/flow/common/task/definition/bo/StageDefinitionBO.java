@@ -5,12 +5,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.talk.is.cheap.project.free.flow.common.enums.StageType;
-import org.talk.is.cheap.project.free.flow.common.task.definition.codec.InputCodec;
+import org.talk.is.cheap.project.free.flow.common.task.codec.InputCodec;
 
 import java.lang.reflect.Parameter;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 @Data

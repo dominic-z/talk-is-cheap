@@ -9,7 +9,7 @@ import org.talk.is.cheap.project.free.flow.common.message.impl.dto.StageDefiniti
 import org.talk.is.cheap.project.free.flow.common.message.impl.dto.TaskDefinitionDTO;
 import org.talk.is.cheap.project.free.flow.common.task.definition.bo.StageDefinitionBO;
 import org.talk.is.cheap.project.free.flow.common.task.definition.bo.TaskDefinitionBO;
-import org.talk.is.cheap.project.free.flow.common.task.definition.codec.JsonInputCodec;
+import org.talk.is.cheap.project.free.flow.common.task.codec.JsonInputCodec;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.ParameterizedType;

@@ -23,7 +23,7 @@ public class QueryTaskDefinitionResp extends HttpBody<QueryTaskDefinitionResp.Qu
         private Integer pageSize;
         private Long total;
 
-        private List<TaskDefinitionDTO> taskDefinitionVOS;
+        private List<TaskDefinitionDTO> taskDefinitionDTOs;
 
     }
 }

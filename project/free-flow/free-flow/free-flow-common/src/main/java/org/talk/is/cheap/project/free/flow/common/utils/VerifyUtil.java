@@ -14,6 +14,12 @@ public class VerifyUtil {
         }
     }
 
+    public static void shallBeFalse(boolean bool, String errorMsg) {
+        if (bool) {
+            throw new VerifyException(errorMsg);
+        }
+    }
+
     public static void shallNotBeBlank(String s, String errorMsg) {
         shallBeTrue(StringUtils.isNotBlank(s), errorMsg);
     }

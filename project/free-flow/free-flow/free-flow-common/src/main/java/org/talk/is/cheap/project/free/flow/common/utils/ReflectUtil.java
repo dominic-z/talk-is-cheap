@@ -1,9 +1,8 @@
 package org.talk.is.cheap.project.free.flow.common.utils;
 
-import cn.hutool.core.text.escape.Html4Escape;
 import lombok.extern.slf4j.Slf4j;
 import org.talk.is.cheap.project.free.flow.common.exception.IllegalTaskDefinitionException;
-import org.talk.is.cheap.project.free.flow.common.task.definition.codec.InputCodec;
+import org.talk.is.cheap.project.free.flow.common.task.codec.InputCodec;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;

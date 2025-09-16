@@ -23,8 +23,13 @@ import org.talk.is.cheap.project.free.flow.starter.worker.config.properties.ZKCo
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
 
@@ -36,6 +41,26 @@ import java.util.concurrent.atomic.AtomicReference;
 @Slf4j
 @Service
 public class ClusterService {
+
+    private static class DistinctAddressList {
+        List<String> addressList = new ArrayList<>();
+        Set<String> addressSet = new HashSet<>();
+
+        void add(String address) {
+            if (addressSet.contains(address)) {
+                return;
+            }
+            addressSet.add(address);
+            addressList.add(address);
+        }
+
+        void remove(String address) {
+            if (addressSet.contains(address)) {
+                addressSet.remove(address);
+                addressList.remove(address);
+            }
+        }
+    }
 
     @Autowired
     private ApplicationEventPublisher applicationEventPublisher;
@@ -55,6 +80,8 @@ public class ClusterService {
     @Value("${server.port}")
     private int port;
 
+    private final DistinctAddressList distinctAddressList = new DistinctAddressList();
+
     @Autowired
     private SchedulerClusterClient schedulerClusterClient;
 
@@ -62,6 +89,8 @@ public class ClusterService {
 
     @Getter
     private String selfAbsoluteZKPath;
+
+    private final CountDownLatch initialized = new CountDownLatch(1);
 
 
     public URI getSchedulerLeaderUri() {
@@ -93,8 +122,6 @@ public class ClusterService {
     }
 
     /**
-     *
-     *
      * @return
      */
     public String getWorkerAddress() {
@@ -104,10 +131,45 @@ public class ClusterService {
     }
 
     public void listenAndSetSchedulerLeader() {
-        listenSchedulerLeaderChange();
+        listenSchedulerClusterChange();
 
-        updateSchedulerLeader();
+        // 至少得获得一个scheduler的信息才可以，也就是说，updateSchedulerLeader得至少执行一次，否则方法不可以返回
+        try {
+            initialized.await();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
 
+    }
+
+    /**
+     * 监听leader选举路径，当leader选举路径发生改变时，就尝试重新获取leader
+     */
+    private void listenSchedulerClusterChange() {
+        String electionPath = zkConfigProperties.getZookeeper().getPath().getScheduler().getElection();
+        CuratorCache curatorCache = CuratorCache.builder(starterCuratorZKClient, electionPath).build();
+        CuratorCacheListener listener = CuratorCacheListener.builder()
+                .forPathChildrenCache(electionPath, starterCuratorZKClient, new PathChildrenCacheListener() {
+                    @Override
+                    public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception {
+                        log.info("leader election event: {}", event);
+                        if(event.getData()!=null){
+                            String schedulerAddress = new String(event.getData().getData(), StandardCharsets.UTF_8);
+                            switch (event.getType()) {
+                                case CHILD_ADDED:
+                                    distinctAddressList.add(schedulerAddress);
+                                    break;
+                                case CHILD_REMOVED:
+                                    distinctAddressList.remove(schedulerAddress);
+                                    break;
+                            }
+                        }
+                        updateSchedulerLeader();
+                    }
+                }).build();
+
+        curatorCache.listenable().addListener(listener);
+        curatorCache.start();
     }
 
     private void updateSchedulerLeader() {
@@ -117,15 +179,12 @@ public class ClusterService {
             URI uri = getUri(randomSchedulerAddress);
             HttpBody<String> resp = schedulerClusterClient.getLeaderAddress(uri);
             log.info("getLeaderResp: {}", resp);
+            initialized.countDown();
             this.schedulerLeaderAddress.compareAndExchange(this.schedulerLeaderAddress.get(), resp.getData());
         } catch (Exception e) {
             log.error("error when get to scheduler leader", e);
             throw new RuntimeException(e);
         }
-    }
-
-    private static URI getUri(String randomSchedulerAddress) {
-        return UriComponentsBuilder.fromHttpUrl("http://" + randomSchedulerAddress).build().toUri();
     }
 
     /**
@@ -135,44 +194,23 @@ public class ClusterService {
      */
     private String getRandomSchedulerAddress() {
         try {
-            String schedulerPath = zkConfigProperties.getZookeeper().getPath().getScheduler().getElection();
-            List<String> schedulerElectionKeys =
-                    starterCuratorZKClient.getChildren().forPath(schedulerPath);
-            if (schedulerElectionKeys.isEmpty()) {
-                log.error("no scheduler");
-                return null;
-            }
-            // 随意找一个scheduler就可以，scheduler本身有gateway
-            // todo: 找到真的leader
-            String randomSchedulerNode = schedulerElectionKeys.get(new Random().nextInt(schedulerElectionKeys.size()));
-            log.info("randomSchedulerNode: {}", randomSchedulerNode);
-            byte[] bytes = starterCuratorZKClient.getData().forPath(schedulerPath + "/" + randomSchedulerNode);
-            return new String(bytes, StandardCharsets.UTF_8);
+            VerifyUtil.shallBeFalse(distinctAddressList.addressList.isEmpty(), "can't find any scheduler host");
+
+            return distinctAddressList.addressList.get(new Random().nextInt(distinctAddressList.addressList.size()));
         } catch (Exception e) {
             log.error("can't find leader host", e);
             throw new RuntimeException(e);
         }
     }
 
-
-    /**
-     * 监听leader选举路径，当leader选举路径发生改变时，就尝试重新获取leader
-     */
-    private void listenSchedulerLeaderChange() {
-        String electionPath = zkConfigProperties.getZookeeper().getPath().getScheduler().getElection();
-        CuratorCache curatorCache = CuratorCache.builder(starterCuratorZKClient, electionPath).build();
-        CuratorCacheListener listener = CuratorCacheListener.builder()
-                .forPathChildrenCache(electionPath, starterCuratorZKClient, new PathChildrenCacheListener() {
-                    @Override
-                    public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception {
-                        log.info("leader election event: {}", event);
-                        updateSchedulerLeader();
-                    }
-                }).build();
-
-        curatorCache.listenable().addListener(listener);
-        curatorCache.start();
+    private static URI getUri(String randomSchedulerAddress) {
+        return UriComponentsBuilder.fromHttpUrl("http://" + randomSchedulerAddress).build().toUri();
     }
+
+    public URI getRandomSchedulerURI(){
+        return getUri(getRandomSchedulerAddress());
+    }
+
 
     // todo: 支持设置最长等待时长
     public void terminate() {

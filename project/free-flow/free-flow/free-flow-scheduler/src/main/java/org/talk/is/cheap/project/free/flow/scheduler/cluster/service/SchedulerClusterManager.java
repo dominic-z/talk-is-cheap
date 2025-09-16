@@ -25,7 +25,8 @@ import java.util.concurrent.Executors;
 /**
  * 负责管理Scheduler集群，通过zk实现：
  * 1. scheduler的选举
- * 2. 选举成功的节点启动对worker的健康状况监听，其实就是心跳，只是负责启动
+ * 2. 选举成功的节点启动对worker的健康状况监听
+ * 3. 负责管理worker以及其task的持有情况，worker的任务的分配、启动、状态流转
  */
 @Component
 @Slf4j

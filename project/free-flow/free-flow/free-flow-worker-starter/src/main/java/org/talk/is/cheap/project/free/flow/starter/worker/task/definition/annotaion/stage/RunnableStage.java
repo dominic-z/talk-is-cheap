@@ -1,8 +1,8 @@
 package org.talk.is.cheap.project.free.flow.starter.worker.task.definition.annotaion.stage;
 
 
-import org.talk.is.cheap.project.free.flow.common.task.definition.codec.InputCodec;
-import org.talk.is.cheap.project.free.flow.common.task.definition.codec.SimpleStringInputCodec;
+import org.talk.is.cheap.project.free.flow.common.task.codec.InputCodec;
+import org.talk.is.cheap.project.free.flow.common.task.codec.SimpleStringInputCodec;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -29,7 +29,7 @@ public @interface RunnableStage {
      * 版本号
      * @return
      */
-    int version();
+    int version() default 1;
 
     /**
      * 用于input的编码和解码器类型

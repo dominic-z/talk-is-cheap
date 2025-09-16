@@ -13,10 +13,10 @@ public class URIs {
     public static class SchedulerClusterURIs {
         private static final String PREFIX = "/scheduler/cluster";
 
-        public static final String ADDRESS = PREFIX+"/address";
-        public static final String IDS = PREFIX+"/ids";
-        public static final String LEADER = PREFIX+"/leader";
-        public static final String REGISTRY_WORKER = PREFIX+"/registry-worker";
+        public static final String ADDRESS = PREFIX + "/address";
+        public static final String IDS = PREFIX + "/ids";
+        public static final String LEADER = PREFIX + "/leader";
+        public static final String REGISTRY_WORKER = PREFIX + "/registry-worker";
 
 
     }
@@ -28,9 +28,15 @@ public class URIs {
         public static final String TERMINATE = PREFIX + "/terminate";
     }
 
-    public static class WorkerDefinitionURIs{
-        private static final String  PREFIX= "/worker/definition";
+    public static class WorkerDefinitionURIs {
+        private static final String PREFIX = "/worker/definition";
 
-        public static final String GET_TASK_DEFINITION = PREFIX+"/get-task-definition";
+        public static final String GET_TASK_DEFINITION = PREFIX + "/get-task-definition";
+    }
+
+    public static class WorkerDriverURIs {
+        private static final String PREFIX = "/worker/driver";
+
+        public static final String START_TASK = PREFIX + "/start-task";
     }
 }

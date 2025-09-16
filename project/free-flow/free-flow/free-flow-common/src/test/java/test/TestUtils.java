@@ -3,8 +3,8 @@ package test;
 import com.google.common.hash.Hashing;
 import org.junit.jupiter.api.Test;
 import org.talk.is.cheap.project.free.flow.common.exception.IllegalTaskDefinitionException;
-import org.talk.is.cheap.project.free.flow.common.task.definition.codec.JsonInputCodec;
-import org.talk.is.cheap.project.free.flow.common.task.definition.codec.SimpleStringInputCodec;
+import org.talk.is.cheap.project.free.flow.common.task.codec.JsonInputCodec;
+import org.talk.is.cheap.project.free.flow.common.task.codec.SimpleStringInputCodec;
 import org.talk.is.cheap.project.free.flow.common.utils.ReflectUtil;
 
 import java.nio.charset.StandardCharsets;
