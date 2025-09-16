@@ -3,7 +3,7 @@
 1. [free-flow-common](free-flow-common)：公共类
 2. [free-flow-scheduler](free-flow-scheduler)：调度服务
 3. [free-flow-worker-starter](free-flow-worker-starter)：worker的依赖starter，依赖了这个starter的就会称为free-flow的一个worker
-4. [free-flow-repository-starter](free-flow-repository-starter)：将一些数据库操作单独抽离出来，为了未来worker能够独立访问数据库，不需要重复开发
+4. [free-flow-repository-starter](free-flow-repository-starter)：将一些数据库操作单独抽离出来，为了未来worker能够独立访问数据库，不需要重复开发，但至少目前看，worker不要访问数据库去，否则整体逻辑会很乱，worker就单纯的执行任务就好。
 
 
 

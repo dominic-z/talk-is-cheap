@@ -6,7 +6,7 @@ import lombok.Data;
 public class StageDefinitionDTO {
     private Long id;
     private Long taskId;
-    private String stageName;
+    private String name;
     private Integer version;
     private String inputCodecFullyQualifiedClassName;
     private String inputFullyQualifiedClassName;

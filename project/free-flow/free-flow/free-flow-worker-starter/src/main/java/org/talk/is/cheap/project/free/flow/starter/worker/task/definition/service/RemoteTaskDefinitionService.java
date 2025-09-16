@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.talk.is.cheap.project.free.flow.common.message.impl.QueryTaskDefinitionReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.QueryTaskDefinitionResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.dto.TaskDefinitionDTO;
+import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.starter.worker.client.SchedulerTaskDefinitionClient;
 import org.talk.is.cheap.project.free.flow.starter.worker.cluster.service.ClusterService;
 
@@ -29,15 +30,15 @@ public class RemoteTaskDefinitionService {
     @Autowired
     private ClusterService clusterService;
 
-    public List<TaskDefinitionDTO> getTaskDefinitionVOs(List<Tuple2<String, Integer>> taskNameAndVersions) {
-        URI schedulerLeaderUri = clusterService.getSchedulerLeaderUri();
+    public List<TaskDefinitionDTO> getTaskDefinitionDTOs(List<Tuple2<String, Integer>> taskNameAndVersions) {
+        URI schedulerLeaderUri = clusterService.getRandomSchedulerURI();
 
         List<QueryTaskDefinitionReq.QueryTaskDefinitionReqData.Query> queries =
                 taskNameAndVersions.stream()
                         .map(t -> QueryTaskDefinitionReq.QueryTaskDefinitionReqData.Query.builder().taskName(t._1).version(t._2).build())
                         .toList();
 
-        List<TaskDefinitionDTO> taskDefinitionVOs = new ArrayList<>();
+        List<TaskDefinitionDTO> taskDefinitionDTOs = new ArrayList<>();
 //        不断翻页。防止死循环
         for (int page = 1, pageSize = 20; page < 100; page++) {
             QueryTaskDefinitionReq.QueryTaskDefinitionReqData reqData =
@@ -46,16 +47,17 @@ public class RemoteTaskDefinitionService {
             req.setData(reqData);
 
             QueryTaskDefinitionResp resp = schedulerTaskDefinitionClient.queryTaskDefinition(schedulerLeaderUri, req);
-            if (req.getData() != null && !resp.getData().getTaskDefinitionVOS().isEmpty()) {
-                taskDefinitionVOs.addAll(resp.getData().getTaskDefinitionVOS());
+            VerifyUtil.shallBeTrue(resp.isSuccess(), String.format("can't query remote task definition, reason: %s", resp.getMsg()));
+            if (req.getData() != null && !resp.getData().getTaskDefinitionDTOs().isEmpty()) {
+                taskDefinitionDTOs.addAll(resp.getData().getTaskDefinitionDTOs());
             }
 
-            if (resp.getData() == null || resp.getData().getTaskDefinitionVOS().size() < page) {
+            if (resp.getData() == null || resp.getData().getTaskDefinitionDTOs().size() < page) {
                 break;
             }
         }
 
-        return taskDefinitionVOs;
+        return taskDefinitionDTOs;
     }
 
 }

@@ -3,8 +3,8 @@ package org.talk.is.cheap.project.free.flow.starter.worker.task.definition.annot
 
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
-import org.talk.is.cheap.project.free.flow.common.task.definition.codec.InputCodec;
-import org.talk.is.cheap.project.free.flow.common.task.definition.codec.SimpleStringInputCodec;
+import org.talk.is.cheap.project.free.flow.common.task.codec.InputCodec;
+import org.talk.is.cheap.project.free.flow.common.task.codec.SimpleStringInputCodec;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;

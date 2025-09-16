@@ -1,7 +1,7 @@
 package org.talk.is.cheap.project.free.example.task.param;
 
 import lombok.Data;
-import org.talk.is.cheap.project.free.flow.common.task.definition.codec.JsonInputCodec;
+import org.talk.is.cheap.project.free.flow.common.task.codec.JsonInputCodec;
 
 @Data
 public class TTSharedContext {

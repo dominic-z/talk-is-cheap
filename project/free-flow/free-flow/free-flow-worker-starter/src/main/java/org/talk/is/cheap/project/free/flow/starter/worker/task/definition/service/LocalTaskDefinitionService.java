@@ -12,12 +12,13 @@ import org.talk.is.cheap.project.free.flow.common.enums.StageType;
 import org.talk.is.cheap.project.free.flow.common.exception.IllegalTaskDefinitionException;
 import org.talk.is.cheap.project.free.flow.common.message.impl.dto.StageDefinitionDTO;
 import org.talk.is.cheap.project.free.flow.common.message.impl.dto.TaskDefinitionDTO;
+import org.talk.is.cheap.project.free.flow.common.task.codec.InputCodec;
 import org.talk.is.cheap.project.free.flow.common.task.definition.bo.StageDefinitionBO;
 import org.talk.is.cheap.project.free.flow.common.task.definition.bo.TaskDefinitionBO;
-import org.talk.is.cheap.project.free.flow.common.task.definition.codec.InputCodec;
 import org.talk.is.cheap.project.free.flow.common.utils.ReflectUtil;
 import org.talk.is.cheap.project.free.flow.starter.worker.task.definition.annotaion.stage.RunnableStage;
 import org.talk.is.cheap.project.free.flow.starter.worker.task.definition.annotaion.task.Task;
+import org.talk.is.cheap.project.free.flow.starter.worker.task.driver.runtime.StageRuntimeEnv;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
@@ -101,6 +102,8 @@ public class LocalTaskDefinitionService {
         int version = taskAnnotation.version();
         int maxRetryCount = taskAnnotation.maxRetryCount();
         Class<? extends InputCodec<?>> sharedContextCodecClass = taskAnnotation.sharedContextCodecClass();
+        Class<?> sharedConextClass = ReflectUtil.getCodecGenericClass(sharedContextCodecClass);
+
         int timeoutInSeconds = taskAnnotation.timeout();
 
         shallBeFalse(StringUtils.isBlank(taskName), String.format("taskName can't be blank, class: %s", taskClass.getName()));
@@ -111,7 +114,8 @@ public class LocalTaskDefinitionService {
                 .maxRetryCount(maxRetryCount)
                 .timeoutInSecond(timeoutInSeconds)
                 .sharedContextCodecClass(sharedContextCodecClass)
-                .sharedContextClass(ReflectUtil.getCodecGenericClass(sharedContextCodecClass))
+                .sharedContextClass(sharedConextClass)
+                .taskClass(taskClass)
                 .build();
 
         parseStageMethodAndSetStageDefinitionBOs(taskDefinitionBO, taskClass.getDeclaredMethods());
@@ -154,6 +158,13 @@ public class LocalTaskDefinitionService {
                 String methodName = method.getName();
                 Parameter[] parameters = method.getParameters();
 
+                if (parameters.length != 0) {
+
+                    shallBeTrue(method.getParameters().length == 1 || parameters[0].getType() == StageRuntimeEnv.class,
+                            String.format("Stage method should have only 1 StageRuntimeEnv parameter: %s", stageName));
+
+                }
+
                 stageDefinitionBO = StageDefinitionBO.builder()
                         .name(stageName)
                         .version(stageVersion)
@@ -165,7 +176,8 @@ public class LocalTaskDefinitionService {
                         .maxRetryCount(maxRetryCount)
                         .timeout(timeout)
                         .methodName(methodName)
-                        .parameters(parameters).build();
+                        .parameters(parameters)
+                        .build();
 
             }
 
@@ -265,9 +277,9 @@ public class LocalTaskDefinitionService {
             TaskDefinitionBO taskDefinitionBO = iterator.next();
             taskNameVersions.add(new Tuple2<>(taskDefinitionBO.getName(), taskDefinitionBO.getVersion()));
             if (!iterator.hasNext() || taskNameVersions.size() == batchSize) {
-                List<TaskDefinitionDTO> taskDefinitionVOs = remoteTaskDefinitionService.getTaskDefinitionVOs(taskNameVersions);
+                List<TaskDefinitionDTO> taskDefinitionDTOs = remoteTaskDefinitionService.getTaskDefinitionDTOs(taskNameVersions);
 
-                for (TaskDefinitionDTO remoteVO : taskDefinitionVOs) {
+                for (TaskDefinitionDTO remoteVO : taskDefinitionDTOs) {
                     checkLocalAndRemoteTaskDefinitionMatch(taskDefinitionBOMap.get(remoteVO.getName()), remoteVO);
                 }
             }
@@ -275,52 +287,52 @@ public class LocalTaskDefinitionService {
     }
 
     // 对比已经存在的task的定义与本身自己的task定义
-    private void checkLocalAndRemoteTaskDefinitionMatch(TaskDefinitionBO localBO, TaskDefinitionDTO remoteVO) throws IllegalTaskDefinitionException {
+    private void checkLocalAndRemoteTaskDefinitionMatch(TaskDefinitionBO localBO, TaskDefinitionDTO remoteDTO) throws IllegalTaskDefinitionException {
         String taskName = localBO.getName();
-        shallBeFalse(remoteVO.getRoots().size() != localBO.getRoots().size() || !remoteVO.getRoots().containsAll(localBO.getRoots()),
+        shallBeFalse(remoteDTO.getRoots().size() != localBO.getRoots().size() || !remoteDTO.getRoots().containsAll(localBO.getRoots()),
                 String.format("Conflicts with the task definition of the remote end. root nodes are not equal.task: %s", taskName));
 
         // 比较俩包装类型是否相等的稍微简单点的方法
-        shallBeTrue(Option.of(remoteVO.getMaxRetryCount()).equals(Option.of(localBO.getMaxRetryCount())),
+        shallBeTrue(Option.of(remoteDTO.getMaxRetryCount()).equals(Option.of(localBO.getMaxRetryCount())),
                 String.format("Conflicts with the task definition of the remote end. max retry count are not equal.task: %s", taskName));
 
-        shallBeTrue(Option.of(remoteVO.getTimeout()).equals(Option.of(localBO.getTimeoutInSecond())),
+        shallBeTrue(Option.of(remoteDTO.getTimeout()).equals(Option.of(localBO.getTimeoutInSecond())),
                 String.format("Conflicts with the task definition of the remote end. timeout are not equal.task: %s", taskName));
 
-        Map<String, Set<String>> remoteGraph = remoteVO.getPointOutGraph();
+        Map<String, Set<String>> remoteGraph = remoteDTO.getPointOutGraph();
         Map<String, Set<String>> localGraph = localBO.getPointOutGraph();
         shallBeFalse(remoteGraph.size() != localGraph.size() || !remoteGraph.keySet().containsAll(localGraph.keySet()),
                 String.format("Conflicts with the task definition of the remote end. graph keys are not equal.task: %s", taskName));
 
         // 利用bfs来比较两个graph是否相等，bfs写的比较简单
-        LinkedList<String> deque = new LinkedList<>(remoteVO.getRoots());
-        Set<String> visitedStageNames = new HashSet<>(remoteVO.getRoots());
+        LinkedList<String> deque = new LinkedList<>(remoteDTO.getRoots());
+        Set<String> visitedStageNames = new HashSet<>(remoteDTO.getRoots());
         while (!deque.isEmpty()) {
             String stageName = deque.removeFirst();
 
-            shallBeTrue(remoteVO.getStageDefinitionMap().containsKey(stageName) && localBO.getStageDefinitionMap().containsKey(stageName),
+            shallBeTrue(remoteDTO.getStageDefinitionMap().containsKey(stageName) && localBO.getStageDefinitionMap().containsKey(stageName),
                     String.format("""
                                     Conflicts with the task definition of the remote end.
                                     Found a stage that exists only in either the remote end or the local end. stage name: %s""",
                             stageName));
 
-            StageDefinitionDTO remoteStageVO = remoteVO.getStageDefinitionMap().get(stageName);
+            StageDefinitionDTO remoteStageDTO = remoteDTO.getStageDefinitionMap().get(stageName);
             StageDefinitionBO localStageBO = localBO.getStageDefinitionMap().get(stageName);
 
-            shallBeTrue(remoteStageVO.getVersion().equals(localStageBO.getVersion()),
+            shallBeTrue(remoteStageDTO.getVersion().equals(localStageBO.getVersion()),
                     String.format("""
                                     Conflicts with the task definition of the remote end.
                                     stage version conflicts with the same task version. stage name: %s""",
                             stageName));
 
 
-            shallBeTrue(Option.of(remoteStageVO.getMaxRetryCount()).equals(Option.of(localStageBO.getMaxRetryCount())),
+            shallBeTrue(Option.of(remoteStageDTO.getMaxRetryCount()).equals(Option.of(localStageBO.getMaxRetryCount())),
                     String.format("""
                                     Conflicts with the task definition of the remote end.
                                     max retry count is not equal. stage name: %s""",
                             stageName));
 
-            shallBeTrue(Option.of(remoteStageVO.getTimeout()).equals(Option.of(localStageBO.getTimeout())),
+            shallBeTrue(Option.of(remoteStageDTO.getTimeout()).equals(Option.of(localStageBO.getTimeout())),
                     String.format("""
                                     Conflicts with the task definition of the remote end.
                                     timeout is not equal. stage name: %s""",
@@ -330,7 +342,7 @@ public class LocalTaskDefinitionService {
             Set<String> localStageChildren = localGraph.get(stageName);
 
             shallBeTrue(remoteStageChildren != null && localStageChildren != null
-                            && remoteStageChildren.size() != localStageChildren.size() && remoteStageChildren.containsAll(localStageChildren),
+                            && remoteStageChildren.size() == localStageChildren.size() && remoteStageChildren.containsAll(localStageChildren),
                     String.format("Conflicts with the task definition of the remote end. stage children are not equal.stage name: %s",
                             stageName));
 
