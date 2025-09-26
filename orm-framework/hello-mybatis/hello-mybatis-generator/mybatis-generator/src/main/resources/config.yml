@@ -47,28 +47,28 @@ datasource:
 # 以上是样例。
 
 tables:
-  - id: 1
-    name: cluster_node_log
-  - id: 2
-    name: task_definition
-  - id: 3
-    name: schedule_task_definition
-  - id: 4
-    name: stage_definition
-  - id: 5
-    name: task_graph_definition
-  - id: 6
-    name: task_startup
-  - id: 7
-    name: task_execution
+#  - id: 1
+#    name: cluster_node_log
+#  - id: 2
+#    name: task_definition
+#  - id: 3
+#    name: schedule_task_definition
+#  - id: 4
+#    name: stage_definition
+#  - id: 5
+#    name: task_graph_definition
+#  - id: 6
+#    name: task_startup
+#  - id: 7
+#    name: task_execution
   - id: 8
     name: stage_startup
-  - id: 9
-    name: stage_source_target_startup_relation
-  - id: 10
-    name: stage_execution
-  - id: 11
-    name: seq_generator
+#  - id: 9
+#    name: stage_source_target_startup_relation
+#  - id: 10
+#    name: stage_execution
+#  - id: 11
+#    name: seq_generator
   # code-package
 basePackage: org.talk.is.cheap.project.free.flow.starter.repository
 

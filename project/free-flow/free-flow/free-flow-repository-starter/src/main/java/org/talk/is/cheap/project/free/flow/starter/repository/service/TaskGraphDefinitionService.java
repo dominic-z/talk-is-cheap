@@ -20,7 +20,7 @@ import java.lang.IllegalArgumentException;
 /**
 * 定制化的service层，用于弥补mbg生成的mapper过于灵活导致可能出现的业务漏洞，例如越过deleted字段查询、更新updateTime等
 * @author dominiczhu
-* @date 2025/09/09
+* @date 2025/09/22
 */
 @Service
 public class TaskGraphDefinitionService{
@@ -33,7 +33,7 @@ public class TaskGraphDefinitionService{
 
     // 基于TaskGraphDefinitionMapper
 
-    @Transactional(rollbackFor = Exception.class ,transactionManager = "repositoryStarterTransactionManager")
+    @Transactional(rollbackFor = Exception.class , transactionManager = "repositoryStarterTransactionManager")
     public int create(TaskGraphDefinition record) {
         if (record == null) {
             return 0;
@@ -42,7 +42,7 @@ public class TaskGraphDefinitionService{
     }
 
 
-    @Transactional(rollbackFor = Exception.class,transactionManager = "repositoryStarterTransactionManager")
+    @Transactional(rollbackFor = Exception.class, transactionManager = "repositoryStarterTransactionManager")
     public int deleteByExample(TaskGraphDefinitionExample example) {
         if (example == null) {
             return 0;
@@ -50,7 +50,7 @@ public class TaskGraphDefinitionService{
         return taskGraphDefinitionMapper.deleteByExample(example);
     }
 
-    @Transactional(rollbackFor = Exception.class,transactionManager = "repositoryStarterTransactionManager")
+    @Transactional(rollbackFor = Exception.class, transactionManager = "repositoryStarterTransactionManager")
     public int updateByExampleSelective(TaskGraphDefinition record, TaskGraphDefinitionExample example) {
         if (record == null || example == null) {
             return 0;
@@ -86,7 +86,7 @@ public class TaskGraphDefinitionService{
     }
 
     // insertBatch的service接口
-    @Transactional(rollbackFor = Exception.class,transactionManager = "repositoryStarterTransactionManager")
+    @Transactional(rollbackFor = Exception.class, transactionManager = "repositoryStarterTransactionManager")
     public int createBatch(Collection<TaskGraphDefinition> records) {
         if (records == null || records.isEmpty()) {
             return 0;
@@ -94,7 +94,7 @@ public class TaskGraphDefinitionService{
         return taskGraphDefinitionMapper.insertBatch(records);
     }
 
-    @Transactional(rollbackFor = Exception.class,transactionManager = "repositoryStarterTransactionManager")
+    @Transactional(rollbackFor = Exception.class, transactionManager = "repositoryStarterTransactionManager")
     public int createBatchSelective(Collection<TaskGraphDefinition> records, Collection<String> excludeColNames) {
         if (records == null || records.isEmpty()) {
             return 0;

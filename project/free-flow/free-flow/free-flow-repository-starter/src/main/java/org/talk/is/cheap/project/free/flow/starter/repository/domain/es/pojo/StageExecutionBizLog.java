@@ -8,5 +8,5 @@ import java.util.Date;
 public class StageExecutionBizLog {
     private Long stageExecutionId;
     private String log;
-    private Date date;
+    private Date createTime;
 }

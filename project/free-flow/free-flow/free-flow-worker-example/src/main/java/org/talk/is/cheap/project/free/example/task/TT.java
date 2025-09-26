@@ -18,8 +18,8 @@ public class TT {
 
     }
 
-    @RunnableStage(name = "method1", version = 1, toStageName = "method2", isStartingStage = true, inputCodecClass =
-            TTMethod1Input.TTMethod1InputCodec.class)
+    @RunnableStage(name = "method1", version = 1, toStageName = "method2", isStartingStage = true,
+            inputCodecClass = TTMethod1Input.TTMethod1InputCodec.class)
     public void method1(StageRuntimeEnv<TTMethod1Input> stageRuntimeEnv) {
         log.info("method1 input: {}", stageRuntimeEnv.getInput());
         TTSharedContext ttSharedContext = stageRuntimeEnv.getSharedContext();

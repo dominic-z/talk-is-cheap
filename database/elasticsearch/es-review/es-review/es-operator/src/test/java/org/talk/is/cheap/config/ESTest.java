@@ -23,6 +23,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.elasticsearch.client.ResponseException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -181,8 +182,8 @@ public class ESTest {
         log.info("hotel: {}", hotelDoc);
         IndexRequest<HotelDoc> req =
                 new IndexRequest.Builder<HotelDoc>().index("hotel").id(hotelDoc.getId().toString())
-                .opType(OpType.Create) // 只有在这个id不存在时执行新增，如果不指定optype，那么如果这个id存在，则会执行update操作
-                .document(hotelDoc).build();
+                        .opType(OpType.Create) // 只有在这个id不存在时执行新增，如果不指定optype，那么如果这个id存在，则会执行update操作
+                        .document(hotelDoc).build();
         IndexResponse resp = esClient.index(req);
         log.info("resp: {}", resp);
 //        随后可以去kibana去查
@@ -191,6 +192,11 @@ public class ESTest {
     }
 
 
+    /**
+     * 这也是向es中灌入测试数据，不过之前需要createMapping
+     *
+     * @throws IOException
+     */
     @Test
     public void indexMultipleDocs() throws IOException {
         List<HotelDoc> hotelDocs = parseHotelData();
@@ -265,6 +271,36 @@ public class ESTest {
 //        发现name变成了"name" : "春天花花大酒店",
     }
 
+    @Test
+    // 可以通过ifSeqNo和ifPrimaryTerm来进行并发控制。
+    public void safeUpdate() throws IOException {
+        GetRequest getRequest = new GetRequest.Builder().index("hotel").id("38609").build();
+        GetResponse<HotelDoc> hotelDocGetResponse = esClient.get(getRequest, HotelDoc.class);
+        HotelDoc current = hotelDocGetResponse.source();
+        current.setName(current.getName() + "2");
+
+        UpdateRequest<HotelDoc, HotelDoc> updateRequest = new UpdateRequest.Builder<HotelDoc, HotelDoc>()
+                .index("hotel")
+                .id("38609")
+                .ifPrimaryTerm(hotelDocGetResponse.primaryTerm())
+                .ifSeqNo(hotelDocGetResponse.seqNo() - 1)
+                .doc(current)
+                .build();
+
+        try {
+
+            UpdateResponse<HotelDoc> hotelDocUpdateResponse = esClient.update(updateRequest, HotelDoc.class);
+            log.info("update resp {}", hotelDocUpdateResponse);
+        } catch (Exception e) {
+            if (e instanceof ResponseException) {
+                // 说明版本冲突了
+                int statusCode = ((ResponseException) e).getResponse().getStatusLine().getStatusCode();
+                log.info("statusCode: {}", statusCode);
+            }
+            log.error("e", e);
+        }
+    }
+
 
     @Test
     /**
@@ -306,6 +342,16 @@ public class ESTest {
 
     /**
      * 对应multiMatch语句
+     * <p>
+     * GET /hotel/_search
+     * {
+     * "query":{
+     * "multi_match": {
+     * "query": "外滩如家",
+     * "fields": ["brand","name","business"]
+     * }
+     * }
+     * }
      *
      * @throws IOException
      */
@@ -323,6 +369,11 @@ public class ESTest {
         log.info("resp total: {}", hitsMetadata.total());
     }
 
+    /**
+     * term查询不会触发分词，通常用于keyword等类型
+     *
+     * @throws IOException
+     */
     @Test
     public void testTermQuery() throws IOException {
         SearchRequest request = new SearchRequest.Builder().index("hotel")
@@ -647,7 +698,7 @@ public class ESTest {
 
 
     @Test
-    public void testSuggestion() throws IOException{
+    public void testSuggestion() throws IOException {
 
         Suggester suggester = new Suggester.Builder().suggesters("title_suggest",
                 b1 -> b1.text("rujia").completion(b2 -> b2.field("suggestion"))).build();

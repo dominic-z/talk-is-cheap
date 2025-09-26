@@ -20,7 +20,7 @@ import java.lang.IllegalArgumentException;
 /**
 * 定制化的service层，用于弥补mbg生成的mapper过于灵活导致可能出现的业务漏洞，例如越过deleted字段查询、更新updateTime等
 * @author dominiczhu
-* @date 2025/09/09
+* @date 2025/09/22
 */
 @Service
 public class ClusterNodeLogService{
@@ -33,7 +33,7 @@ public class ClusterNodeLogService{
 
     // 基于ClusterNodeLogMapper
 
-    @Transactional(rollbackFor = Exception.class ,transactionManager = "repositoryStarterTransactionManager")
+    @Transactional(rollbackFor = Exception.class , transactionManager = "repositoryStarterTransactionManager")
     public int create(ClusterNodeLog record) {
         if (record == null) {
             return 0;
@@ -42,7 +42,7 @@ public class ClusterNodeLogService{
     }
 
 
-    @Transactional(rollbackFor = Exception.class,transactionManager = "repositoryStarterTransactionManager")
+    @Transactional(rollbackFor = Exception.class, transactionManager = "repositoryStarterTransactionManager")
     public int deleteByExample(ClusterNodeLogExample example) {
         if (example == null) {
             return 0;
@@ -50,7 +50,7 @@ public class ClusterNodeLogService{
         return clusterNodeLogMapper.deleteByExample(example);
     }
 
-    @Transactional(rollbackFor = Exception.class,transactionManager = "repositoryStarterTransactionManager")
+    @Transactional(rollbackFor = Exception.class, transactionManager = "repositoryStarterTransactionManager")
     public int updateByExampleSelective(ClusterNodeLog record, ClusterNodeLogExample example) {
         if (record == null || example == null) {
             return 0;
@@ -86,7 +86,7 @@ public class ClusterNodeLogService{
     }
 
     // insertBatch的service接口
-    @Transactional(rollbackFor = Exception.class,transactionManager = "repositoryStarterTransactionManager")
+    @Transactional(rollbackFor = Exception.class, transactionManager = "repositoryStarterTransactionManager")
     public int createBatch(Collection<ClusterNodeLog> records) {
         if (records == null || records.isEmpty()) {
             return 0;
@@ -94,7 +94,7 @@ public class ClusterNodeLogService{
         return clusterNodeLogMapper.insertBatch(records);
     }
 
-    @Transactional(rollbackFor = Exception.class,transactionManager = "repositoryStarterTransactionManager")
+    @Transactional(rollbackFor = Exception.class, transactionManager = "repositoryStarterTransactionManager")
     public int createBatchSelective(Collection<ClusterNodeLog> records, Collection<String> excludeColNames) {
         if (records == null || records.isEmpty()) {
             return 0;

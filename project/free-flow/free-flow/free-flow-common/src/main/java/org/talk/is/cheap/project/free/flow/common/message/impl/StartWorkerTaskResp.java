@@ -15,22 +15,29 @@ public class StartWorkerTaskResp extends HttpBody<StartWorkerTaskResp.Data> {
 
     @lombok.Data
     public static class Data {
-        private Map<Tuple2<String,Integer>,TaskStartResult> taskNameVersions;
+        private List<TaskStartResult> taskStartResultList;
     }
 
-    @AllArgsConstructor
-    public enum TaskStartResult{
-        SUCCEEDED(0,""),
-        FAILED(1,"FAILED"),
-        NO_TASK_DEFINITION(2,"The task definition for this task is not available."),
-        ;
+    @lombok.Data
+    public static class TaskStartResult{
+        private Long taskStartupId;
+        private Result result;
+
+        @AllArgsConstructor
+        public enum Result {
+            SUCCEEDED(0,""),
+            FAILED(1,"FAILED"),
+            NO_TASK_DEFINITION(2,"The task definition for this task is not available."),
+            ;
 
 
-        @Getter
-        @JsonValue
-        public final Integer code;
-        @Getter
-        public final String msg;
+            @Getter
+            @JsonValue
+            public final Integer code;
+            @Getter
+            public final String msg;
+        }
+
     }
 
 }

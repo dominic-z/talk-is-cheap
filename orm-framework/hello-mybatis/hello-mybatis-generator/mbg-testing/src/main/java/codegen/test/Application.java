@@ -1,6 +1,7 @@
 package codegen.test;
 
 import codegen.test.dao.StudentMapper;
+import codegen.test.dao.example.StudentExample;
 import codegen.test.pojo.mbg.Student;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,16 +29,19 @@ public class Application implements CommandLineRunner {
 
         Student student1 = new Student();
         student1.setAge((byte) 12);
-        student1.setId(1);
         student1.setName("ni");
         student1.setPhoto("ha");
         Student student2 = new Student();
         student2.setAge((byte) 1);
-        student2.setId(2);
         student2.setName("hao");
         student2.setPhoto("hoho");
 
         HashSet<String> excludColNames = new HashSet<>(Set.of(Student.SEX, Student.PHOTO));
         studentMapper.insertBatchSelective(List.of(student1,student2), excludColNames);
+
+
+        StudentExample studentExample = new StudentExample();
+        studentExample.createCriteria().andIdEqualTo(12);
+        studentMapper.updateByExampleSelective(new Student().withName("ninini"),studentExample);
     }
 }

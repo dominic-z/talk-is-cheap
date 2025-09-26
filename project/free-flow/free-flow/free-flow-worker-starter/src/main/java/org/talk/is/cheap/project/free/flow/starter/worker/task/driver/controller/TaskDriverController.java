@@ -1,7 +1,6 @@
 package org.talk.is.cheap.project.free.flow.starter.worker.task.driver.controller;
 
 
-import io.vavr.Tuple2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -10,13 +9,13 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.talk.is.cheap.project.free.flow.common.message.ResultCode;
-import org.talk.is.cheap.project.free.flow.common.message.impl.StartWorkerTaskReq;
-import org.talk.is.cheap.project.free.flow.common.message.impl.StartWorkerTaskResp;
+import org.talk.is.cheap.project.free.flow.common.message.impl.StartWorkerStageReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.StartWorkerStageResp;
 import org.talk.is.cheap.project.free.flow.common.router.URIs;
 import org.talk.is.cheap.project.free.flow.starter.worker.task.driver.service.TaskDriverService;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 @RestController
 public class TaskDriverController {
@@ -25,34 +24,42 @@ public class TaskDriverController {
     private TaskDriverService taskDriverService;
 
     // todo: 测试
-    @RequestMapping(path = URIs.WorkerDriverURIs.START_TASK, method = RequestMethod.POST,
+    @RequestMapping(path = URIs.WorkerDriverURIs.START_STAGE, method = RequestMethod.POST,
             produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
-    public StartWorkerTaskResp startTask(@RequestBody StartWorkerTaskReq req) {
-        StartWorkerTaskResp resp = new StartWorkerTaskResp();
+    public StartWorkerStageResp startStage(@RequestBody StartWorkerStageReq req) {
+        StartWorkerStageResp resp = new StartWorkerStageResp();
 
         try {
-            Map<Tuple2<String, Integer>, StartWorkerTaskReq.TaskStartupData> startupDataMap = req.getData().getTaskNameVersionParams();
-            if (startupDataMap == null || startupDataMap.isEmpty()) {
+            List<StartWorkerStageReq.StageStartupData> stageStartupDataList = req.getData().getStartupDataList();
+            if (stageStartupDataList == null || stageStartupDataList.isEmpty()) {
                 resp.success(null);
                 return resp;
             }
 
-            Map<Tuple2<String,Integer>,StartWorkerTaskResp.TaskStartResult> taskStartResultMap = new HashMap<>();
-            for (Tuple2<String, Integer> taskNameVersion : startupDataMap.keySet()) {
-                String name = taskNameVersion._1();
-                Integer version = taskNameVersion._2();
-
-                if(!taskDriverService.canStartTask(name,version)){
-                    taskStartResultMap.put(taskNameVersion, StartWorkerTaskResp.TaskStartResult.NO_TASK_DEFINITION);
-                }else{
-                    taskDriverService.startTask(name,version,startupDataMap.get(taskNameVersion));
+            List<StartWorkerStageResp.StageStartResult> stageStartResults = new ArrayList<>();
+            for (StartWorkerStageReq.StageStartupData stageStartupData : stageStartupDataList) {
+                String name = stageStartupData.getTaskName();
+                Integer version = stageStartupData.getTaskVersion();
+                StartWorkerStageResp.StageStartResult stageStartResult = new StartWorkerStageResp.StageStartResult();
+                stageStartResult.setStageStartupId(stageStartupData.getStageStartupId());
+                if (!taskDriverService.canStartTask(name, version)) {
+                    stageStartResult.setResult(StartWorkerStageResp.StageStartResult.Result.NO_TASK_DEFINITION);
+                } else {
+                    try {
+                        if (taskDriverService.startStage(stageStartupData)) {
+                            stageStartResult.setResult(StartWorkerStageResp.StageStartResult.Result.SUCCEEDED);
+                        }
+                    } catch (Exception e) {
+                        stageStartResult.setResult(StartWorkerStageResp.StageStartResult.Result.FAILED);
+                        stageStartResult.setMsg(e.getMessage());
+                    }
                 }
+                stageStartResults.add(stageStartResult);
             }
-            StartWorkerTaskResp.Data data = new StartWorkerTaskResp.Data();
-            data.setTaskNameVersions(taskStartResultMap);
+            StartWorkerStageResp.Data data = new StartWorkerStageResp.Data();
+            data.setStageStartResultList(stageStartResults);
             resp.success(data);
-
         } catch (Exception e) {
             resp.fail(ResultCode.FAIL, e.getMessage());
         }
