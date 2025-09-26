@@ -51,7 +51,7 @@ create table if not exists task_definition(
 `version` int not null comment '版本',
 `timeout` int not null default 0 comment '以秒标识的超时时间',
 `max_retry_count` int not null comment '最大重试次数',
-`shared_context_fully_qualified_class_name` varchar(256) comment '各个stage共享的上下文的类全限定名',
+`shared_context_fully_qualified_class_name` varchar(256) comment '各个stage共享的上下文的类全限定名，共享上下文用于stage之间传递数据',
 `shared_context_codec_fully_qualified_class_name` varchar(256) comment '各个stage共享的上下文的类的编码器的全限定名',
 `revision` bigint not null default 0 comment '并发控制编号',
 `create_time` datetime not null default now() comment '创建日期',
@@ -111,7 +111,7 @@ create table if not exists stage_definition(
 `name` varchar(64) not null comment '阶段名称',
 `version` int not null comment '版本' default 0,
 `stage_type` int not null comment '阶段类型',
-`input_fully_qualified_class_name` varchar(256) comment '该stage的输入的类的全限定名',
+`input_fully_qualified_class_name` varchar(256) comment '该stage的输入的类的全限定名，输入的作用是在任务启动的时候可以由外界指定某个stage的入参',
 `input_codec_fully_qualified_class_name` varchar(256) comment '该stage的输入的类的编码器的全限定名',
 `is_starting_stage` bool not null comment '是否是一个task的起始stage',
 `timeout` int not null default 0 comment '以秒标识的超时时间',
@@ -205,14 +205,17 @@ drop table if exists task_execution;
 create table if not exists task_execution(
 `id` bigint AUTO_INCREMENT primary key,
 `task_startup_id` bigint not null comment '任务启动id',
-`worker_id` varchar(64) not null comment '执行此次任务的workerid',
+`assigned_worker_addr` varchar(64) not null comment '任务一开始被指派的节点地址，尽可能保障任务在这个节点执行',
 `status` int not null comment '此次执行的状态',
+ -- 不需要在task_execution中存encoded_shared_context_es_id，这会有并发问题，比如stageA结束后运行stageB和stageC，如果stageB很快运行完成并共享上下文数据存储更新而stageC刚开始运行，那么StageC读取的是stageB完成后的共享上下文，这有问题
+-- `encoded_shared_context_es_id` varchar(128) comment '本次执行的共享上下文在es中的id', 
+`completion_time` datetime comment '任务启动时间',
 `start_time` datetime not null default now() comment '任务启动时间',
 `revision` bigint not null default 0 comment '并发控制编号',
 `create_time` datetime not null default now() comment '创建日期',
 `update_time` datetime not null default now() comment '更新日期',
 index idx_task_startup_id(task_startup_id),
-index idx_worker(worker_id)
+index idx_worker(assigned_worker_addr)
 )ENGINE = InnoDB default charset = utf8mb4 comment '任务执行主表';
 -- 创建更新触发器
 DROP TRIGGER IF EXISTS task_execution_update_time;
@@ -235,17 +238,18 @@ DELIMITER ;
 drop table if exists stage_startup;
 create table if not exists stage_startup(
 `id` bigint AUTO_INCREMENT primary key,
-`task_startup_id` bigint not null comment '任务启动id',
+`task_execution_id` bigint not null comment '任务执行id',
 `stage_id` bigint not null comment '阶段id',
 -- `source_type` int not null comment '用于描述此次stage启动的原因的类型，例如作为初始stage、循环触发、前一个stage完成等等',
 -- `source_id` bigint comment '用于描述此次stage启动的原因的id',
 `status` int not null comment '此次启动的状态',
 -- `startup_params` varchar(2048) not null comment '启动参数，包含入参、上下文缓存的全局对象等，todo: 移动到es里',
 `startup_param_es_id` varchar(128) comment '启动参数，存储于es中，考虑到es的id不一定为数字，因此设定为字符串类型',
+`completion_time` datetime comment '任务启动时间',
 `revision` bigint not null default 0 comment '并发控制编号',
 `create_time` datetime not null default now() comment '创建日期',
 `update_time` datetime not null default now() comment '更新日期', 
-index idx_task_startup_id(task_startup_id),
+index idx_task_execution_id(task_execution_id),
 index idx_stage_id(stage_id)
 )ENGINE = InnoDB default charset = utf8mb4 comment '阶段启动表';
 -- 创建更新触发器
@@ -294,14 +298,14 @@ drop table if exists stage_execution;
 create table if not exists stage_execution(
 `id` bigint AUTO_INCREMENT primary key,
 `stage_startup_id` bigint not null comment '阶段启动id',
-`worker_id` varchar(64) not null comment '执行此次阶段的workerid',
+`worker_address` varchar(64) not null comment '执行此次阶段的worker的地址',
 `status` int not null comment '此次执行的状态',
 `start_time` datetime not null default now() comment '阶段启动时间',
 `revision` bigint not null default 0 comment '并发控制编号',
 `create_time` datetime not null default now() comment '创建日期',
 `update_time` datetime not null default now() comment '更新日期',
 index idx_stage_startup_id(stage_startup_id),
-index idx_worker(worker_id)
+index idx_worker(worker_address)
 )ENGINE = InnoDB default charset = utf8mb4 comment '阶段执行主表';
 -- 创建更新触发器
 DROP TRIGGER IF EXISTS stage_execution_update_time;
@@ -345,12 +349,14 @@ create table if not exists seq_generator(
 unique index idx_seq_name(seq_name)
 )ENGINE = InnoDB default charset = utf8mb4 comment '序列表';
 
-INSERT into seq_generator(seq_name,`next`) values ('task_startup_param','1');
+INSERT into seq_generator(seq_name,`next`) values ('task_shared_context','1');
 INSERT into seq_generator(seq_name,`next`) values ('stage_startup_param','1');
 INSERT into seq_generator(seq_name,`next`) values ('stage_execution_biz_log','1');
+INSERT into seq_generator(seq_name,`next`) values ('stage_execution_result_msg','1');
 SELECT * from seq_generator sg ;
 
-UPDATE seq_generator set next=1 where seq_name ='task_startup_param';
+
+-- UPDATE seq_generator set next=1 where seq_name ='task_startup_param';
 
 
 

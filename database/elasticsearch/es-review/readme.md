@@ -1453,3 +1453,30 @@ GET test_index/_analyze
   "text": ["赵,钱,孙,李","周"]
 }
 ```
+
+
+# 补充
+
+## 并发控制
+
+https://www.doubao.com/thread/wf1e34207b2413348
+
+id为38609的数据刚好是第二条，
+```shell
+GET /hotel/_doc/38609
+# "_index": "hotel",
+#   "_id": "38609",
+#   "_version": 1,
+#   "_seq_no": 1,
+#   "_primary_term": 1,
+
+# 通过if_seq_no和if_primary_term进行版本控制
+POST /hotel/_update/38609
+{
+  "if_seq_no": 1,
+  "if_primary_term": 1,
+  "doc": {"name": "速8酒店(上海赤峰路店)1"}
+}
+
+
+```

@@ -165,7 +165,7 @@ public class TestSpringApp {
     public void testEs() throws IOException {
         StageStartupParam taskStartupParam = new StageStartupParam();
         taskStartupParam.setStageStartupId(12L);
-        taskStartupParam.setStartupParamEncoding("cccc");
+        taskStartupParam.setEncodedInput("cccc");
 
         String id = stageStartupParamService.create(taskStartupParam);
         log.info("create id: {}", id);

@@ -33,6 +33,7 @@ public class SimpleUse {
         Banana bBanana = new Banana();
         bBanana.setName("b banana");
         fruitBasket.getBananas().add(bBanana);
+        fruitBasket.setBananaMap(Map.of(bBanana,1));
         return fruitBasket;
     }
 
@@ -58,10 +59,13 @@ public class SimpleUse {
 
     @Test
     public void readJson() throws JsonProcessingException {
-        String  childJson=defaultMapper.writeValueAsString(child);
-        Map<?, ?> newChild = defaultMapper.readValue(childJson, Map.class);
+        String childJson=defaultMapper.writeValueAsString(child);
+        Child newChild = defaultMapper.readValue(childJson, Child.class);
         System.out.println(newChild);
-        Map<?, ?> newFruitBasket= (Map<?, ?>) newChild.get("fruitBasket");
+
+        Map<?, ?> newChildMap = defaultMapper.readValue(childJson, Map.class);
+        System.out.println(newChildMap);
+        Map<?, ?> newFruitBasket= (Map<?, ?>) newChildMap.get("fruitBasket");
 
         List<?> bananas= (List<?>) newFruitBasket.get("bananas");
         System.out.println(bananas.get(0));
@@ -79,6 +83,10 @@ class Child {
 class FruitBasket {
     private List<Banana> bananas;
     private List<Apple> apples;
+    /*
+    这种map没有办法反序列化，需要配置
+     */
+    private Map<Banana,Integer> bananaMap;
 }
 
 @Data

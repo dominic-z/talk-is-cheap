@@ -4,10 +4,13 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Data;
 import lombok.Getter;
+import lombok.ToString;
+import org.apache.commons.lang3.StringUtils;
 import org.talk.is.cheap.project.free.flow.common.task.codec.InputCodec;
 
 @Builder
 @Getter
+@ToString
 public class StageRuntimeEnv<T> {
 
     private final Long stageStartupId;
@@ -21,6 +24,9 @@ public class StageRuntimeEnv<T> {
     private TaskRuntimeEnv taskRuntimeEnv;
 
     public T getInput() {
+        if (StringUtils.isBlank(encodedInput)) {
+            return null;
+        }
         if (input == null) {
             input = inputCodec.decode(encodedInput, inputClass);
         }
@@ -28,7 +34,7 @@ public class StageRuntimeEnv<T> {
     }
 
 
-    public <K> K getSharedContext(){
+    public <K> K getSharedContext() {
         return (K) taskRuntimeEnv.getSharedContext();
     }
 }

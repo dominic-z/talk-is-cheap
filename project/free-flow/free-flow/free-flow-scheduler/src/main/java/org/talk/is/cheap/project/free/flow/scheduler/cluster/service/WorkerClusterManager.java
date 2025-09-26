@@ -21,6 +21,7 @@ import org.talk.is.cheap.project.free.flow.scheduler.cluster.client.WorkerCluste
 import org.talk.is.cheap.project.free.flow.common.enums.NodeStatus;
 import org.talk.is.cheap.project.free.flow.common.enums.NodeType;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.RunnableWorkerAddEvent;
+import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.WorkerTerminatedEvent;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNodeLog;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.ClusterNodeLogService;
 
@@ -29,8 +30,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -193,7 +196,7 @@ public class WorkerClusterManager {
                 terminatingWorkerPathAddress.remove(zkPath);
                 missingTerminatingWorkerPathAddress.remove(zkPath);
             }
-
+            publisher.publishEvent(new WorkerTerminatedEvent(workerNodeAddress));
             clusterNodeLogService.create(
                     new ClusterNodeLog()
                             .withNodeAddress(workerNodeAddress)
@@ -314,11 +317,8 @@ public class WorkerClusterManager {
      *
      * @return
      */
-    public List<String> getRunnableWorkerNodeAddresses() {
-        if (this.cachedRunnableWorkerAddresses == null || runnableWorkerModified) {
-            this.cachedRunnableWorkerAddresses = new ArrayList<>(this.runnableWorkerPathAddress.values());
-        }
-        return this.cachedRunnableWorkerAddresses;
+    public Set<String> getRunnableWorkerNodeAddresses() {
+        return new HashSet<>(this.runnableWorkerPathAddress.values());
     }
 
 

@@ -21,6 +21,14 @@ public class URIs {
 
     }
 
+    public static class SchedulerTaskProcessURIs {
+        private static final String PREFIX = "/scheduler/task/process";
+
+        public static final String START = PREFIX + "/start";
+        public static final String RESULTS = PREFIX + "/results";
+
+    }
+
     public static class WorkerClusterURIs {
         private static final String PREFIX = "/worker/cluster";
 
@@ -37,6 +45,6 @@ public class URIs {
     public static class WorkerDriverURIs {
         private static final String PREFIX = "/worker/driver";
 
-        public static final String START_TASK = PREFIX + "/start-task";
+        public static final String START_STAGE = PREFIX + "/start-stage";
     }
 }

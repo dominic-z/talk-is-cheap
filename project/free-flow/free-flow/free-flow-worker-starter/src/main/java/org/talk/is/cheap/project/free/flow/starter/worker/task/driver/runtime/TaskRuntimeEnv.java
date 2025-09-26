@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 import org.talk.is.cheap.project.free.flow.common.task.codec.InputCodec;
 import org.talk.is.cheap.project.free.flow.common.task.codec.JsonInputCodec;
 import org.talk.is.cheap.project.free.flow.common.task.definition.bo.TaskDefinitionBO;
@@ -31,6 +32,10 @@ public class TaskRuntimeEnv<T> {
     private TaskDefinitionBO taskDefinitionBO;
 
     public T getSharedContext() {
+        if(StringUtils.isBlank(encodedSharedContext)){
+            return null;
+        }
+
         if (sharedContext == null) {
             sharedContext = sharedContextCodec.decode(encodedSharedContext, sharedContextClass);
         }
