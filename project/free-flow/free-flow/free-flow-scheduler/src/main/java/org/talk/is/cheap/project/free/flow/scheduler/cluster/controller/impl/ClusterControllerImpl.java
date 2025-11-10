@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.common.message.ResultCode;
-import org.talk.is.cheap.project.free.flow.common.message.impl.RegistryWorkerReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.RegistryWorkerReq;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.controller.ClusterController;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.SchedulerClusterManager;
 

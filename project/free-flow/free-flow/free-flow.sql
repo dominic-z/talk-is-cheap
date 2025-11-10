@@ -15,7 +15,7 @@ create table if not exists cluster_node_log (
 index idx_node_address_status(node_address,node_status),
 index idx_node_type_status(node_type,node_status)
 )
-ENGINE = InnoDB default charset = utf8mb4 comment '集群节点登入登出日志';
+ENGINE = InnoDB default charset = utf8mb4 comment '集群节点登入登出日志表';
 -- 创建更新触发器
 DROP TRIGGER IF EXISTS cluster_node_log_update_time;
 DELIMITER $$
@@ -150,7 +150,7 @@ create table if not exists task_graph_definition(
 index idx_task_id(task_id),
 index idx_from_to_stage_id(from_stage_id,to_stage_id),
 index idx_to_stage_id(to_stage_id)
-)ENGINE = InnoDB default charset = utf8mb4 comment '任务图结构定义表';
+)ENGINE = InnoDB default charset = utf8mb4 comment '任务图结构定义表，记录了一个task的stage之间的连接关系';
 -- 创建更新触发器
 DROP TRIGGER IF EXISTS task_graph_definition_update_time;
 DELIMITER $$
@@ -172,7 +172,7 @@ drop table if exists task_startup;
 create table if not exists task_startup(
 `id` bigint AUTO_INCREMENT primary key,
 `task_id` bigint not null comment '任务id',
-`source_type` int not null comment '用于描述此次task启动的原因的类型，例如被scheduleTask调度、被某个stage调起等',
+`source_type` int not null comment '用于描述此次task启动的原因的类型，例如被scheduleTask调度、被某个stage调起（如果某个task被作为另一个task的stage）等',
 `source_id` bigint comment '用于描述此次task启动的原因的id',
 `status` int not null comment '此次启动的状态',
 -- `startup_params` varchar(2048) not null comment '启动参数: 移动到es里',
@@ -183,7 +183,7 @@ create table if not exists task_startup(
 index idx_task_id(task_id),
 index idx_source_type_id(source_type,source_id),
 index idx_source_id(source_id)
-)ENGINE = InnoDB default charset = utf8mb4 comment '任务启动表';
+)ENGINE = InnoDB default charset = utf8mb4 comment '任务启动表，每当有一个指令声明需要执行一个task，一条startup数据将被创建，相当于一个待办指令列表，仅仅表征有意图执行一个task，一条startup会唤起至少一条execution来真正的执行任务';
 -- 创建更新触发器
 DROP TRIGGER IF EXISTS task_startup_update_time;
 DELIMITER $$
@@ -216,7 +216,7 @@ create table if not exists task_execution(
 `update_time` datetime not null default now() comment '更新日期',
 index idx_task_startup_id(task_startup_id),
 index idx_worker(assigned_worker_addr)
-)ENGINE = InnoDB default charset = utf8mb4 comment '任务执行主表';
+)ENGINE = InnoDB default charset = utf8mb4 comment '任务执行主表，每当一个task被真正的执行，一条execution数据将被记录；由于失败重试功能，一个task的startup可能唤起多个execution';
 -- 创建更新触发器
 DROP TRIGGER IF EXISTS task_execution_update_time;
 DELIMITER $$
@@ -278,7 +278,7 @@ create table if not exists stage_source_target_startup_relation(
 index idx_target_id(target_stage_startup_id),
 index idx_source_target(source_type,source_id,target_stage_startup_id),
 index idx_source_id(source_id)
-)ENGINE = InnoDB default charset = utf8mb4 comment '阶段启动来源关系表';
+)ENGINE = InnoDB default charset = utf8mb4 comment '阶段启动来源关系表，一个stage的启动可能是上一个stage完成了，也可能是手动强行启动的，该表用于记录启动一个stage的原因';
 -- 创建更新触发器
 DROP TRIGGER IF EXISTS stage_source_target_startup_relation_update_time;
 DELIMITER $$

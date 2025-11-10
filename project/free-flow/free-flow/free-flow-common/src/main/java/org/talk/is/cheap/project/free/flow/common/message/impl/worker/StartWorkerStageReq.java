@@ -1,10 +1,9 @@
-package org.talk.is.cheap.project.free.flow.common.message.impl;
+package org.talk.is.cheap.project.free.flow.common.message.impl.worker;
 
 import lombok.Builder;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 
 import java.util.List;
-import java.util.Map;
 
 
 public class StartWorkerStageReq extends HttpBody<StartWorkerStageReq.Data> {

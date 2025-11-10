@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
-import org.talk.is.cheap.project.free.flow.common.message.impl.RegistryWorkerReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.RegistryWorkerReq;
 import org.talk.is.cheap.project.free.flow.common.router.URIs;
 
 import java.net.URI;

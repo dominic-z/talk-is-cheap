@@ -19,7 +19,12 @@ import java.io.IOException;
 
 
 /**
- * 希望依赖这个starter的项目能够自动具备一些数据操作的接口，但不希望影响项目本身自带的数据操作dao接口，所以当前配置需要晚于mybatis、druid等数据库相关的自动配置
+ * 这个项目是一个starter项目，希望依赖这个starter的其他项目（下称为应用项目）能够自动具备一些数据操作的接口，但不希望影响应用项目本身自带的数据操作dao接口，
+ * 比如应用项目本身有依赖mybatis-starter/druid-starter的话，项目本身会创建mybatis和druid的相关bean，但如果应用项目的容器存在相关bean，
+ * 可能mybatis-starter/druid-starter就不会为应用项目自动创建正确的bean了
+ * 所以当前配置需要晚于mybatis、druid等数据库相关的自动配置
+ *
+ * 看的两个starter包确认druid和mybatis的starter配置项
  */
 @AutoConfiguration(afterName = {"org.mybatis.spring.boot.autoconfigure.MybatisAutoConfiguration",
         "org.mybatis.spring.boot.autoconfigure.MybatisLanguageDriverAutoConfiguration",

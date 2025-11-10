@@ -2,7 +2,7 @@ package org.talk.is.cheap.project.free.flow.starter.worker.task.driver.runtime;
 
 
 import org.springframework.stereotype.Service;
-import org.talk.is.cheap.project.free.flow.common.message.impl.StartWorkerStageReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.worker.StartWorkerStageReq;
 import org.talk.is.cheap.project.free.flow.common.task.codec.InputCodec;
 import org.talk.is.cheap.project.free.flow.common.task.definition.bo.StageDefinitionBO;
 import org.talk.is.cheap.project.free.flow.common.task.definition.bo.TaskDefinitionBO;
