@@ -1,4 +1,4 @@
-package org.talk.is.cheap.project.free.flow.common.message.impl;
+package org.talk.is.cheap.project.free.flow.common.message.impl.worker;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.AllArgsConstructor;

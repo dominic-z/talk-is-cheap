@@ -96,7 +96,7 @@ PUT /task_shared_context
 }
 
 
-// 每个stage的stageup将会在es中创建一个这个doc，用来记录每个stage的输入参数，并且记录启动的时候的共享上下文的快照（该快照仅仅用于重启任务时）
+// 每个stage的stageup将会在es中创建一个这个doc，用来记录每个stage的输入参数，并且记录启动的时候的共享上下文的快照（该快照仅仅用于重启任务时）、任务完成时的共享上下文快照（用于生成子stage启动时的共享上下文）
 DELETE /stage_startup_param
 PUT /stage_startup_param
 {

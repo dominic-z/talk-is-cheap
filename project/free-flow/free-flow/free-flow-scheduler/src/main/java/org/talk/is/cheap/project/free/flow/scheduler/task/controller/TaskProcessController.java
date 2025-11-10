@@ -2,6 +2,7 @@ package org.talk.is.cheap.project.free.flow.scheduler.task.controller;
 
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -11,8 +12,10 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.common.message.ResultCode;
-import org.talk.is.cheap.project.free.flow.common.message.impl.WorkerSubmitStageResultReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.StartTaskReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerSubmitStageResultReq;
 import org.talk.is.cheap.project.free.flow.common.router.URIs;
+import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.scheduler.task.service.WorkerTaskDriverService;
 import org.talk.is.cheap.project.free.flow.scheduler.task.service.WorkerTaskResultService;
 
@@ -29,6 +32,20 @@ public class TaskProcessController {
 
     @Autowired
     private WorkerTaskDriverService workerTaskDriverService;
+
+
+    // todo: 启动一个任务
+    @RequestMapping(path=URIs.SchedulerTaskProcessURIs.START,method = RequestMethod.POST,produces = MediaType.APPLICATION_JSON_VALUE)
+    public HttpBody<String> startTask(@RequestBody StartTaskReq req){
+        StartTaskReq.Data data = req.getData();
+
+
+        HttpBody<String> resp = HttpBody.<String>builder().build();
+        resp.success("");
+        return resp;
+    }
+
+
 
     @RequestMapping(path = URIs.SchedulerTaskProcessURIs.RESULTS, method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody

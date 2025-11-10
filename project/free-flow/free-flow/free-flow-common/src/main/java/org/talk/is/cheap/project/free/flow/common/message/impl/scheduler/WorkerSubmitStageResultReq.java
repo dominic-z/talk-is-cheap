@@ -1,6 +1,5 @@
-package org.talk.is.cheap.project.free.flow.common.message.impl;
+package org.talk.is.cheap.project.free.flow.common.message.impl.scheduler;
 
-import lombok.Data;
 import lombok.Getter;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 

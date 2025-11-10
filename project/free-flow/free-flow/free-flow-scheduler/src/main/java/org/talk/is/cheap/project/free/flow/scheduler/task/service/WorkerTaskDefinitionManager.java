@@ -4,16 +4,13 @@ package org.talk.is.cheap.project.free.flow.scheduler.task.service;
 import io.vavr.Tuple2;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.modelmapper.ModelMapper;
-import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.talk.is.cheap.project.free.flow.common.enums.TaskStageStatus;
-import org.talk.is.cheap.project.free.flow.common.message.impl.GetWorkerTaskDefinitionResp;
+import org.talk.is.cheap.project.free.flow.common.message.impl.worker.GetWorkerTaskDefinitionResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.dto.TaskDefinitionDTO;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.RunnableWorkerAddEvent;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.WorkerTerminatedEvent;
@@ -22,14 +19,10 @@ import org.talk.is.cheap.project.free.flow.scheduler.task.client.WorkerTaskDefin
 import org.talk.is.cheap.project.free.flow.scheduler.util.FieldAwareLockManager;
 import org.talk.is.cheap.project.free.flow.starter.repository.config.RepositoryAutoConfig;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.StageDefinitionExample;
-import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.TaskGraphDefinitionExample;
-import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNodeLog;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.StageDefinition;
-import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.StageStartup;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskDefinition;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.TaskDefinitionExample;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskGraphDefinition;
-import org.talk.is.cheap.project.free.flow.starter.repository.service.ClusterNodeLogService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.StageDefinitionService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.TaskDefinitionService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.TaskGraphDefinitionService;
@@ -237,6 +230,9 @@ public class WorkerTaskDefinitionManager {
      * @return
      */
     public Set<String> getWorkerAddressesWithTask(String taskName, Integer taskVersion) {
+        if(StringUtils.isBlank(taskName)){
+            return new HashSet<>();
+        }
         Map<Integer, Set<String>> versionAddresses = this.taskWorkerMap.get(taskName);
         if (taskVersion != null) {
             if (versionAddresses.containsKey(taskVersion)) {

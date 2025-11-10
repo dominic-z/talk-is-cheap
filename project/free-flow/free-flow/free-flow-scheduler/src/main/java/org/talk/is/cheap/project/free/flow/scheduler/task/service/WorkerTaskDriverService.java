@@ -4,9 +4,10 @@ package org.talk.is.cheap.project.free.flow.scheduler.task.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.talk.is.cheap.project.free.flow.common.enums.StartupSourceType;
 import org.talk.is.cheap.project.free.flow.common.enums.TaskStageStatus;
-import org.talk.is.cheap.project.free.flow.common.message.impl.StartWorkerStageReq;
-import org.talk.is.cheap.project.free.flow.common.message.impl.StartWorkerStageResp;
+import org.talk.is.cheap.project.free.flow.common.message.impl.worker.StartWorkerStageReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.worker.StartWorkerStageResp;
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.WorkerClusterManager;
 import org.talk.is.cheap.project.free.flow.scheduler.task.client.WorkerTaskDriverClient;
@@ -23,6 +24,7 @@ import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskSt
 import org.talk.is.cheap.project.free.flow.starter.repository.service.StageExecutionService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.StageStartupService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.TaskGraphDefinitionService;
+import org.talk.is.cheap.project.free.flow.starter.repository.service.TaskStartupService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.StageDefinitionServiceWrapper;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.StageStartupServiceWrapper;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.TaskDefinitionServiceWrapper;
@@ -35,13 +37,15 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @Slf4j
 public class WorkerTaskDriverService {
 
 
+    /**
+     * 数据库操作service
+     */
     @Autowired
     private StageStartupServiceWrapper stageStartupServiceWrapper;
     @Autowired
@@ -54,19 +58,49 @@ public class WorkerTaskDriverService {
     @Autowired
     private TaskDefinitionServiceWrapper taskDefinitionServiceWrapper;
     @Autowired
+    private TaskStartupService taskStartupService;
+    @Autowired
     private TaskStartupServiceWrapper taskStartupServiceWrapper;
     @Autowired
     private TaskExecutionServiceWrapper taskExecutionServiceWrapper;
     @Autowired
-    private WorkerClusterManager workerClusterManager;
-
-    @Autowired
-    private TaskSharedContextService taskSharedContextService;
-    @Autowired
     private StageStartupParamService stageStartupParamService;
 
+    /**
+     * worker客户端
+     */
     @Autowired
     private WorkerTaskDriverClient workerTaskDriverClient;
+
+    /**
+     * 任务与集群管理service
+     */
+    @Autowired
+    private WorkerClusterManager workerClusterManager;
+    @Autowired
+    private TaskScheduler taskScheduler;
+
+    /**
+     * 在启动任务之前校验task，并且在数据库中创建任务数据，包括创建各种startup数据
+     *
+     * @param taskName
+     * @param taskVersion
+     */
+    public void prepareForTaskStart(String taskName, Integer taskVersion) {
+        TaskDefinition taskDefinition = taskDefinitionServiceWrapper.queryByNameVersion(taskName, taskVersion);
+
+        String workerAddress = taskScheduler.assignTaskToWorkerAddress(taskName, taskDefinition.getVersion());
+        VerifyUtil.shallNotBeBlank(workerAddress, "No node capable of executing this task can be found.");
+
+
+        TaskStartup taskStartup = new TaskStartup()
+                .withTaskId(taskDefinition.getId())
+                .withSourceType(StartupSourceType.EXTERNAL.getValue())
+                .withStatus(TaskStageStatus.PENDING.getStatus());
+        VerifyUtil.shallBeTrue(taskStartupService.create(taskStartup)>0,"创建task启动记录失败");
+
+    }
+
 
     /**
      * 尝试驱动fromStageStartupId的下一个stage，返回下一个驱动的stage的startupId
@@ -167,13 +201,22 @@ public class WorkerTaskDriverService {
         URI workerURI = workerClusterManager.getWorkerURI(workerAddr);
         StartWorkerStageResp resp = workerTaskDriverClient.startStage(workerURI, startWorkerStageReq);
 
+        if (!resp.getData().getStageStartResultList().isEmpty() && resp.getData().getStageStartResultList().size() != 1) {
+            StartWorkerStageResp.StageStartResult stageStartResult = resp.getData().getStageStartResultList().get(0);
+            if (stageStartResult.getResult() == StartWorkerStageResp.StageStartResult.Result.SUCCEEDED) {
+                stageStartupServiceWrapper.updateSelectiveById(stageStartupId,
+                        new StageStartup().withStatus(TaskStageStatus.RUNNING.getStatus()));
+                StageExecution stageExecution = new StageExecution()
+                        .withStageStartupId(stageStartupId)
+                        .withStatus(TaskStageStatus.RUNNING.getStatus())
+                        .withWorkerAddress(workerAddr);
+                stageExecutionService.create(stageExecution);
+            } else {
+                stageStartupServiceWrapper.updateSelectiveById(stageStartupId,
+                        new StageStartup().withStatus(TaskStageStatus.FAILED_TO_START.getStatus()));
+            }
+        }
 
-        stageStartupServiceWrapper.updateSelectiveById(stageStartupId, new StageStartup().withStatus(TaskStageStatus.RUNNING.getStatus()));
 
-        StageExecution stageExecution = new StageExecution()
-                .withStageStartupId(stageStartupId)
-                .withStatus(TaskStageStatus.RUNNING.getStatus())
-                .withWorkerAddress(workerAddr);
-        stageExecutionService.create(stageExecution);
     }
 }

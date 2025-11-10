@@ -1,6 +1,7 @@
 package org.talk.is.cheap.project.free.flow.starter.repository.service.derived;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.StageExecutionExample;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.TaskExecutionExample;
@@ -14,7 +15,7 @@ import java.util.List;
 @Service
 @Slf4j
 public class StageExecutionServiceWrapper {
-
+    @Autowired
     private StageExecutionService stageExecutionService;
 
     public StageExecution selectById(long id) {

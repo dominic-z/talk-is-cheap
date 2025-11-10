@@ -9,8 +9,8 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.talk.is.cheap.project.free.flow.common.message.ResultCode;
-import org.talk.is.cheap.project.free.flow.common.message.impl.StartWorkerStageReq;
-import org.talk.is.cheap.project.free.flow.common.message.impl.StartWorkerStageResp;
+import org.talk.is.cheap.project.free.flow.common.message.impl.worker.StartWorkerStageReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.worker.StartWorkerStageResp;
 import org.talk.is.cheap.project.free.flow.common.router.URIs;
 import org.talk.is.cheap.project.free.flow.starter.worker.task.driver.service.TaskDriverService;
 

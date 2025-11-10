@@ -1,6 +1,7 @@
 package org.talk.is.cheap.project.free.flow.starter.repository.service.derived;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.StageStartupExample;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.StageStartup;
@@ -11,7 +12,7 @@ import java.util.List;
 @Service
 @Slf4j
 public class StageStartupServiceWrapper {
-
+    @Autowired
     private StageStartupService stageStartupService;
 
     public StageStartup selectById(long id) {

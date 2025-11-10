@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.talk.is.cheap.project.free.flow.common.enums.StageType;
 import org.talk.is.cheap.project.free.flow.common.message.ResultCode;
-import org.talk.is.cheap.project.free.flow.common.message.impl.GetWorkerTaskDefinitionResp;
+import org.talk.is.cheap.project.free.flow.common.message.impl.worker.GetWorkerTaskDefinitionResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.dto.StageDefinitionDTO;
 import org.talk.is.cheap.project.free.flow.common.message.impl.dto.TaskDefinitionDTO;
 import org.talk.is.cheap.project.free.flow.common.router.URIs;

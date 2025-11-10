@@ -1,4 +1,4 @@
-package org.talk.is.cheap.project.free.flow.scheduler.task;
+package org.talk.is.cheap.project.free.flow.scheduler.task.service;
 
 
 import com.google.common.hash.Hashing;
@@ -28,6 +28,9 @@ public class TaskScheduler {
 
 
         runnableWorkerNodeAddresses.retainAll(workerAddressesWithTask);
+        if (runnableWorkerNodeAddresses.isEmpty()) {
+            return null;
+        }
         int i = Hashing.consistentHash(Hashing.sha256().hashString(taskName, StandardCharsets.UTF_8),
                 runnableWorkerNodeAddresses.size());
 
