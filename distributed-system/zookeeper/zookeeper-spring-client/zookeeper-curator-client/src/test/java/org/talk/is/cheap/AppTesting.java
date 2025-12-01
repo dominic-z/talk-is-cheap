@@ -55,6 +55,11 @@ public class AppTesting {
                 .withMode(CreateMode.PERSISTENT)
                 .forPath(path, "this is a book".getBytes());
         log.info("create result: {}", createPath);
+//        如果重复创建一个节点会出错KeeperException.NodeExistsException
+//        tenant1CuratorClient.create()
+//                .creatingParentsIfNeeded()
+//                .withMode(CreateMode.PERSISTENT)
+//                .forPath(path, "this is a book".getBytes());
 
         log.info("get data: {}", new String(tenant1CuratorClient.getData().forPath(path), StandardCharsets.UTF_8));
         log.info("get children: {}", tenant1CuratorClient.getChildren().forPath("/tenant1"));
@@ -163,6 +168,8 @@ public class AppTesting {
 //        版权声明：本文为博主原创文章，遵循 CC 4.0 BY-SA 版权协议，转载请附上原文出处链接和本声明。
 //
 //        原文链接：https://blog.csdn.net/qq_37960603/article/details/121835169
+
+        ExecutorService listenerExecutor = Executors.newFixedThreadPool(5);
         CuratorCache curatorCache = CuratorCache.builder(tenant1CuratorClient, path).build();
         CuratorCacheListener listener = CuratorCacheListener.builder()
 //                .forNodeCache(new NodeCacheListener() {
@@ -172,14 +179,18 @@ public class AppTesting {
 //                    }
 //                })
                 .forCreates(childData -> {
-                    log.info("path: {}, data: {}", childData.getPath(), new String(childData.getData(), StandardCharsets.UTF_8));
+                    log.info("event: create, path: {}, data: {}", childData.getPath(), new String(childData.getData(), StandardCharsets.UTF_8));
                 })
                 .forChanges(new CuratorCacheListenerBuilder.ChangeListener() {
                     @Override
                     public void event(ChildData oldNode, ChildData node) {
-                        log.info("value change: old path: {}, old data: {}, new path: {}, new data: {}",
-                                oldNode.getPath(), new String(oldNode.getData(), StandardCharsets.UTF_8),
-                                node.getPath(), new String(node.getData(), StandardCharsets.UTF_8));
+                        // 实际的处理是在另一个线程池处理的
+                        listenerExecutor.submit(()->{
+                            log.info("value change: old path: {}, old data: {}, new path: {}, new data: {}",
+                                    oldNode.getPath(), new String(oldNode.getData(), StandardCharsets.UTF_8),
+                                    node.getPath(), new String(node.getData(), StandardCharsets.UTF_8));
+                        });
+
                     }
                 })
 //                监听子节点
@@ -187,7 +198,6 @@ public class AppTesting {
                     @Override
                     public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception {
                         if (event.getData() != null) {
-
                             log.info("child event: {},path: {},data:{}", event.getType(), event.getData().getPath(),
                                     new String(event.getData().getData()));
                         } else {
@@ -230,7 +240,7 @@ public class AppTesting {
                 .withMode(CreateMode.PERSISTENT)
                 .forPath(subPath, "this is a book".getBytes());
         tenant1CuratorClient.setData()
-                .forPath(path, "this is a new book".getBytes());
+                .forPath(subPath, "this is a new book".getBytes());
         tenant1CuratorClient.delete().deletingChildrenIfNeeded().forPath(subPath);
 
         tenant1CuratorClient.create()
@@ -246,7 +256,7 @@ public class AppTesting {
 
 
     /**
-     * 本质上就是创建一些临时节点
+     * 选举，本质上就是创建一些临时节点，多启动几个这个方法的实例
      *
      * @throws Exception
      */
@@ -298,6 +308,7 @@ public class AppTesting {
                     }
                 }
             };
+//            参考LeaderLatch的getLeader()方法，getLeader会去zk服务器拿最新的数据，而hasLeadership只是使用本地数据做对比而已
 //            LeaderLatch类不能close()多次，LeaderLatch.hasLeadership()与LeaderLatch.getLeader()得到的结果不一定一致，需要通过LeaderLatch.getLeader().isLeader
 //            ()来判断。
             executorService.execute(candidate);

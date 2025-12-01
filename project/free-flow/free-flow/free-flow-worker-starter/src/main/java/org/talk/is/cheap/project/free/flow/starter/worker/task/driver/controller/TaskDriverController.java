@@ -23,7 +23,7 @@ public class TaskDriverController {
     @Autowired
     private TaskDriverService taskDriverService;
 
-    // todo: 测试
+
     @RequestMapping(path = URIs.WorkerDriverURIs.START_STAGE, method = RequestMethod.POST,
             produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody

@@ -6,6 +6,8 @@
 
 因为springboot的starter默认配置确实稍微有点黑盒，我都没有找到es-starter的自动配置类，如果我需要配置多个不同路径的es客户端，可能就很麻烦，因此决定仍然使用原声的esclient然后自己封装。
 
+20251110：找到了，在org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchRestClientAutoConfiguration，在spring-boot-autoconfiture里，是通过Import注解来将其他价格configuration引入从而实现的autoconfigure
+
 看的比较粗，跑通主流程
 
 [docker安装Elasticsearch8.x【保姆级教程】](https://www.cnblogs.com/tans9508/articles/18406380)
@@ -130,4 +132,95 @@ es8为https，需要指定证书，导出证书，这个证书也是用来给jav
 docker cp es8:/usr/share/elasticsearch/config/certs/http_ca.crt ./git_ignore/
 
 curl --cacert ./git_ignore/http_ca.crt -u elastic:123456 https://localhost:9200
+```
+
+
+# 一些基本语句
+
+```
+
+GET /hotel/_mapping
+
+// 创建索引结构
+PUT /hotel
+{
+  "mappings": {
+    "properties": {
+      "id":{
+        "type":"long"
+      },
+      "name": {
+        "type": "text",
+        "analyzer": "ik_max_word"  // 使用IK分词器
+      },
+      "address": {
+        "type": "text",
+        "analyzer": "ik_max_word"  // 使用IK分词器
+      },
+      "price": {
+        "type": "integer"
+      },
+      "score": {
+        "type": "integer"
+      },
+      "brand": {
+        "type": "text",
+        "analyzer": "ik_max_word"  // 使用IK分词器
+      },
+      "city": {
+        "type": "text",
+        "analyzer": "ik_max_word"  // 使用IK分词器
+      },
+      "star_name": {
+        "type": "text",
+        "analyzer": "ik_max_word"  // 使用IK分词器
+      },
+      "business": {
+        "type": "text",
+        "analyzer": "ik_max_word"  // 使用IK分词器
+      },
+      "location": {
+        "type": "text",
+        "analyzer": "ik_max_word"  // 使用IK分词器
+      },
+      "pic": {
+        "type": "text",
+        "analyzer": "ik_max_word"  // 使用IK分词器
+      }
+    }
+  }
+}
+
+
+GET /hotel/_doc/36934
+
+
+
+
+POST /hotel/_update/38609
+{
+  "if_seq_no": 1,
+  "if_primary_term": 1,
+  "doc": {"name": "速8酒店(上海赤峰路店)1"}
+}
+
+
+GET /hotel/_search
+{
+  "query": {
+    "match_all": {}
+  }
+}
+
+GET /hotel/_search
+{
+  "query": {
+    "match": {
+      "all": { 
+        "query": "",
+        "operator": "and"
+      }
+    }
+  }
+}
 ```

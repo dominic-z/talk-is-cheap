@@ -8,12 +8,12 @@ create table if not exists cluster_node_log (
 `id` bigint AUTO_INCREMENT primary key,
 `node_address` varchar(64) not null comment '节点地址',
 `node_type` int not null default 0 comment '节点类型',
-`node_status` int not null default 0 comment '节点状态',
+`node_action` int not null default 0 comment '节点行为，例如上线、终止、运行、下线等',
 `revision` bigint not null default 0 comment '并发控制编号',
 `create_time` datetime not null default now() comment '创建日期',
 `update_time` datetime not null default now() comment '更新日期',
-index idx_node_address_status(node_address,node_status),
-index idx_node_type_status(node_type,node_status)
+index idx_node_address_action(node_address,node_action),
+index idx_node_type_action(node_type,node_action)
 )
 ENGINE = InnoDB default charset = utf8mb4 comment '集群节点登入登出日志表';
 -- 创建更新触发器
@@ -183,7 +183,8 @@ create table if not exists task_startup(
 index idx_task_id(task_id),
 index idx_source_type_id(source_type,source_id),
 index idx_source_id(source_id)
-)ENGINE = InnoDB default charset = utf8mb4 comment '任务启动表，每当有一个指令声明需要执行一个task，一条startup数据将被创建，相当于一个待办指令列表，仅仅表征有意图执行一个task，一条startup会唤起至少一条execution来真正的执行任务';
+)ENGINE = InnoDB default charset = utf8mb4 comment 
+'任务启动表，每当有一个指令声明需要执行一个task，一条startup数据将被创建，相当于一个待办指令列表，仅仅表征有意图执行一个task，一条startup会唤起至少一条execution来真正的执行任务（为了支持任务可以失败重试，因此将发起任务的意图和任务的执行分离）';
 -- 创建更新触发器
 DROP TRIGGER IF EXISTS task_startup_update_time;
 DELIMITER $$
@@ -245,7 +246,7 @@ create table if not exists stage_startup(
 `status` int not null comment '此次启动的状态',
 -- `startup_params` varchar(2048) not null comment '启动参数，包含入参、上下文缓存的全局对象等，todo: 移动到es里',
 `startup_param_es_id` varchar(128) comment '启动参数，存储于es中，考虑到es的id不一定为数字，因此设定为字符串类型',
-`completion_time` datetime comment '任务启动时间',
+`completion_time` datetime comment 'stage完成时间',
 `revision` bigint not null default 0 comment '并发控制编号',
 `create_time` datetime not null default now() comment '创建日期',
 `update_time` datetime not null default now() comment '更新日期', 
@@ -278,7 +279,7 @@ create table if not exists stage_source_target_startup_relation(
 index idx_target_id(target_stage_startup_id),
 index idx_source_target(source_type,source_id,target_stage_startup_id),
 index idx_source_id(source_id)
-)ENGINE = InnoDB default charset = utf8mb4 comment '阶段启动来源关系表，一个stage的启动可能是上一个stage完成了，也可能是手动强行启动的，该表用于记录启动一个stage的原因';
+)ENGINE = InnoDB default charset = utf8mb4 comment '阶段启动来源关系表，一个stage的启动可能是父stage（们）完成了，也可能是手动强行启动的，该表用于记录启动一个stage的原因';
 -- 创建更新触发器
 DROP TRIGGER IF EXISTS stage_source_target_startup_relation_update_time;
 DELIMITER $$

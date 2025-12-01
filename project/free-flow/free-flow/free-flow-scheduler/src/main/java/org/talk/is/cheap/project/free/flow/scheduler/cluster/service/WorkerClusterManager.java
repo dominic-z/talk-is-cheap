@@ -2,7 +2,6 @@ package org.talk.is.cheap.project.free.flow.scheduler.cluster.service;
 
 import io.vavr.Tuple2;
 import jakarta.annotation.PreDestroy;
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
@@ -11,38 +10,49 @@ import org.apache.curator.framework.recipes.cache.CuratorCache;
 import org.apache.curator.framework.recipes.cache.CuratorCacheListener;
 import org.apache.curator.framework.recipes.cache.TreeCacheEvent;
 import org.apache.curator.framework.recipes.cache.TreeCacheListener;
+import org.apache.zookeeper.CreateMode;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.client.WorkerClusterClient;
-import org.talk.is.cheap.project.free.flow.common.enums.NodeStatus;
+import org.talk.is.cheap.project.free.flow.common.enums.NodeAction;
 import org.talk.is.cheap.project.free.flow.common.enums.NodeType;
-import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.RunnableWorkerAddEvent;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.WorkerTerminatedEvent;
+import org.talk.is.cheap.project.free.flow.scheduler.config.property.ZKPathProperty;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNodeLog;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.ClusterNodeLogService;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 负责管理worker集群，负责：
- * 1. 执行worker的心跳监听
- * 2. 管理worker的状态，worker的状态变化的数据源均来自监听zookeeper，即scheduler只信任来自zookeeper的关于worker的的信息。
+ * 这个是leader scheduler要做的事情：
+ * 1. 监听worker的上下线，并关注worker的健康情况；
+ * 2. 通过zk将worker节点情况同步给其他scheduler，这样让其他的scheduler也能执行任务调度、分配、启动、状态流转
+ * <p>
+ * 一个worker的注册整体流程大体分为下列几步
+ * 1. worker上线后写入zk的路径1
+ * 2. scheduler的leader监听路径1，并且持续ping路径1中的地址
+ * 3. 将ping通的worker丢进另一个zk路径2
+ * 4. 全部scheduler都监听路径2，将路径2认为是可执行任务的worker
+ * <p>
+ * 做的事情就是，监听zk是否有新worker节点
+ * WorkerClusterManager会触发WorkerTaskDefinitionManager的相关动作。
+ * 注意，WorkerClusterManager所管理的节点并不一定是真的能干活的，因为他不管理每个节点的taskDefinition情况，他只看节点是否健康
  */
 @Service
 @Slf4j
@@ -53,13 +63,8 @@ public class WorkerClusterManager {
     @Autowired
     private CuratorFramework curatorZKClient;
 
-    @Value("${apache.zookeeper.path.worker.root}")
-    private String zkRootWorkerPath;
-    @Value("${apache.zookeeper.path.worker.runnable}")
-    private String zkRunnableWorkerPath;
-
-    @Value("${apache.zookeeper.path.worker.terminating}")
-    private String zkTerminatingWorkerPath;
+    @Autowired
+    private ZKPathProperty zkPathProperty;
 
     @Autowired
     private ClusterNodeLogService clusterNodeLogService;
@@ -69,20 +74,18 @@ public class WorkerClusterManager {
 
     private CuratorCache workerCuratorCache;
 
-    // 活跃的节点
-    private final Map<String, String> runnableWorkerPathAddress = new ConcurrentHashMap<>();
-
-    // 防止外界get runnableWorkerPathId的时候一直重复读取runnableWorkerPathId，做一个缓存，只是为了加速，不需要线程安全
-    private volatile boolean runnableWorkerModified = false;
-    private List<String> cachedRunnableWorkerAddresses;
-    // 关闭中的节点
+    // 活跃的节点，节点的上下线可能同时发生，因此需要并发安全
+    private final Map<String, String> onlineWorkerPathAddress = new ConcurrentHashMap<>();
+    private final Map<String, Integer> pingFailedPathCounter = new ConcurrentHashMap<>();
+    private final Map<String, Integer> pingSucceedPathCounter = new ConcurrentHashMap<>();
+    // 终止中的节点
     private final Map<String, String> terminatingWorkerPathAddress = new ConcurrentHashMap<>();
 
-    // ping失败但是没有下线的节点
-    private final Map<String, String> missingRunnableWorkerPathAddress = new ConcurrentHashMap<>();
-    private final Map<String, String> missingTerminatingWorkerPathAddress = new ConcurrentHashMap<>();
+    // 当监听的worker的路径发生变化时，这个线程池负责实际执行监听回调，线程池设置为4，因为每个任务其实都不大，实际要参考集群的情况来控制
+    private final ThreadPoolExecutor handleWorkerEventThreadPool = new ThreadPoolExecutor(4, 4, 1000, TimeUnit.MILLISECONDS,
+            new LinkedBlockingQueue<>());
 
-
+    // 确保ping是串行的，后续在ping的时候并行
     private final ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(1);
 
 
@@ -91,35 +94,36 @@ public class WorkerClusterManager {
      */
     public void manageWorkers() {
 
-        this.runnableWorkerPathAddress.clear();
-        this.missingTerminatingWorkerPathAddress.clear();
+        this.onlineWorkerPathAddress.clear();
         this.terminatingWorkerPathAddress.clear();
-        this.missingTerminatingWorkerPathAddress.clear();
 
-        watchWorkers();
+        watchOnlineWorkers();
         pingWorkers();
 
     }
 
-    private void watchWorkers() {
+    private void watchOnlineWorkers() {
         CuratorCacheListener listener = CuratorCacheListener.builder().forTreeCache(curatorZKClient, new TreeCacheListener() {
             @Override
             public void childEvent(CuratorFramework client, TreeCacheEvent event) throws Exception {
-                TreeCacheEvent.Type type = event.getType();
-                switch (type) {
-                    case NODE_ADDED:
-                        handleAddWorker(event);
-                        break;
-                    case NODE_REMOVED:
-                        handleRemoveWorker(event);
-                        break;
-                    default:
-                }
+                log.debug("A Zookeeper node path event has been monitored.");
+                handleWorkerEventThreadPool.submit(() -> {
+                    TreeCacheEvent.Type type = event.getType();
+                    switch (type) {
+                        case NODE_ADDED:
+                            handleAddWorker(event);
+                            break;
+                        case NODE_REMOVED:
+                            handleRemoveWorker(event);
+                            break;
+                        default:
+                    }
+                });
             }
         }).build();
 
 
-        workerCuratorCache = CuratorCache.builder(curatorZKClient, zkRootWorkerPath).build();
+        workerCuratorCache = CuratorCache.builder(curatorZKClient, zkPathProperty.getWorker().getOnline()).build();
         workerCuratorCache.listenable().addListener(listener);
         workerCuratorCache.start();
     }
@@ -133,34 +137,28 @@ public class WorkerClusterManager {
         String zkPath = eventData.getPath();
 
         String parentPath = Paths.get(eventData.getPath()).getParent().toString();
-        if (StringUtils.equals(parentPath, zkRunnableWorkerPath)) {
-            // 如果是runnable下的节点
-            log.info("add runnable worker, path: {}, workerNodeAddress: {}", zkPath, workerNodeAddress);
-            runnableWorkerPathAddress.put(zkPath, workerNodeAddress);
-            missingRunnableWorkerPathAddress.remove(zkPath);
-
-            runnableWorkerModified = true;
+        if (StringUtils.equals(parentPath, zkPathProperty.getWorker().getOnline())) {
+            // 如果是online下的节点
+            log.info("new online worker, path: {}, workerNodeAddress: {}", zkPath, workerNodeAddress);
+            onlineWorkerPathAddress.put(zkPath, workerNodeAddress);
 
             clusterNodeLogService.create(
                     new ClusterNodeLog()
                             .withNodeAddress(workerNodeAddress)
                             .withNodeType(NodeType.WORKER.getType())
-                            .withNodeStatus(NodeStatus.RUNNABLE.getStatus()));
+                            .withNodeAction(NodeAction.RUNNABLE.getStatus()));
 
-            // 发布新增worker事件，用于触发读取worker中定义的task定义
-            publisher.publishEvent(new RunnableWorkerAddEvent(workerNodeAddress));
 
-        } else if (StringUtils.equals(parentPath, zkTerminatingWorkerPath)) {
+        } else if (StringUtils.equals(parentPath, zkPathProperty.getWorker().getTerminating())) {
             // 如果是terminating下的节点
             log.info("add terminating worker, path: {}, workerNodeAddress: {}", zkPath, workerNodeAddress);
             terminatingWorkerPathAddress.put(zkPath, workerNodeAddress);
-            missingTerminatingWorkerPathAddress.remove(zkPath);
 
             clusterNodeLogService.create(
                     new ClusterNodeLog()
                             .withNodeAddress(workerNodeAddress)
                             .withNodeType(NodeType.WORKER.getType())
-                            .withNodeStatus(NodeStatus.TERMINATING.getStatus()));
+                            .withNodeAction(NodeAction.TERMINATING.getStatus()));
 
         }
     }
@@ -175,33 +173,31 @@ public class WorkerClusterManager {
         String zkPath = eventData.getPath();
 
         String parentPath = Paths.get(zkPath).getParent().toString();
-        if (StringUtils.equals(parentPath, zkRunnableWorkerPath)) {
-            // 如果是runnable下的节点
+        if (StringUtils.equals(parentPath, zkPathProperty.getWorker().getOnline())) {
+            // 如果是online下的节点被移除了
             log.info("remove runnable worker, path: {}, workerNodeAddress: {}", zkPath, workerNodeAddress);
-            // todo: 有并发问题，如果不加锁在处理event的时候ping操作可能并发操作这两个map，所以可能导致真正下线的worker可能还会留存在missing之中。所以只能加锁，一开始开发的时候没有发现问题，todo就记录一下
-            synchronized (this) {
-                runnableWorkerPathAddress.remove(zkPath);
-                missingRunnableWorkerPathAddress.remove(zkPath);
+            onlineWorkerPathAddress.remove(zkPath);
+            try {
+                curatorZKClient.delete()
+                        .forPath(Paths.get(zkPathProperty.getWorker().getRunnable(), Paths.get(zkPath).getFileName().toString()).toString());
+            } catch (Exception e) {
+                log.error("error when delete connected node", e);
             }
-            runnableWorkerModified = true;
             clusterNodeLogService.create(
                     new ClusterNodeLog()
                             .withNodeAddress(workerNodeAddress)
                             .withNodeType(NodeType.WORKER.getType())
-                            .withNodeStatus(NodeStatus.RUNNABLE_TERMINATING.getStatus()));
-        } else if (StringUtils.equals(parentPath, zkTerminatingWorkerPath)) {
-            // 如果是terminating下的节点
+                            .withNodeAction(NodeAction.RUNNABLE_TO_TERMINATING.getStatus()));
+        } else if (StringUtils.equals(parentPath, zkPathProperty.getWorker().getTerminating())) {
+            // 如果是terminating下的节点被移除了，那就是真下线了
             log.info("remove terminating worker, path: {}, workerNodeAddress: {}", zkPath, workerNodeAddress);
-            synchronized (this) {
-                terminatingWorkerPathAddress.remove(zkPath);
-                missingTerminatingWorkerPathAddress.remove(zkPath);
-            }
+            terminatingWorkerPathAddress.remove(zkPath);
             publisher.publishEvent(new WorkerTerminatedEvent(workerNodeAddress));
             clusterNodeLogService.create(
                     new ClusterNodeLog()
                             .withNodeAddress(workerNodeAddress)
                             .withNodeType(NodeType.WORKER.getType())
-                            .withNodeStatus(NodeStatus.TERMINATED.getStatus()));
+                            .withNodeAction(NodeAction.TERMINATED.getStatus()));
         }
 
     }
@@ -222,59 +218,49 @@ public class WorkerClusterManager {
             public void run() {
 
                 log.debug("ping runnable");
-                if (ping(runnableWorkerPathAddress, missingRunnableWorkerPathAddress)) {
-                    runnableWorkerModified = true;
-                }
+                Tuple2<Map<String, String>, Map<String, String>> pingRunnableResult = ping(onlineWorkerPathAddress);
+                // ping失败的
+                pingRunnableResult._2.forEach((path, address) -> {
+                    pingSucceedPathCounter.remove(path);
+                    if (pingFailedPathCounter.containsKey(path) && pingFailedPathCounter.get(path) >= 4) {
+                        // 连续4次ping失败
+                        try {
+                            curatorZKClient.delete()
+                                    .forPath(Paths.get(zkPathProperty.getWorker().getRunnable(),
+                                            Paths.get(path).getFileName().toString()).toString());
+                        } catch (Exception e) {
+                            log.error("error when delete connected node", e);
+                        }
+                    } else {
+                        pingFailedPathCounter.put(path, pingFailedPathCounter.getOrDefault(path, 0) + 1);
+                    }
+                });
 
-                log.debug("ping terminating");
-                ping(terminatingWorkerPathAddress, missingTerminatingWorkerPathAddress);
+                // ping成功的
+                pingRunnableResult._1.forEach((path, address) -> {
+                    Path runnablePath = Paths.get(zkPathProperty.getWorker().getRunnable(), Paths.get(path).getFileName().toString());
+                    if (pingSucceedPathCounter.containsKey(path) && pingSucceedPathCounter.get(path) >= 4) {
+                        // 连续ping4次成功，认为稳定，上线。
+                        pingFailedPathCounter.remove(path);
+                        try {
+                            if (curatorZKClient.checkExists().forPath(runnablePath.toString()) == null) {
+                                curatorZKClient.create()
+                                        .withMode(CreateMode.PERSISTENT)
+                                        .forPath(runnablePath.toString(), address.getBytes());
+                            }
+                        } catch (Exception e) {
+                            log.error("error when create connected worker path", e);
+                        }
+                    } else {
+                        pingSucceedPathCounter.put(path, pingSucceedPathCounter.getOrDefault(path, 0) + 1);
+                    }
 
+                });
 
                 scheduledThreadPoolExecutor.schedule(this, 10, TimeUnit.SECONDS);
             }
         };
-        ScheduledFuture<?> schedule = scheduledThreadPoolExecutor.schedule(pingWorkerTask, 10, TimeUnit.SECONDS);
-    }
-
-    /**
-     * 方法的作用：
-     * 1. ping connectedWorkerPathAddress中的节点，将其中ping失败的节点丢进missingWorkerPathAddress中
-     * 2. ping missingWorkerPathAddress中的节点，将其中ping成功的丢进connectedWorkerPathAddress
-     * @param connectedWorkerPathAddress 目前处于链接状态的节点
-     * @param missingWorkerPathAddress   目前失联的节点
-     * @return 是否产生了新的已连接的或者丢失的节点
-     */
-    private boolean ping(Map<String, String> connectedWorkerPathAddress, Map<String, String> missingWorkerPathAddress) {
-        boolean modified = false;
-
-        // ping处于连接状态的节点
-        Tuple2<Map<String, String>, Map<String, String>> pingConnectedResult = ping(connectedWorkerPathAddress);
-        synchronized (this) {
-            Map<String, String> pingSuccess = pingConnectedResult._1;
-            pingSuccess.forEach((path, address) -> {
-                if (connectedWorkerPathAddress.remove(path) != null) {
-                    // todo: 光加锁还不行，得这样判断一下，因为如果是节点下线导致的ping出现异常，那么这个节点一定会出现在getNewMissingResult里，如果不这样判断一下而是直接往missingWorkerPathId里面put
-                    //  ，那还是会出现下线节点一直存在在missing中
-                    // 如果remove返回的不是null，说明这个节点已经被其他线程remove了（目前只有节点下线一种情况）
-                    missingWorkerPathAddress.put(path, address);
-                }
-            });
-            modified = !pingConnectedResult._2.isEmpty();
-        }
-
-
-        // ping失联的节点
-        Tuple2<Map<String, String>, Map<String, String>> pingMissingResult = ping(missingWorkerPathAddress);
-        synchronized (this) {
-            pingMissingResult._1.forEach((path, address) -> {
-                if (missingWorkerPathAddress.remove(path) != null) {
-                    connectedWorkerPathAddress.put(path, address);
-                }
-            });
-            modified = modified || !pingConnectedResult._1.isEmpty();
-        }
-        log.debug("connected worker: {}, missing worker: {}", connectedWorkerPathAddress.keySet(), missingWorkerPathAddress.keySet());
-        return modified;
+        scheduledThreadPoolExecutor.schedule(pingWorkerTask, 10, TimeUnit.SECONDS);
     }
 
     /**
@@ -303,10 +289,6 @@ public class WorkerClusterManager {
         Tuple2<Map<String, String>, Map<String, String>> pingResult = new Tuple2<>(newConnectedWorkerAddressPath,
                 newMissingWorkerAddressPath);
 
-//        PingWorkerResultDTO pingWorkerResultBO = new PingWorkerResultDTO();
-//        pingWorkerResultBO.setConnectedResult(newConnectedWorkerAddressPath);
-//        pingWorkerResultBO.setMissingResult(newMissingWorkerAddressPath);
-
         return pingResult;
     }
 
@@ -318,7 +300,7 @@ public class WorkerClusterManager {
      * @return
      */
     public Set<String> getRunnableWorkerNodeAddresses() {
-        return new HashSet<>(this.runnableWorkerPathAddress.values());
+        return new HashSet<>(this.onlineWorkerPathAddress.values());
     }
 
 

@@ -6,6 +6,7 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
 import org.apache.curator.framework.recipes.leader.LeaderLatchListener;
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationStartedEvent;
@@ -13,7 +14,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.talk.is.cheap.project.free.flow.common.enums.EnvType;
 import org.talk.is.cheap.project.free.flow.common.utils.IPUtil;
-import org.talk.is.cheap.project.free.flow.common.enums.NodeStatus;
+import org.talk.is.cheap.project.free.flow.common.enums.NodeAction;
 import org.talk.is.cheap.project.free.flow.common.enums.NodeType;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNodeLog;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.ClusterNodeLogService;
@@ -23,10 +24,8 @@ import java.util.concurrent.Executors;
 
 
 /**
- * 负责管理Scheduler集群，通过zk实现：
- * 1. scheduler的选举
- * 2. 选举成功的节点启动对worker的健康状况监听
- * 3. 负责管理worker以及其task的持有情况，worker的任务的分配、启动、状态流转
+ * 负责管理Scheduler集群，通过zk实现：scheduler的选举
+ * SchedulerClusterManager会触发WorkerClusterManager的相关动作
  */
 @Component
 @Slf4j
@@ -77,7 +76,7 @@ public class SchedulerClusterManager {
                 new ClusterNodeLog()
                         .withNodeAddress(getSchedulerAddress())
                         .withNodeType(NodeType.SCHEDULER.getType())
-                        .withNodeStatus(NodeStatus.RUNNABLE.getStatus()));
+                        .withNodeType(NodeAction.RUNNABLE.getStatus()));
 
     }
 
@@ -88,14 +87,18 @@ public class SchedulerClusterManager {
      */
     private void election() throws Exception {
         if (curatorZKClient.checkExists().forPath(zkSchedulerPath) == null) {
-            curatorZKClient.create().creatingParentsIfNeeded()
-                    .withMode(CreateMode.PERSISTENT)
-                    .forPath(zkSchedulerPath);
+            try {
+                curatorZKClient.create().creatingParentsIfNeeded()
+                        .withMode(CreateMode.PERSISTENT)
+                        .forPath(zkSchedulerPath);
+            } catch (KeeperException.NodeExistsException e) {
+                log.warn("zk: {} already exists", zkSchedulerPath);
+            }
         }
 
-        // 例如：注册服务到注册中心
         final String schedulerAddress = getSchedulerAddress();
 
+        // 关键逻辑，开始竞选
         leaderLatch = new LeaderLatch(curatorZKClient, zkSchedulerElectionPath, schedulerAddress, LeaderLatch.CloseMode.NOTIFY_LEADER);
         leaderLatch.addListener(new LeaderLatchListener() {
             @Override
@@ -143,7 +146,7 @@ public class SchedulerClusterManager {
             return this.cachedLeaderAddress;
         }
         if (leaderLatch == null) {
-            throw new RuntimeException("leaderLatch is null");
+            throw new RuntimeException("leaderLatch is null, The current node has not yet participated in the election.");
         }
         if (leaderLatch.getLeader() == null) {
             return null;

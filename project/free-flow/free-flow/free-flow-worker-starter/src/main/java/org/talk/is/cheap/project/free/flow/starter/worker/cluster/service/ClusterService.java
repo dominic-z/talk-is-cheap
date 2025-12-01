@@ -105,7 +105,7 @@ public class ClusterService {
             selfAbsoluteZKPath = starterCuratorZKClient.create()
                     .creatingParentsIfNeeded()
                     .withMode(CreateMode.EPHEMERAL)
-                    .forPath(Paths.get(zkConfigProperties.getZookeeper().getPath().getWorker().getRunnable(), getSelfZKWorkerPath()).toString(),
+                    .forPath(Paths.get(zkConfigProperties.getZookeeper().getPath().getWorker().getOnline(), getSelfZKWorkerPath()).toString(),
                             getWorkerAddress().getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) {
             log.error("error when registry to zk", e);
