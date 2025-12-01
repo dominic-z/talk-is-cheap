@@ -9,7 +9,7 @@
 [ZooKeeper ： Curator框架之Leader选举LeaderLatch](https://blog.csdn.net/qq_37960603/article/details/122360656)
 [ZooKeeper ： Curator框架之Leader选举LeaderSelector](https://blog.csdn.net/qq_37960603/article/details/122369232)
 [04.Curator Leader选举](https://www.cnblogs.com/LiZhiW/p/4930486.html)
-
+[CuratorCacheListener指定线程池](https://www.doubao.com/thread/w32c44081938c388e)
 ## zookeeper
 
 

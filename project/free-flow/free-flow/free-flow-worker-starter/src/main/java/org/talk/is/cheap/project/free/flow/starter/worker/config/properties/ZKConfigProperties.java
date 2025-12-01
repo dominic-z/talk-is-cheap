@@ -37,6 +37,7 @@ public class ZKConfigProperties {
             @Data
             public static class Worker{
                 private String root;
+                private String online;
                 private String runnable;
                 private String terminating;
             }

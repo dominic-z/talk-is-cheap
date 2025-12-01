@@ -187,6 +187,12 @@ public class ESTest {
         IndexResponse resp = esClient.index(req);
         log.info("resp: {}", resp);
 //        随后可以去kibana去查
+//        GET /hotel/_search
+//{
+//  "query": {
+//    "match_all": {}
+//  }
+//}
 //        GET /hotel/_doc/36934
 //        DELETE /hotel/_doc/36934
     }

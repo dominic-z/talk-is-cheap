@@ -42,7 +42,7 @@ public class RepositoryAutoConfig {
     public static final String SQL_SESSION_TEMPLATE_BEAN_NAME = "repositoryStarterSqlSessionTemplate";
     public static final String TRANSACTION_MANAGER_BEAN_NAME = "repositoryStarterTransactionManager";
 
-    // 定制一个名字，不要影响实际应用的bean
+    // 定制一个名字，不要影响应用项目里的bean
 
     @Bean(name=DATASOURCE_BEAN_NAME)
     public DataSource druidDataSource() throws Exception {
@@ -65,6 +65,7 @@ public class RepositoryAutoConfig {
         factory.setMapperLocations(patternResolver.getResources("classpath:/free-flow-starter-repository-mappers/mappers/**/*.xml"));
         factory.setTypeAliasesPackage("org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo");
 
+        // 代替传统的mybatis.xml配置文件的方式进行配置
         org.apache.ibatis.session.Configuration configuration = new org.apache.ibatis.session.Configuration();
 
         configuration.setMapUnderscoreToCamelCase(true);
@@ -76,7 +77,12 @@ public class RepositoryAutoConfig {
 
 
     /**
-     * 抄的DataSourceTransactionManagerAutoConfiguration
+     * 抄的DataSourceTransactionManagerAutoConfiguration，至于为啥抄
+     * 问的豆包：springboot如何创建一个事务管理器的？
+     * https://www.doubao.com/thread/wd77336657ea502f9
+     *
+     * spring内置的事务管理器被放在了org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration这个位置
+     *
      * @param dataSource
      * @return
      */

@@ -2,9 +2,16 @@ package org.talk.is.cheap.project.free.flow.scheduler.task.service;
 
 
 import io.vavr.Tuple2;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.cache.CuratorCache;
+import org.apache.curator.framework.recipes.cache.CuratorCacheListener;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
@@ -12,9 +19,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.GetWorkerTaskDefinitionResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.dto.TaskDefinitionDTO;
-import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.RunnableWorkerAddEvent;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.WorkerTerminatedEvent;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.WorkerClusterManager;
+import org.talk.is.cheap.project.free.flow.scheduler.config.property.ZKPathProperty;
 import org.talk.is.cheap.project.free.flow.scheduler.task.client.WorkerTaskDefinitionClient;
 import org.talk.is.cheap.project.free.flow.scheduler.util.FieldAwareLockManager;
 import org.talk.is.cheap.project.free.flow.starter.repository.config.RepositoryAutoConfig;
@@ -39,6 +46,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+/**
+ * 通过zk监听已经建立链接的worker，读取其中的任务定义
+ */
 @Service
 @Slf4j
 public class WorkerTaskDefinitionManager {
@@ -111,6 +121,12 @@ public class WorkerTaskDefinitionManager {
     @Autowired
     private WorkerClusterManager workerClusterManager;
 
+    @Autowired
+    private CuratorFramework curatorZKClient;
+
+    @Autowired
+    private ZKPathProperty zkPathProperty;
+
     @Getter
     private static final ModelMapper MODEL_MAPPER = new ModelMapper();
 
@@ -122,69 +138,98 @@ public class WorkerTaskDefinitionManager {
     private final FieldAwareLockManager<String> lockManagerByWorkerAddress = new FieldAwareLockManager<>();
 
     // 耗时任务尽可能放在一个独立的线程里，避免影响主线程
-    private final ThreadPoolExecutor taskDefinitionThreadPool = new ThreadPoolExecutor(0, 4, 1000, TimeUnit.MILLISECONDS,
+    private final ThreadPoolExecutor taskDefinitionThreadPool = new ThreadPoolExecutor(4, 4, 1000, TimeUnit.MILLISECONDS,
             new LinkedBlockingQueue<>());
 
+    private CuratorCache curatorCache;
+
+    @PostConstruct
+    public void watchRunnableWorker() {
+        curatorCache = CuratorCache.builder(curatorZKClient, zkPathProperty.getWorker().getRunnable()).build();
+        CuratorCacheListener listener = CuratorCacheListener.builder()
+                .forPathChildrenCache(zkPathProperty.getWorker().getRunnable(), curatorZKClient, new PathChildrenCacheListener() {
+                    @Override
+                    public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception {
+                        String workerAddress = new String(event.getData().getData());
+                        log.info("on runnable worker event: {}, zkPath: {}, address: {}", event.getType(), event.getData().getPath(),
+                                workerAddress);
+                        switch (event.getType()) {
+                            case CHILD_ADDED:
+                                onAddRunnableWorkerEvent(workerAddress);
+                            case CHILD_REMOVED:
+                                onRemoveRunnableWorker(workerAddress);
+                        }
+
+                    }
+                }).build();
+
+        curatorCache.listenable().addListener(listener);
+        curatorCache.start();
+    }
+    @PreDestroy
+    public void stop(){
+        curatorCache.close();
+    }
 
     /**
-     * 由Scheduler主动询问worker中的任务定义并进行存储，因为目前scheduler就一个，因此由scheduler主动询问可以由scheduler控制访问的并发量。
-     *
-     *
-     * 因为处理addEvent和removeEvent的先后顺序无法确保，例如同一个NodeAddress，可能上线后立刻断开链接，但是terminated事件先于addEvent处理完成
-     * 所以本类中存在的worker并不一定是真实存活的worker，真实存活的worker由workerClusterManager确保
-     *
      * 并发处理，可能存在一个worker刚触发了addevent正在读取信息的过程中，又触发了workerTerminiated事件，导致这个对象里多个map的数据不一致
      * 通过加锁解决，加了锁之后，上面的问题也一并解决了，即使terminated事件先处理了，addEvent后处理的时候也会抛出异常，而不会成功读取worker的任务定义（因为已经断开链接了）
-     *
-     * @param event
      */
-    @EventListener(RunnableWorkerAddEvent.class)
-    public void onRunnableWorkerAddEvent(RunnableWorkerAddEvent event) {
-        final String workerAddress = event.getNodeAddress();
+    private void onAddRunnableWorkerEvent(String workerAddress) {
 
         // worker启动时候已经充分校验任务，任务定义本身不需要校验，但是需要考虑并发问题。
         Supplier<Integer> readTaskDefinitionJob = () -> {
-            lockManagerByWorkerAddress.lock(workerAddress);
+            try {
+                lockManagerByWorkerAddress.lock(workerAddress);
 
-            GetWorkerTaskDefinitionResp getWorkerTaskDefinitionResp =
-                    workerTaskDefinitionClient.getTaskDefinition(workerClusterManager.getWorkerURI(workerAddress));
-            List<TaskDefinitionDTO> taskDefinitionDTOList = getWorkerTaskDefinitionResp.getData();
-
-            if (taskDefinitionDTOList == null) {
-                log.warn("worker: {} has no task definition", workerAddress);
-                return 0;
-            }
-            final int batchSize = 10;
-            TaskDefinitionExample example = new TaskDefinitionExample();
-            workerTaskMap.put(workerAddress, new HashSet<>());
-
-            for (TaskDefinitionDTO taskDefinitionDTO : taskDefinitionDTOList) {
-                String taskName = taskDefinitionDTO.getName();
-                Integer taskVersion = taskDefinitionDTO.getVersion();
-                taskDefinitionDTOMap.computeIfAbsent(taskName, (key) -> new ConcurrentHashMap<>()).put(taskVersion, taskDefinitionDTO);
-                Tuple2<String, Integer> nameVersion = new Tuple2<>(taskName, taskVersion);
-                workerTaskMap.get(workerAddress).add(nameVersion);
-                taskWorkerMap.computeIfAbsent(taskName, (n) -> new ConcurrentHashMap<>())
-                        .computeIfAbsent(taskVersion, (v) -> new HashSet<>())
-                        .add(workerAddress);
-
-                example.clear();
-                example.createCriteria().andNameEqualTo(taskName)
-                        .andVersionEqualTo(taskVersion);
-                if (taskDefinitionService.selectByExample(example).isEmpty()) {
-                    try {
-                        workerTaskDefinitionManagerTxnHelper.createTask(taskDefinitionDTO);
-                    } catch (Exception e) {
-                        log.error("Writing task definition failed. This may be caused by concurrent writes. " +
-                                "It is recommended to check whether the task definition is created normally, but this will not affect" +
-                                " the worker's execution of this task.", e);
-                    }
+                if (taskWorkerMap.containsKey(workerAddress)) {
+                    // 如果一个节点已经读取过，就不必重新读取了，直接返回；按理来说不会出现这个情况；
+                    log.info("The reading phase has been skipped.");
+                    return -1;
                 }
 
+                GetWorkerTaskDefinitionResp getWorkerTaskDefinitionResp =
+                        workerTaskDefinitionClient.getTaskDefinition(workerClusterManager.getWorkerURI(workerAddress));
+                List<TaskDefinitionDTO> taskDefinitionDTOList = getWorkerTaskDefinitionResp.getData();
+
+                if (taskDefinitionDTOList == null) {
+                    log.warn("worker: {} has no task definition", workerAddress);
+                    return 0;
+                }
+                final int batchSize = 10;
+                TaskDefinitionExample example = new TaskDefinitionExample();
+                workerTaskMap.put(workerAddress, new HashSet<>());
+
+                for (TaskDefinitionDTO taskDefinitionDTO : taskDefinitionDTOList) {
+                    String taskName = taskDefinitionDTO.getName();
+                    Integer taskVersion = taskDefinitionDTO.getVersion();
+                    taskDefinitionDTOMap.computeIfAbsent(taskName, (key) -> new ConcurrentHashMap<>()).put(taskVersion, taskDefinitionDTO);
+                    Tuple2<String, Integer> nameVersion = new Tuple2<>(taskName, taskVersion);
+                    workerTaskMap.get(workerAddress).add(nameVersion);
+                    taskWorkerMap.computeIfAbsent(taskName, (n) -> new ConcurrentHashMap<>())
+                            .computeIfAbsent(taskVersion, (v) -> new HashSet<>())
+                            .add(workerAddress);
+
+                    example.clear();
+                    example.createCriteria().andNameEqualTo(taskName)
+                            .andVersionEqualTo(taskVersion);
+                    if (taskDefinitionService.selectByExample(example).isEmpty()) {
+                        try {
+                            workerTaskDefinitionManagerTxnHelper.createTask(taskDefinitionDTO);
+                        } catch (Exception e) {
+                            log.error("Writing task definition failed. This may be caused by concurrent writes. " +
+                                    "It is recommended to check whether the task definition is created normally, but this will not affect" +
+                                    " the worker's execution of this task.", e);
+                        }
+                    }
+
+                }
+                return taskDefinitionDTOList.size();
+            } finally {
+                lockManagerByWorkerAddress.unlockAndRemove(workerAddress);
             }
 
-            lockManagerByWorkerAddress.unlockAndRemove(workerAddress);
-            return taskDefinitionDTOList.size();
+
         };
 
         CompletableFuture.supplyAsync(readTaskDefinitionJob, taskDefinitionThreadPool)
@@ -195,29 +240,32 @@ public class WorkerTaskDefinitionManager {
                 });
     }
 
-    @EventListener(WorkerTerminatedEvent.class)
-    public void onWorkerTerminated(WorkerTerminatedEvent event){
-        String nodeAddress = event.getNodeAddress();
+    public void onRemoveRunnableWorker(String nodeAddress) {
 
-        Supplier<Boolean> workerRemovedJob = ()->{
-            lockManagerByWorkerAddress.lock(nodeAddress);
-            Set<Tuple2<String, Integer>> removedTaskVersion = this.workerTaskMap.remove(nodeAddress);
-            for (Tuple2<String, Integer> nameVersion : removedTaskVersion) {
-                String taskName = nameVersion._1();
-                Integer taskVersion = nameVersion._2();
+        Supplier<Boolean> workerRemovedJob = () -> {
+            try {
+                lockManagerByWorkerAddress.lock(nodeAddress);
+                Set<Tuple2<String, Integer>> removedTaskVersion = this.workerTaskMap.remove(nodeAddress);
+                for (Tuple2<String, Integer> nameVersion : removedTaskVersion) {
+                    String taskName = nameVersion._1();
+                    Integer taskVersion = nameVersion._2();
 
-                if(this.taskWorkerMap.containsKey(taskName) && this.taskWorkerMap.get(taskName).containsKey(taskVersion)){
-                    this.taskWorkerMap.get(taskName).get(taskVersion).remove(nodeAddress);
+                    if (this.taskWorkerMap.containsKey(taskName) && this.taskWorkerMap.get(taskName).containsKey(taskVersion)) {
+                        this.taskWorkerMap.get(taskName).get(taskVersion).remove(nodeAddress);
+                    }
                 }
+            } finally {
+                lockManagerByWorkerAddress.unlockAndRemove(nodeAddress);
             }
-            lockManagerByWorkerAddress.unlockAndRemove(nodeAddress);
             return true;
         };
 
         CompletableFuture.supplyAsync(workerRemovedJob, taskDefinitionThreadPool)
-                .thenAccept(n -> log.info("The {} node is offline, and the task definition data it held has been successfully cleared.", nodeAddress))
+                .thenAccept(n -> log.info("The {} node is offline, and the task definition data it held has been successfully cleared.",
+                        nodeAddress))
                 .exceptionally(e -> {
-                    log.error("The {} node is offline, and an exception occurred while clearing the task definition data it held.", nodeAddress);
+                    log.error("The {} node is offline, and an exception occurred while clearing the task definition data it held.",
+                            nodeAddress);
                     return null;
                 });
     }
@@ -225,12 +273,13 @@ public class WorkerTaskDefinitionManager {
 
     /**
      * 获取具备某个任务的worker列表
+     *
      * @param taskName
      * @param taskVersion
      * @return
      */
     public Set<String> getWorkerAddressesWithTask(String taskName, Integer taskVersion) {
-        if(StringUtils.isBlank(taskName)){
+        if (StringUtils.isBlank(taskName)) {
             return new HashSet<>();
         }
         Map<Integer, Set<String>> versionAddresses = this.taskWorkerMap.get(taskName);

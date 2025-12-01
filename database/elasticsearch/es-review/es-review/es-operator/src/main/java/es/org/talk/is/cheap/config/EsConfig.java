@@ -5,6 +5,9 @@ import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.json.jackson.JacksonJsonpMapper;
 import co.elastic.clients.transport.ElasticsearchTransport;
 import co.elastic.clients.transport.rest_client.RestClientTransport;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
@@ -64,13 +67,19 @@ public class EsConfig {
                         .setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
                         .setDefaultCredentialsProvider(credentialsProvider))
                 .build();
-//        如果不需要https访问，那么这样就行
+//        如果不需要https访问，那么下面这样就行
 //        var restClient = RestClient.builder(new HttpHost(esHost, esPort))
 //                .setHttpClientConfigCallback(httpAsyncClientBuilder -> httpAsyncClientBuilder.setDefaultCredentialsProvider(credentialsProvider))
 //                .build();
         // Create the transport with a Jackson mapper
+
+        // java对象是驼峰命名，而es中按理来说需要时下划线命名，es通过json来转换
+        // https://www.doubao.com/thread/w06adfa699d19aa1b
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
+
         return new RestClientTransport(
-                restClient, new JacksonJsonpMapper());
+                restClient, new JacksonJsonpMapper(objectMapper));
     }
     @Bean("esClient")
     public ElasticsearchClient elasticsearchClient(

@@ -56,6 +56,7 @@ apache:
         election: /free-flow/scheduler/leader
       worker:
         root: /free-flow/worker
+        online: /free-flow/worker/online
         runnable: /free-flow/worker/runnable
         terminating: /free-flow/worker/terminating
   # 重试策略

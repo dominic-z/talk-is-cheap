@@ -1,6 +1,7 @@
 package org.talk.is.cheap.project.free.flow.scheduler.task.service;
 
 
+import com.google.common.base.VerifyException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,7 @@ import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.WorkerClust
 import org.talk.is.cheap.project.free.flow.scheduler.task.client.WorkerTaskDriverClient;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.StageStartupExample;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.TaskGraphDefinitionExample;
+import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.TaskStartupExample;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.es.pojo.StageStartupParam;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.StageDefinition;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.StageExecution;
@@ -23,6 +25,7 @@ import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskGr
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskStartup;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.StageExecutionService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.StageStartupService;
+import org.talk.is.cheap.project.free.flow.starter.repository.service.TaskExecutionService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.TaskGraphDefinitionService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.TaskStartupService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.StageDefinitionServiceWrapper;
@@ -31,7 +34,6 @@ import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.Ta
 import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.TaskExecutionServiceWrapper;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.TaskStartupServiceWrapper;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.es.StageStartupParamService;
-import org.talk.is.cheap.project.free.flow.starter.repository.service.es.TaskSharedContextService;
 
 import java.io.IOException;
 import java.net.URI;
@@ -64,6 +66,8 @@ public class WorkerTaskDriverService {
     @Autowired
     private TaskExecutionServiceWrapper taskExecutionServiceWrapper;
     @Autowired
+    private TaskExecutionService taskExecutionService;
+    @Autowired
     private StageStartupParamService stageStartupParamService;
 
     /**
@@ -89,15 +93,30 @@ public class WorkerTaskDriverService {
     public void prepareForTaskStart(String taskName, Integer taskVersion) {
         TaskDefinition taskDefinition = taskDefinitionServiceWrapper.queryByNameVersion(taskName, taskVersion);
 
-        String workerAddress = taskScheduler.assignTaskToWorkerAddress(taskName, taskDefinition.getVersion());
-        VerifyUtil.shallNotBeBlank(workerAddress, "No node capable of executing this task can be found.");
-
-
         TaskStartup taskStartup = new TaskStartup()
                 .withTaskId(taskDefinition.getId())
                 .withSourceType(StartupSourceType.EXTERNAL.getValue())
                 .withStatus(TaskStageStatus.PENDING.getStatus());
-        VerifyUtil.shallBeTrue(taskStartupService.create(taskStartup)>0,"创建task启动记录失败");
+        VerifyUtil.shallBeTrue(taskStartupService.create(taskStartup) > 0, "创建task启动记录失败");
+
+
+        String workerAddress = taskScheduler.assignTaskToWorkerAddress(taskName, taskDefinition.getVersion(), taskStartup.getId());
+        try {
+            VerifyUtil.shallNotBeBlank(workerAddress, "No node capable of executing this task can be found.");
+        } catch (VerifyException e) {
+            TaskStartupExample taskStartupExample = new TaskStartupExample();
+            taskStartupExample.createCriteria().andIdEqualTo(taskStartup.getId());
+            taskStartupService.updateByExampleSelective(new TaskStartup().withStatus(TaskStageStatus.FAILED.getStatus()),
+                    taskStartupExample);
+            throw  e;
+        }
+
+        TaskExecution taskExecution = new TaskExecution().withStatus(TaskStageStatus.PENDING.getStatus())
+                .withAssignedWorkerAddr(workerAddress)
+                .withTaskStartupId(taskStartup.getId());
+        VerifyUtil.shallBeTrue(taskExecutionService.create(taskExecution) > 0, "创建task执行记录失败");
+
+
 
     }
 
