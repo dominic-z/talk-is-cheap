@@ -150,14 +150,20 @@ public class WorkerTaskDefinitionManager {
                 .forPathChildrenCache(zkPathProperty.getWorker().getRunnable(), curatorZKClient, new PathChildrenCacheListener() {
                     @Override
                     public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception {
-                        String workerAddress = new String(event.getData().getData());
-                        log.info("on runnable worker event: {}, zkPath: {}, address: {}", event.getType(), event.getData().getPath(),
-                                workerAddress);
-                        switch (event.getType()) {
-                            case CHILD_ADDED:
-                                onAddRunnableWorkerEvent(workerAddress);
-                            case CHILD_REMOVED:
-                                onRemoveRunnableWorker(workerAddress);
+                        if (event.getData() == null) {
+                            log.info("on runnable worker event: {}", event.getType());
+                        } else {
+                            String workerAddress = new String(event.getData().getData());
+                            log.info("on runnable worker event: {}, zkPath: {}, address: {}", event.getType(), event.getData().getPath(),
+                                    workerAddress);
+                            switch (event.getType()) {
+                                case CHILD_ADDED:
+                                    onAddRunnableWorkerEvent(workerAddress);
+                                    break;
+                                case CHILD_REMOVED:
+                                    onRemoveRunnableWorker(workerAddress);
+                                    break;
+                            }
                         }
 
                     }
@@ -166,8 +172,9 @@ public class WorkerTaskDefinitionManager {
         curatorCache.listenable().addListener(listener);
         curatorCache.start();
     }
+
     @PreDestroy
-    public void stop(){
+    public void stop() {
         curatorCache.close();
     }
 
@@ -184,7 +191,7 @@ public class WorkerTaskDefinitionManager {
 
                 if (taskWorkerMap.containsKey(workerAddress)) {
                     // 如果一个节点已经读取过，就不必重新读取了，直接返回；按理来说不会出现这个情况；
-                    log.info("The reading phase has been skipped.");
+                    log.info("The reading phase has been skipped for {}.", workerAddress);
                     return -1;
                 }
 
@@ -222,6 +229,7 @@ public class WorkerTaskDefinitionManager {
                                     " the worker's execution of this task.", e);
                         }
                     }
+                    log.info("finish parsing task: {}, version: {} from {}", taskName, taskVersion, workerAddress);
 
                 }
                 return taskDefinitionDTOList.size();

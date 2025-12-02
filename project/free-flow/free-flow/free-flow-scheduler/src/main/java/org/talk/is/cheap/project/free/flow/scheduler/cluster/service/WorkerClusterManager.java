@@ -175,13 +175,17 @@ public class WorkerClusterManager {
         String parentPath = Paths.get(zkPath).getParent().toString();
         if (StringUtils.equals(parentPath, zkPathProperty.getWorker().getOnline())) {
             // 如果是online下的节点被移除了
+            // 因为监听事件并不是串行的，即使发送是串行的，到达也可能不是串行的。因此需要考虑一些节点反复上下线导致的并发异常，例如一个节点上线->下线->上线，如果下线事件反而最后处理，那么这个节点可能就丢了。
+            // 可以借鉴“延迟双删”的策略，加一个延迟事件处理队列，在x秒之后再读取一下这个节点，如果在线的话，就尝试put，如果不在线就删除，当然无法完全解决问题，但是能够降低概率。
             log.info("remove runnable worker, path: {}, workerNodeAddress: {}", zkPath, workerNodeAddress);
             onlineWorkerPathAddress.remove(zkPath);
+            pingSucceedPathCounter.remove(zkPath);
+            pingFailedPathCounter.remove(zkPath);
             try {
                 curatorZKClient.delete()
                         .forPath(Paths.get(zkPathProperty.getWorker().getRunnable(), Paths.get(zkPath).getFileName().toString()).toString());
             } catch (Exception e) {
-                log.error("error when delete connected node", e);
+                log.error("error when delete runnable node", e);
             }
             clusterNodeLogService.create(
                     new ClusterNodeLog()
@@ -222,7 +226,7 @@ public class WorkerClusterManager {
                 // ping失败的
                 pingRunnableResult._2.forEach((path, address) -> {
                     pingSucceedPathCounter.remove(path);
-                    if (pingFailedPathCounter.containsKey(path) && pingFailedPathCounter.get(path) >= 4) {
+                    if (pingFailedPathCounter.containsKey(path) && pingFailedPathCounter.get(path) >= 1) {
                         // 连续4次ping失败
                         try {
                             curatorZKClient.delete()
@@ -239,11 +243,12 @@ public class WorkerClusterManager {
                 // ping成功的
                 pingRunnableResult._1.forEach((path, address) -> {
                     Path runnablePath = Paths.get(zkPathProperty.getWorker().getRunnable(), Paths.get(path).getFileName().toString());
-                    if (pingSucceedPathCounter.containsKey(path) && pingSucceedPathCounter.get(path) >= 4) {
-                        // 连续ping4次成功，认为稳定，上线。
+                    if (pingSucceedPathCounter.containsKey(path) && pingSucceedPathCounter.get(path) >= 1) {
+                        // 连续ping4次成功，认为稳定，上线。这种机制也有助于防止网络不稳定导致节点反复上下线导致的反复io
                         pingFailedPathCounter.remove(path);
                         try {
                             if (curatorZKClient.checkExists().forPath(runnablePath.toString()) == null) {
+                                // 之所以判断一下，因为很有可能worker已经在runnable路径了，比如scheduler-leader节点全都下线了
                                 curatorZKClient.create()
                                         .withMode(CreateMode.PERSISTENT)
                                         .forPath(runnablePath.toString(), address.getBytes());
