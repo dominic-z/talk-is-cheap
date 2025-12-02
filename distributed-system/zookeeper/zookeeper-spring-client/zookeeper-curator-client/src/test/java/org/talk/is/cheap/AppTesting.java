@@ -88,9 +88,10 @@ public class AppTesting {
 
     /**
      * 监听
-     *
+     * <p>
      * 一些奇怪的笔记：
      * 1. 如果我通过
+     *
      * @throws Exception
      */
     @Test
@@ -99,7 +100,8 @@ public class AppTesting {
         final String subPath = "/tenant1/watch/sub";
         final String subSubPath = "/tenant1/watch/sub/sub";
         // 如果执行清空，那么后续监听的时候，第一个事件就是初始化，第二个事件应该就是创建
-        // 而如果不执行清空，并且path/subPath/subSubPath已经存在的话，那么第一个事件就是NODE_ADD，为啥？我推测既然这个监听器叫做什么什么cache，那么我可以理解为是对zk在本地做了个缓存，zk有而本地没有，那么就会触发node_add事件，
+        // 而如果不执行清空，并且path/subPath/subSubPath已经存在的话，那么第一个事件就是NODE_ADD，为啥？我推测既然这个监听器叫做什么什么cache，那么我可以理解为是对zk在本地做了个缓存，zk
+        // 有而本地没有，那么就会触发node_add事件，
         // 相当于对于当前这个客户端来说，zk新增了节点，好像也合理。
         if (tenant1CuratorClient.checkExists().forPath(path) != null) {
             tenant1CuratorClient.delete().deletingChildrenIfNeeded().forPath(path);
@@ -179,13 +181,14 @@ public class AppTesting {
 //                    }
 //                })
                 .forCreates(childData -> {
-                    log.info("event: create, path: {}, data: {}", childData.getPath(), new String(childData.getData(), StandardCharsets.UTF_8));
+                    log.info("event: create, path: {}, data: {}", childData.getPath(), new String(childData.getData(),
+                            StandardCharsets.UTF_8));
                 })
                 .forChanges(new CuratorCacheListenerBuilder.ChangeListener() {
                     @Override
                     public void event(ChildData oldNode, ChildData node) {
                         // 实际的处理是在另一个线程池处理的
-                        listenerExecutor.submit(()->{
+                        listenerExecutor.submit(() -> {
                             log.info("value change: old path: {}, old data: {}, new path: {}, new data: {}",
                                     oldNode.getPath(), new String(oldNode.getData(), StandardCharsets.UTF_8),
                                     node.getPath(), new String(node.getData(), StandardCharsets.UTF_8));
@@ -201,7 +204,7 @@ public class AppTesting {
                             log.info("child event: {},path: {},data:{}", event.getType(), event.getData().getPath(),
                                     new String(event.getData().getData()));
                         } else {
-                            log.info("child event: {}", event.getType());
+                            log.info("child event: {}, initial data: {}", event.getType(), event.getInitialData());
 
                         }
                     }
@@ -212,8 +215,8 @@ public class AppTesting {
                     public void childEvent(CuratorFramework client, TreeCacheEvent event) throws Exception {
                         if (event.getData() != null) {
 
-                            log.info("tree child event: {},path: {},data:{}", event.getType(), event.getData().getPath(),
-                                    new String(event.getData().getData()));
+                            log.info("tree child event: {}, path: {}, data:{}, old_event: {}", event.getType(), event.getData().getPath(),
+                                    new String(event.getData().getData()), event.getOldData());
                         } else {
                             log.info("tree child event: {}", event.getType());
 
