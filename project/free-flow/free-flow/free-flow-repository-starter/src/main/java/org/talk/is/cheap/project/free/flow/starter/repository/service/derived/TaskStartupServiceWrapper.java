@@ -26,4 +26,11 @@ public class TaskStartupServiceWrapper {
         return list.get(0);
     }
 
+
+    public int updateByIdSelective(long id,TaskStartup taskStartup){
+        TaskStartupExample example = new TaskStartupExample();
+        example.createCriteria().andIdEqualTo(id);
+
+        return taskStartupService.updateByExampleSelective(taskStartup,example);
+    }
 }

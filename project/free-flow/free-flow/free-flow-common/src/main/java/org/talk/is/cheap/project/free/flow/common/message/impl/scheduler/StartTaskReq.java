@@ -8,10 +8,10 @@ import java.util.Map;
 public class StartTaskReq extends HttpBody<StartTaskReq.Data> {
 
     @lombok.Data
-    public static class  Data{
+    public static class Data {
         private String taskName;
         private Integer taskVersion;
         private String initialEncodedSharedContext;
-        private Map<String,String> stageEncodedInputs;
+        private Map<String, String> stageEncodedInputs;
     }
 }

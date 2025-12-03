@@ -13,4 +13,6 @@ public class StageStartupParam {
     private String encodedSharedContextSnapshotAtStartup;
     private String encodedSharedContextSnapshotAtCompletion;
     private Date updateTime;
+
+    public static String STAGE_STARTUP_ID = "stage_startup_id";
 }

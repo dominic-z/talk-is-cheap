@@ -28,4 +28,11 @@ public class StageDefinitionServiceWrapper {
         return list.get(0);
     }
 
+
+    public List<StageDefinition> selectByTaskId(long taskId) {
+        StageDefinitionExample example = new StageDefinitionExample();
+        example.createCriteria().andTaskIdEqualTo(taskId);
+        return stageDefinitionService.selectByExample(example);
+    }
+
 }

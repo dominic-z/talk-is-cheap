@@ -81,7 +81,8 @@ PUT /task_shared_context
   "mappings": {
     "properties": {
       "task_execution_id":{
-        "type":"keyword"
+        "type":"keyword",
+        "unique": true
       },
       "task_shared_context_encoding_snapshot": {
         "type": "text",
@@ -103,7 +104,8 @@ PUT /stage_startup_param
   "mappings": {
     "properties": {
       "stage_startup_id":{
-        "type":"keyword"
+        "type":"keyword",
+        "unique": true
       },
       "encoded_input": {
         "type": "text",
@@ -136,7 +138,8 @@ PUT /stage_execution_biz_log
   "mappings": {
     "properties": {
       "stage_execution_id":{
-        "type":"keyword"
+        "type":"keyword",
+        "unique": true
       },
       "log":{
         "type":"text",
@@ -157,7 +160,8 @@ PUT /stage_execution_result_msg
   "mappings": {
     "properties": {
       "stage_execution_id":{
-        "type":"keyword"
+        "type":"keyword",
+        "unique": true
       },
       "msg":{
         "type":"text",

@@ -8,8 +8,10 @@ import co.elastic.clients.elasticsearch.core.GetResponse;
 import co.elastic.clients.elasticsearch.core.IndexRequest;
 import co.elastic.clients.elasticsearch.core.IndexResponse;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
+import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.UpdateRequest;
 import co.elastic.clients.elasticsearch.core.UpdateResponse;
+import co.elastic.clients.elasticsearch.core.search.HitsMetadata;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -73,5 +75,19 @@ public class StageStartupParamService {
                 .id(id).build();
         GetResponse<StageStartupParam> resp = esClient.get(getRequest, StageStartupParam.class);
         return resp.source();
+    }
+
+
+    public StageStartupParam getByStageStartupId(long stageStartupId) throws IOException {
+
+        SearchRequest searchRequest = new SearchRequest.Builder()
+                .index(INDEX_NAME)
+                .query(qb -> qb.term(tb -> tb.field(StageStartupParam.STAGE_STARTUP_ID).value(stageStartupId))).build();
+        SearchResponse<StageStartupParam> resp = esClient.search(searchRequest, StageStartupParam.class);
+        HitsMetadata<StageStartupParam> hits = resp.hits();
+        if (resp.hits().total().value()==0) {
+            return null;
+        }
+        return resp.hits().hits().get(0).source();
     }
 }

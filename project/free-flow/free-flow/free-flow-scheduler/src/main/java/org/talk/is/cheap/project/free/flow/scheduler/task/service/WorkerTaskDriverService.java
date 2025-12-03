@@ -5,6 +5,7 @@ import com.google.common.base.VerifyException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.talk.is.cheap.project.free.flow.common.enums.StartupSourceType;
 import org.talk.is.cheap.project.free.flow.common.enums.TaskStageStatus;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.StartWorkerStageReq;
@@ -12,10 +13,12 @@ import org.talk.is.cheap.project.free.flow.common.message.impl.worker.StartWorke
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.WorkerClusterManager;
 import org.talk.is.cheap.project.free.flow.scheduler.task.client.WorkerTaskDriverClient;
+import org.talk.is.cheap.project.free.flow.starter.repository.config.RepositoryAutoConfig;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.StageStartupExample;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.TaskGraphDefinitionExample;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.TaskStartupExample;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.es.pojo.StageStartupParam;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.es.pojo.TaskSharedContext;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.StageDefinition;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.StageExecution;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.StageStartup;
@@ -34,11 +37,14 @@ import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.Ta
 import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.TaskExecutionServiceWrapper;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.TaskStartupServiceWrapper;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.es.StageStartupParamService;
+import org.talk.is.cheap.project.free.flow.starter.repository.service.es.TaskSharedContextService;
 
 import java.io.IOException;
 import java.net.URI;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -67,8 +73,13 @@ public class WorkerTaskDriverService {
     private TaskExecutionServiceWrapper taskExecutionServiceWrapper;
     @Autowired
     private TaskExecutionService taskExecutionService;
+
+    // es
     @Autowired
     private StageStartupParamService stageStartupParamService;
+
+    @Autowired
+    private TaskSharedContextService taskSharedContextService;
 
     /**
      * worker客户端
@@ -90,33 +101,66 @@ public class WorkerTaskDriverService {
      * @param taskName
      * @param taskVersion
      */
-    public void prepareForTaskStart(String taskName, Integer taskVersion) {
+//    @Transactional(rollbackFor = Exception.class, transactionManager = RepositoryAutoConfig.TRANSACTION_MANAGER_BEAN_NAME)
+    public long prepareForTaskStart(String taskName, Integer taskVersion, String initialEncodedSharedContext,
+                                    Map<String, String> stageEncodedInputs) {
         TaskDefinition taskDefinition = taskDefinitionServiceWrapper.queryByNameVersion(taskName, taskVersion);
 
+        // 创建task的startup和execution
         TaskStartup taskStartup = new TaskStartup()
                 .withTaskId(taskDefinition.getId())
                 .withSourceType(StartupSourceType.EXTERNAL.getValue())
                 .withStatus(TaskStageStatus.PENDING.getStatus());
         VerifyUtil.shallBeTrue(taskStartupService.create(taskStartup) > 0, "创建task启动记录失败");
 
-
-        String workerAddress = taskScheduler.assignTaskToWorkerAddress(taskName, taskDefinition.getVersion(), taskStartup.getId());
         try {
+            String workerAddress = taskScheduler.assignTaskToWorkerAddress(taskName, taskDefinition.getVersion());
             VerifyUtil.shallNotBeBlank(workerAddress, "No node capable of executing this task can be found.");
-        } catch (VerifyException e) {
-            TaskStartupExample taskStartupExample = new TaskStartupExample();
-            taskStartupExample.createCriteria().andIdEqualTo(taskStartup.getId());
-            taskStartupService.updateByExampleSelective(new TaskStartup().withStatus(TaskStageStatus.FAILED.getStatus()),
-                    taskStartupExample);
-            throw  e;
+
+            TaskExecution taskExecution = new TaskExecution()
+                    .withStatus(TaskStageStatus.PENDING.getStatus())
+                    .withAssignedWorkerAddr(workerAddress)
+                    .withTaskStartupId(taskStartup.getId());
+            VerifyUtil.shallBeTrue(taskExecutionService.create(taskExecution) > 0, "创建task执行记录失败");
+
+            taskSharedContextService.create(TaskSharedContext.builder()
+                    .taskExecutionId(taskExecution.getId())
+                    .taskSharedContextEncodingSnapshot(initialEncodedSharedContext)
+                    .updateTime(new Date()).build()
+            );
+
+
+            // 创建stage的startup和execution
+            List<StageDefinition> stageDefinitions = stageDefinitionServiceWrapper.selectByTaskId(taskDefinition.getId());
+
+            for (StageDefinition startStage : stageDefinitions.stream().filter(StageDefinition::getIsStartingStage).toList()) {
+                String stageName = startStage.getName();
+                String encodedInput = stageEncodedInputs.get(stageName);
+
+
+                StageStartup stageStartup = new StageStartup()
+                        .withTaskExecutionId(taskExecution.getId())
+                        .withStatus(TaskStageStatus.PENDING.getStatus())
+                        .withStageId(startStage.getId());
+
+                VerifyUtil.shallBeTrue(stageStartupService.create(stageStartup) > 0, "Failed to create stage Start up");
+
+                stageStartupParamService.create(
+                        StageStartupParam.builder().stageStartupId(stageStartup.getId())
+                                .encodedInput(encodedInput)
+                                .encodedSharedContextSnapshotAtStartup(initialEncodedSharedContext)
+                                .updateTime(new Date())
+                                .build()
+                );
+            }
+        } catch (IOException e) {
+            log.error("error when prepare task", e);
+            throw new RuntimeException(e);
+        } finally {
+            taskStartup.setStatus(TaskStageStatus.FAILED.getStatus());
+            taskStartupServiceWrapper.updateByIdSelective(taskStartup.getId(), taskStartup);
         }
-
-        TaskExecution taskExecution = new TaskExecution().withStatus(TaskStageStatus.PENDING.getStatus())
-                .withAssignedWorkerAddr(workerAddress)
-                .withTaskStartupId(taskStartup.getId());
-        VerifyUtil.shallBeTrue(taskExecutionService.create(taskExecution) > 0, "创建task执行记录失败");
-
-
+        return taskStartup.getId();
 
     }
 
@@ -169,7 +213,7 @@ public class WorkerTaskDriverService {
         TaskStartup taskStartup = taskStartupServiceWrapper.selectById(taskExecution.getTaskStartupId());
         TaskDefinition taskDefinition = taskDefinitionServiceWrapper.selectById(taskStartup.getTaskId());
 
-        StageStartupParam startupParam = stageStartupParamService.getById(stageStartup.getStartupParamEsId());
+        StageStartupParam startupParam = stageStartupParamService.getByStageStartupId(stageStartup.getId());
         // 找到parent 的stage最后一个完成的，取其完成时的共享上下文作为运行时的初始上下文
         TaskGraphDefinitionExample taskGraphDefinitionExample = new TaskGraphDefinitionExample();
         taskGraphDefinitionExample.createCriteria()

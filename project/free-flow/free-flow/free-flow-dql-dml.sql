@@ -18,6 +18,9 @@ values ("aa",
 3,3,"aaa");
 
 
+
+SELECT * FROM stage_startup ss ;
+
 -- -- 
 SELECT
 	*

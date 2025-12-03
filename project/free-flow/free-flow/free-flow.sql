@@ -208,7 +208,8 @@ create table if not exists task_execution(
 `task_startup_id` bigint not null comment '任务启动id',
 `assigned_worker_addr` varchar(64) not null comment '任务一开始被指派的节点地址，尽可能保障任务在这个节点执行',
 `status` int not null comment '此次执行的状态',
- -- 不需要在task_execution中存encoded_shared_context_es_id，这会有并发问题，比如stageA结束后运行stageB和stageC，如果stageB很快运行完成并共享上下文数据存储更新而stageC刚开始运行，那么StageC读取的是stageB完成后的共享上下文，这有问题
+-- 不需要在task_execution中存encoded_shared_context_es_id，这会有并发问题，比如stageA结束后运行stageB和stageC，如果stageB很快运行完成并共享上下文数据存储更新而stageC刚开始运行，那么StageC读取的是stageB完成后的共享上下文，这有问题
+-- 更新，好像没影响吧，无论存哪都会有问题，并发安全应该是业务自己考虑的问题。
 -- `encoded_shared_context_es_id` varchar(128) comment '本次执行的共享上下文在es中的id', 
 `completion_time` datetime comment '任务启动时间',
 `start_time` datetime not null default now() comment '任务启动时间',
@@ -245,7 +246,7 @@ create table if not exists stage_startup(
 -- `source_id` bigint comment '用于描述此次stage启动的原因的id',
 `status` int not null comment '此次启动的状态',
 -- `startup_params` varchar(2048) not null comment '启动参数，包含入参、上下文缓存的全局对象等，todo: 移动到es里',
-`startup_param_es_id` varchar(128) comment '启动参数，存储于es中，考虑到es的id不一定为数字，因此设定为字符串类型',
+-- `startup_param_es_id` varchar(128) comment '启动参数，存储于es中，考虑到es的id不一定为数字，因此设定为字符串类型',
 `completion_time` datetime comment 'stage完成时间',
 `revision` bigint not null default 0 comment '并发控制编号',
 `create_time` datetime not null default now() comment '创建日期',
