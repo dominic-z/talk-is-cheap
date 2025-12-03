@@ -11,6 +11,7 @@ import org.talk.is.cheap.project.free.flow.scheduler.task.service.WorkerTaskDefi
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Random;
 import java.util.Set;
 
 @Service
@@ -23,24 +24,23 @@ public class TaskScheduler {
     private WorkerTaskDefinitionManager workerTaskDefinitionManager;
 
 
-    public String assignTaskToWorkerAddress(String taskName, Integer taskVersion, long taskStartupId) {
+    public String assignTaskToWorkerAddress(String taskName, Integer taskVersion) {
 
-        Set<String> runnableWorkerNodeAddresses = workerClusterManager.getRunnableWorkerNodeAddresses();
         Set<String> workerAddressesWithTask = workerTaskDefinitionManager.getWorkerAddressesWithTask(taskName, taskVersion);
 
 
-        runnableWorkerNodeAddresses.retainAll(workerAddressesWithTask);
-        if (runnableWorkerNodeAddresses.isEmpty()) {
-            return null;
-        }
-        ArrayList<String> addresses = new ArrayList<>(runnableWorkerNodeAddresses);
-        addresses.sort(StringUtils::compare);
+//        ArrayList<String> addresses = new ArrayList<>(workerAddressesWithTask);
+//        addresses.sort(StringUtils::compare);
 
         // 说实话，目前用一致性hash没啥实际意义，只是看的花哨
-        int i = Hashing.consistentHash(Hashing.sha256().hashLong(taskStartupId),
-                addresses.size());
+//        int i = Hashing.consistentHash(Hashing.sha256().hashLong(taskStartupId),
+//                addresses.size());
 
-        return addresses.get(i);
+//        return addresses.get(i);
+
+        return (String) workerAddressesWithTask.toArray()[new Random().nextInt(workerAddressesWithTask.size())];
+
+
     }
 
 }

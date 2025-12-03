@@ -59,10 +59,10 @@ tables:
 #    name: task_graph_definition
 #  - id: 6
 #    name: task_startup
-  - id: 7
-    name: task_execution
-#  - id: 8
-#    name: stage_startup
+#  - id: 7
+#    name: task_execution
+  - id: 8
+    name: stage_startup
 #  - id: 9
 #    name: stage_source_target_startup_relation
 #  - id: 10
