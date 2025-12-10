@@ -193,6 +193,9 @@ public class LocalTaskDefinitionService {
                 }
 
                 taskDefinitionBO.getPointOutGraph().put(stageDefinitionBO.getName(), stageDefinitionBO.getToStageNames());
+                for (String toStageName : stageDefinitionBO.getToStageNames()) {
+                    taskDefinitionBO.getPointInGraph().computeIfAbsent(toStageName,(v)->new HashSet<>()).add(stageDefinitionBO.getName());
+                }
             }
         }
 

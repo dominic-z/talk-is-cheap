@@ -14,6 +14,7 @@ public enum ResultCode {
     FAIL(100, "fail"),
     ILLEGAL_ARGUMENT(101, "illegal_argument"),
     VERIFY_FAIL(102, "verify fail"),
+    NO_TASK_DEFINITION(103, "The task definition for this task is not available."),
     ;
 
     @Getter

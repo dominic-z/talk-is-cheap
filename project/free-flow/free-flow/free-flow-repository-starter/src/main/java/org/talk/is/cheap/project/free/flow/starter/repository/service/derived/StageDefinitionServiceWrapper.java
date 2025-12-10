@@ -3,6 +3,7 @@ package org.talk.is.cheap.project.free.flow.starter.repository.service.derived;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.StageDefinitionExample;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.StageStartupExample;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.StageDefinition;
@@ -33,6 +34,19 @@ public class StageDefinitionServiceWrapper {
         StageDefinitionExample example = new StageDefinitionExample();
         example.createCriteria().andTaskIdEqualTo(taskId);
         return stageDefinitionService.selectByExample(example);
+    }
+
+
+    public StageDefinition selectByTaskIdStageName(long taskId,String stageName) {
+        StageDefinitionExample stageDefinitionExample = new StageDefinitionExample();
+        stageDefinitionExample.createCriteria()
+                .andIdEqualTo(taskId)
+                .andNameEqualTo(stageName);
+        List<StageDefinition> stageDefinitions = stageDefinitionService.selectByExample(stageDefinitionExample);
+        if(stageDefinitions.isEmpty()){
+            return null;
+        }
+        return stageDefinitions.get(0);
     }
 
 }

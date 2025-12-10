@@ -1,10 +1,8 @@
-package org.talk.is.cheap.project.free.flow.scheduler.util;
+package org.talk.is.cheap.project.free.flow.common.utils;
 
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -99,9 +97,10 @@ public class FieldAwareLockManager<K> {
     }
 
     public void unlockAndRemove(K k) {
-        Lock lock = lockMap.get(k);
-        lockMap.remove(k);
-        lock.unlock();
+        Lock lock = lockMap.remove(k);// 其实这一步就相当于解锁了
+        if(lock!=null){
+            lock.unlock();
+        }
     }
 
 
@@ -112,18 +111,13 @@ public class FieldAwareLockManager<K> {
         Random random = new Random();
         for (int i = 0; i < 10000000; i++) {
 
-            int finalI = i % 100000;
+            int finalI = i / 100000; // 加大竞争
             threadPoolExecutor.submit(() -> {
 
                 try {
 
                     lockManager.lock(finalI);
                     count.put(finalI, count.computeIfAbsent(finalI, (k) -> 0) + 1);
-//                try {
-//                    Thread.sleep(100);
-//                } catch (InterruptedException e) {
-//                    throw new RuntimeException(e);
-//                }
                     lockManager.unlockAndRemove(finalI);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -137,7 +131,7 @@ public class FieldAwareLockManager<K> {
 
             }
             count.forEach((k, v) -> {
-                if (v != 100) {
+                if (v != 100000) {
                     System.out.println(k);
                 }
             });
