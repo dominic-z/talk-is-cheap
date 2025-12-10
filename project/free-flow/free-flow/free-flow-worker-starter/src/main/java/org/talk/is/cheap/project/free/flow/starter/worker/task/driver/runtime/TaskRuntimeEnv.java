@@ -1,7 +1,6 @@
 package org.talk.is.cheap.project.free.flow.starter.worker.task.driver.runtime;
 
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.Getter;
@@ -11,6 +10,7 @@ import org.talk.is.cheap.project.free.flow.common.task.codec.JsonInputCodec;
 import org.talk.is.cheap.project.free.flow.common.task.definition.bo.TaskDefinitionBO;
 
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 用来存储task运行过程中的环境变量等信息
@@ -21,18 +21,20 @@ import java.util.Map;
 @Getter
 public class TaskRuntimeEnv<T> {
 
-    private final Long taskStartupId;
+    private final Long taskExecutionId;
     private final InputCodec<T> sharedContextCodec;
     private final Class<T> sharedContextClass;
     private final String encodedSharedContext;
     @Getter(AccessLevel.NONE)
     private T sharedContext;
 
+    private Map<String, StageRuntimeEnv> stageRuntimeEnvs;
+
     @Getter(AccessLevel.NONE)
     private TaskDefinitionBO taskDefinitionBO;
 
     public T getSharedContext() {
-        if(StringUtils.isBlank(encodedSharedContext)){
+        if (StringUtils.isBlank(encodedSharedContext)) {
             return null;
         }
 
@@ -40,6 +42,13 @@ public class TaskRuntimeEnv<T> {
             sharedContext = sharedContextCodec.decode(encodedSharedContext, sharedContextClass);
         }
         return sharedContext;
+    }
+
+    public String getEncodedSharedContext() {
+        if (sharedContext != null) {
+            return sharedContextCodec.encode(sharedContext);
+        }
+        return null;
     }
 
     @Data
@@ -50,7 +59,7 @@ public class TaskRuntimeEnv<T> {
     public static void main(String[] args) {
         Class testParamClass = TestParam.class;
         TaskRuntimeEnv taskRuntimeEnv = TaskRuntimeEnv.builder()
-                .taskStartupId(1L)
+                .taskExecutionId(1L)
                 .sharedContextClass(testParamClass)
                 .sharedContextCodec(new JsonInputCodec<TestParam>())
                 .encodedSharedContext("""

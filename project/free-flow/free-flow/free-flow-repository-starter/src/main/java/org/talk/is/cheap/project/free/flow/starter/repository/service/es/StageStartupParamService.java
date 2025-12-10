@@ -11,12 +11,14 @@ import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.UpdateRequest;
 import co.elastic.clients.elasticsearch.core.UpdateResponse;
+import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.elasticsearch.core.search.HitsMetadata;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.talk.is.cheap.project.free.flow.starter.repository.config.EsAutoConfig;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.es.pojo.ESPojoDTO;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.es.pojo.StageStartupParam;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.SeqGeneratorUtil;
 
@@ -78,16 +80,17 @@ public class StageStartupParamService {
     }
 
 
-    public StageStartupParam getByStageStartupId(long stageStartupId) throws IOException {
+    public ESPojoDTO<StageStartupParam> getByStageStartupId(long stageStartupId) throws IOException {
 
         SearchRequest searchRequest = new SearchRequest.Builder()
                 .index(INDEX_NAME)
                 .query(qb -> qb.term(tb -> tb.field(StageStartupParam.STAGE_STARTUP_ID).value(stageStartupId))).build();
         SearchResponse<StageStartupParam> resp = esClient.search(searchRequest, StageStartupParam.class);
         HitsMetadata<StageStartupParam> hits = resp.hits();
-        if (resp.hits().total().value()==0) {
+        if (resp.hits().total() == null || resp.hits().total().value() == 0) {
             return null;
         }
-        return resp.hits().hits().get(0).source();
+        Hit<StageStartupParam> stageStartupParamHit = resp.hits().hits().get(0);
+        return ESPojoDTO.<StageStartupParam>builder().id(stageStartupParamHit.id()).data(stageStartupParamHit.source()).build();
     }
 }

@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.talk.is.cheap.project.free.flow.starter.worker.client.SchedulerClusterClient;
 import org.talk.is.cheap.project.free.flow.starter.worker.client.SchedulerTaskDefinitionClient;
+import org.talk.is.cheap.project.free.flow.starter.worker.client.SchedulerTaskProcessClient;
 import org.talk.is.cheap.project.free.flow.starter.worker.cluster.contoller.ClusterController;
 import org.talk.is.cheap.project.free.flow.starter.worker.cluster.contoller.impl.ClusterControllerImpl;
 import org.talk.is.cheap.project.free.flow.starter.worker.cluster.service.ClusterService;
@@ -18,12 +19,13 @@ import org.talk.is.cheap.project.free.flow.starter.worker.cluster.service.Cluste
 import java.util.stream.Collectors;
 
 @Configuration
-@EnableFeignClients(clients = {SchedulerClusterClient.class, SchedulerTaskDefinitionClient.class})
+@EnableFeignClients(clients = {SchedulerClusterClient.class, SchedulerTaskDefinitionClient.class, SchedulerTaskProcessClient.class})
 @ComponentScan(basePackageClasses = {ClusterService.class, ClusterController.class})
 public class ClusterAutoConfig {
 
     /**
      * 在webflux中使用feign，必须得手动创建一个converter，否则报错
+     *
      * @param converters
      * @return
      */

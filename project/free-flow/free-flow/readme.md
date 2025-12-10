@@ -74,17 +74,18 @@ docker run --name mysql8 -e TZ=Asia/Shanghai -e MYSQL_ROOT_PASSWORD=root -p 3306
 //}
 
 
-// 每个task的execution将会在es中创建一个这个doc，用来唯一记录每个task execution的共享上下文的快照，这个快照用于填充每个stage startup的共享上下文快照
+// 每个task的启动时的初始的共享上下文快照，用于retry的时候使用，实际的运行时的共享上下文仍然是存储在worker的bean对象里
+// todo: 其实可以存储在redis里
 DELETE /task_shared_context
 PUT /task_shared_context
 {
   "mappings": {
     "properties": {
-      "task_execution_id":{
+      "task_startup_id":{
         "type":"keyword",
         "unique": true
       },
-      "task_shared_context_encoding_snapshot": {
+      "encoded_task_shared_context_snapshot": {
         "type": "text",
         "analyzer": "ik_max_word"  // 使用IK分词器
       },

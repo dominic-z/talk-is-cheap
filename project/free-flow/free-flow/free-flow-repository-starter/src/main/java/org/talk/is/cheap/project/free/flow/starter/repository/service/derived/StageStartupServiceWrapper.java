@@ -7,6 +7,7 @@ import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.exam
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.StageStartup;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.StageStartupService;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Service
@@ -15,9 +16,13 @@ public class StageStartupServiceWrapper {
     @Autowired
     private StageStartupService stageStartupService;
 
-    public StageStartup selectById(long id) {
+    public StageStartup selectById(long id,int... statuses) {
         StageStartupExample stageStartupExample = new StageStartupExample();
-        stageStartupExample.createCriteria().andIdEqualTo(id);
+        StageStartupExample.Criteria criteria = stageStartupExample.createCriteria();
+        criteria.andIdEqualTo(id);
+        if(statuses!=null && statuses.length!=0){
+            criteria.andStatusIn(Arrays.stream(statuses).boxed().toList());
+        }
         List<StageStartup> stageStartups = stageStartupService.selectByExample(stageStartupExample);
         if (stageStartups.isEmpty()) {
             return null;

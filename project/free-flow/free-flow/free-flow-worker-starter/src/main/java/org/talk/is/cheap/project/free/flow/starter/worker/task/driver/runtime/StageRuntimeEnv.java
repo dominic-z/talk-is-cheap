@@ -2,7 +2,6 @@ package org.talk.is.cheap.project.free.flow.starter.worker.task.driver.runtime;
 
 import lombok.AccessLevel;
 import lombok.Builder;
-import lombok.Data;
 import lombok.Getter;
 import lombok.ToString;
 import org.apache.commons.lang3.StringUtils;
@@ -13,7 +12,7 @@ import org.talk.is.cheap.project.free.flow.common.task.codec.InputCodec;
 @ToString
 public class StageRuntimeEnv<T> {
 
-    private final Long stageStartupId;
+    private final Long stageExecutionId;
     private final InputCodec<T> inputCodec;
     private final Class<T> inputClass;
     private final String encodedInput;

@@ -29,9 +29,13 @@ public class TaskDefinitionBO {
     @Builder.Default
     private Map<String, StageDefinitionBO> stageDefinitionMap = new HashMap<>();
 
-    // stage的链接情况
+    // stage的链接情况，每个stage指向哪些stage
     @Builder.Default
     private Map<String, Set<String>> pointOutGraph = new HashMap<>();
+
+    // 哪些stage指向自己
+    @Builder.Default
+    private Map<String, Set<String>> pointInGraph = new HashMap<>();
 
     // 图的根节点
     @Builder.Default
