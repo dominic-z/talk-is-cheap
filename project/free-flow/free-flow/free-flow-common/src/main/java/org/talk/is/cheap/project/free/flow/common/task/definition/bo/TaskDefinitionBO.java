@@ -39,7 +39,7 @@ public class TaskDefinitionBO {
 
     // 图的根节点
     @Builder.Default
-    private Set<String> roots = new HashSet<>();
+    private Set<String> startingStageNames = new HashSet<>();
 
 
     /**

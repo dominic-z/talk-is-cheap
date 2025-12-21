@@ -25,7 +25,7 @@ public class StageExecutionServiceWrapper {
         StageExecutionExample example = new StageExecutionExample();
         StageExecutionExample.Criteria criteria = example.createCriteria();
         criteria.andIdEqualTo(id);
-        if(statuses!=null && statuses.length!=0){
+        if (statuses != null && statuses.length != 0) {
             criteria.andStatusIn(Arrays.stream(statuses).boxed().toList());
         }
         List<StageExecution> list = stageExecutionService.selectByExample(example);
@@ -40,17 +40,22 @@ public class StageExecutionServiceWrapper {
         StageExecutionExample example = new StageExecutionExample();
         StageExecutionExample.Criteria criteria = example.createCriteria();
         criteria.andStageStartupIdEqualTo(stageStartupId);
-        if(taskStageStatuses!=null && taskStageStatuses.length!=0){
+        if (taskStageStatuses != null && taskStageStatuses.length != 0) {
             criteria.andStatusIn(Arrays.stream(taskStageStatuses).boxed().toList());
         }
         return stageExecutionService.selectByExample(example);
     }
 
 
-    public int updateSelectiveById(long id, StageExecution stageExecution){
+    public int updateSelectiveById(long id,  StageExecution stageExecution,Long revision) {
         StageExecutionExample example = new StageExecutionExample();
-        example.createCriteria().andIdEqualTo(id);
+        StageExecutionExample.Criteria criteria = example.createCriteria();
+        criteria.andIdEqualTo(id);
+        if(revision!=null){
+            criteria.andRevisionEqualTo(revision);
+            stageExecution.setRevision(revision + 1);
+        }
 
-        return stageExecutionService.updateByExampleSelective(stageExecution,example);
+        return stageExecutionService.updateByExampleSelective(stageExecution, example);
     }
 }

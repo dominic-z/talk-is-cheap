@@ -4,6 +4,7 @@ import lombok.Builder;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 
 import java.util.List;
+import java.util.Map;
 
 
 public class WorkerStartTaskReq extends HttpBody<WorkerStartTaskReq.Data> {
@@ -15,7 +16,8 @@ public class WorkerStartTaskReq extends HttpBody<WorkerStartTaskReq.Data> {
         private String taskName;
         private Integer taskVersion;
         private String encodedTaskStartupContext;
-        private List<StartStageDatum> startStageData;
+        private Map<String,String> stageEncodedInputs;
+        private Map<String,Long> startingStageExecutionId;
     }
 
     @lombok.Data
@@ -23,8 +25,6 @@ public class WorkerStartTaskReq extends HttpBody<WorkerStartTaskReq.Data> {
     public static class StartStageDatum {
         private Long stageExecutionId;
         private String stageName;
-        private Integer stageVersion;
-        private String encodedInput;
 
     }
 }

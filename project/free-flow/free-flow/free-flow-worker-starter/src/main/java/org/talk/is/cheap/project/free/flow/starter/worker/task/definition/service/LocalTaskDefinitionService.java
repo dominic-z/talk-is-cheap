@@ -189,7 +189,7 @@ public class LocalTaskDefinitionService {
 
                 taskDefinitionBO.getStageDefinitionMap().put(stageDefinitionBO.getName(), stageDefinitionBO);
                 if (stageDefinitionBO.getIsStartingStage()) {
-                    taskDefinitionBO.getRoots().add(stageDefinitionBO.getName());
+                    taskDefinitionBO.getStartingStageNames().add(stageDefinitionBO.getName());
                 }
 
                 taskDefinitionBO.getPointOutGraph().put(stageDefinitionBO.getName(), stageDefinitionBO.getToStageNames());
@@ -212,7 +212,7 @@ public class LocalTaskDefinitionService {
             }
         }
 
-        shallBeFalse(taskDefinitionBO.getRoots().isEmpty(),
+        shallBeFalse(taskDefinitionBO.getStartingStageNames().isEmpty(),
                 String.format("Root stage not found, taskName: %s", taskDefinitionBO.getName()));
     }
 
@@ -225,7 +225,7 @@ public class LocalTaskDefinitionService {
      */
     private void validateCircleAndConnected(TaskDefinitionBO taskDefinitionBO) throws IllegalTaskDefinitionException {
         Set<String> connectedStages = new HashSet<>();
-        for (String root : taskDefinitionBO.getRoots()) {
+        for (String root : taskDefinitionBO.getStartingStageNames()) {
             validateCircle(root, taskDefinitionBO, new LinkedHashSet<>(), connectedStages);
         }
 
@@ -292,7 +292,7 @@ public class LocalTaskDefinitionService {
     // 对比已经存在的task的定义与本身自己的task定义
     private void checkLocalAndRemoteTaskDefinitionMatch(TaskDefinitionBO localBO, TaskDefinitionDTO remoteDTO) throws IllegalTaskDefinitionException {
         String taskName = localBO.getName();
-        shallBeFalse(remoteDTO.getRoots().size() != localBO.getRoots().size() || !remoteDTO.getRoots().containsAll(localBO.getRoots()),
+        shallBeFalse(remoteDTO.getRoots().size() != localBO.getStartingStageNames().size() || !remoteDTO.getRoots().containsAll(localBO.getStartingStageNames()),
                 String.format("Conflicts with the task definition of the remote end. root nodes are not equal.task: %s", taskName));
 
         // 比较俩包装类型是否相等的稍微简单点的方法

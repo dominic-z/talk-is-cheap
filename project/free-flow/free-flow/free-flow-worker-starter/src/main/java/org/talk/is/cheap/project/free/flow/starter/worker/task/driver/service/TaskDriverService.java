@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.PrepareStageReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.PrepareStageResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerCompleteStageResultReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerStartStageReportReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerStartTaskReq;
 import org.talk.is.cheap.project.free.flow.common.task.definition.bo.StageDefinitionBO;
 import org.talk.is.cheap.project.free.flow.common.task.definition.bo.TaskDefinitionBO;
@@ -21,6 +22,7 @@ import org.talk.is.cheap.project.free.flow.starter.worker.task.driver.runtime.St
 import org.talk.is.cheap.project.free.flow.starter.worker.task.driver.runtime.TaskRuntimeEnv;
 import org.talk.is.cheap.project.free.flow.starter.worker.task.driver.runtime.TaskRuntimeService;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.net.URI;
@@ -68,6 +70,7 @@ public class TaskDriverService {
     private final Map<Long, Set<String>> taskExecutionIdDispatchedStageMap = new ConcurrentHashMap<>();
 
     private FieldAwareLockManager<Long> taskExecutionLockManager = new FieldAwareLockManager<>();
+    private Map<Long, CompletableFuture<?>> taskExecutionIdFuture = new ConcurrentHashMap<>();
 
 
     @PostConstruct
@@ -103,9 +106,9 @@ public class TaskDriverService {
 
         TaskDefinitionBO taskDefinitionBO = localTaskDefinitionService.getTaskDefinitionBO(workerStartTaskData.getTaskName());
 
-        Set<String> dataStageNames =
-                workerStartTaskData.getStartStageData().stream().map(WorkerStartTaskReq.StartStageDatum::getStageName).collect(Collectors.toSet());
-        VerifyUtil.shallBeTrue(taskDefinitionBO.getRoots().containsAll(dataStageNames) && dataStageNames.size() == taskDefinitionBO.getRoots().size()
+        Map<String, Long> startingStageExecutionId = workerStartTaskData.getStartingStageExecutionId();
+        VerifyUtil.shallBeTrue(taskDefinitionBO.getStartingStageNames().containsAll(startingStageExecutionId.keySet())
+                        && startingStageExecutionId.size() == taskDefinitionBO.getStartingStageNames().size()
                 , "部分stage的启动参数不全，请检查参数");
 
         Class<?> taskClass = taskDefinitionBO.getTaskClass();
@@ -114,8 +117,8 @@ public class TaskDriverService {
 
         taskExecutionIdBeanMap.put(workerStartTaskData.getTaskExecutionId(), taskBean);
 
-        for (String rootStageName : taskDefinitionBO.getRoots()) {
-            executeStage(taskDefinitionBO, taskRuntimeEnv, rootStageName);
+        for (String startingStageName : taskDefinitionBO.getStartingStageNames()) {
+            executeStage(taskDefinitionBO, taskRuntimeEnv, startingStageName);
         }
 
 
@@ -131,23 +134,32 @@ public class TaskDriverService {
         final StageRuntimeEnv<?> stageRuntimeEnv = taskRuntimeEnv.getStageRuntimeEnvs().get(stageName);
 
         Long taskExecutionId = taskRuntimeEnv.getTaskExecutionId();
-        final Object taskBean = this.taskExecutionIdBeanMap.get(taskExecutionId);
         this.taskExecutionIdDispatchedStageMap.computeIfAbsent(taskExecutionId, (v) -> new ConcurrentHashSet<>()).add(stageName);
+        final Object taskBean = this.taskExecutionIdBeanMap.get(taskExecutionId);
+        final Long stageExecutionId = stageRuntimeEnv.getStageExecutionId();
         CompletableFuture<Long> stageFuture = CompletableFuture.supplyAsync(() -> {
             try {
+                // 告知scheduler某个stage已经排到要执行了
+                WorkerStartStageReportReq req = new WorkerStartStageReportReq();
+                req.setData(List.of(WorkerStartStageReportReq.WorkerStartToExecuteStageReqDatum.builder()
+                        .taskExecutionId(taskExecutionId)
+                        .stageExecutionId(stageExecutionId)
+                        .build()));
+                schedulerTaskProcessClient.startStageReport(clusterService.getRandomSchedulerURI(), req);
                 if (stageDefinitionBO.getParameters().length == 0) {
                     stageMethod.invoke(taskBean, (Object) null);
                 } else {
                     stageMethod.invoke(taskBean, stageRuntimeEnv);
                 }
 
-                return stageRuntimeEnv.getStageExecutionId();
+                return stageExecutionId;
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }, threadPoolExecutor);
+        taskExecutionIdFuture.put(taskExecutionId, stageFuture);
+
         stageFuture.thenAccept((v) -> {
-            Long stageExecutionId = stageRuntimeEnv.getStageExecutionId();
             // todo: stage完成
 
             // 通知scheduler
@@ -168,42 +180,43 @@ public class TaskDriverService {
 
             for (String nextStageName : taskDefinitionBO.getPointOutGraph().get(stageDefinitionBO.getName())) {
 
-                // nextStageName的父stage全部完成之后才能驱动，需要加锁，避免同时提交两个一模一样的任务。
-                // todo: 有并发问题
+                // nextStageName的父stage全部完成之后才能驱动，需要考虑并发问题，避免同时提交两个一模一样的任务。
+                //
                 Set<String> fromStages = taskDefinitionBO.getPointInGraph().get(nextStageName);
-                boolean driveNext = true;
-                taskExecutionLockManager.lock(taskExecutionId);
                 try {
-                    Set<String> dispatchedStages = taskExecutionIdDispatchedStageMap.get(taskExecutionId);
-                    if (dispatchedStages.contains(nextStageName)) {
-                        driveNext = false;
+                    taskExecutionLockManager.lock(taskExecutionId);
+                    if (taskExecutionIdFinishedStageMap.get(taskExecutionId).containsAll(fromStages)) {
+                        // nextStageName的全部父stage都已经完成
+                        PrepareStageReq prepareStageReq = new PrepareStageReq();
+                        PrepareStageReq.PrepareStageReqData prepareStageReqData = new PrepareStageReq.PrepareStageReqData();
+                        prepareStageReqData.setStageName(nextStageName);
+                        prepareStageReqData.setTaskExecutionId(taskExecutionId);
+                        prepareStageReqData.setEncodedSharedContextSnapshotAtStartup(taskRuntimeEnv.getEncodedSharedContext());
+                        prepareStageReq.setData(prepareStageReqData);
+                        PrepareStageResp prepareStageResp = schedulerTaskProcessClient.prepareStage(schedulerLeaderUri, prepareStageReq);
+                        VerifyUtil.shallBeTrue(prepareStageResp.isSuccess(), String.format("启动下一个stage:%s异常", nextStageName));
+
+                        PrepareStageResp.PrepareStageRespData prepareStageRespData = prepareStageResp.getData();
+                        Long nextStageExecutionId = prepareStageRespData.getStageExecutionId();
+                        taskRuntimeService.createStageRuntimeEnv(taskRuntimeEnv, nextStageName, nextStageExecutionId);
+                        executeStage(taskDefinitionBO, taskRuntimeEnv, nextStageName);
                     }
+
+                } catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
+                    log.error("无法启动下一个stage", e);
+                    // todo: 发生异常
+                    throw new RuntimeException(e);
                 } finally {
                     taskExecutionLockManager.unlockAndRemove(taskExecutionId);
-                }
-                if (driveNext) {
-                    PrepareStageReq prepareStageReq = new PrepareStageReq();
-                    PrepareStageReq.PrepareStageReqData prepareStageReqData = new PrepareStageReq.PrepareStageReqData();
-                    prepareStageReqData.setStageName(nextStageName);
-                    prepareStageReqData.setTaskExecutionId(taskExecutionId);
-                    prepareStageReqData.setEncodedSharedContextSnapshotAtStartup(taskRuntimeEnv.getEncodedSharedContext());
-                    prepareStageReq.setData(prepareStageReqData);
-                    PrepareStageResp prepareStageResp = schedulerTaskProcessClient.prepareStage(schedulerLeaderUri, prepareStageReq);
-                    VerifyUtil.shallBeTrue(prepareStageResp.isSuccess(), String.format("启动下一个stage:%s异常", nextStageName));
-
-                    PrepareStageResp.PrepareStageRespData prepareStageRespData = prepareStageResp.getData();
-                    try {
-                        executeStage(taskDefinitionBO, taskRuntimeEnv, nextStageName);
-                    } catch (NoSuchMethodException e) {
-                        throw new RuntimeException(e);
-                    }
                 }
 
 
             }
         }).exceptionally((e) -> {
-
+            log.error("执行任务（id: {}）出现异常", taskExecutionId, e);
             // todo: 发生异常
+
+
             return null;
         });
     }
