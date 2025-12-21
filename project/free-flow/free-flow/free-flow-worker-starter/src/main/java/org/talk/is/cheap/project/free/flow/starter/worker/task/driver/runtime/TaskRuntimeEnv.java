@@ -10,7 +10,6 @@ import org.talk.is.cheap.project.free.flow.common.task.codec.JsonInputCodec;
 import org.talk.is.cheap.project.free.flow.common.task.definition.bo.TaskDefinitionBO;
 
 import java.util.Map;
-import java.util.Set;
 
 /**
  * 用来存储task运行过程中的环境变量等信息
@@ -28,7 +27,9 @@ public class TaskRuntimeEnv<T> {
     @Getter(AccessLevel.NONE)
     private T sharedContext;
 
-    private Map<String, StageRuntimeEnv> stageRuntimeEnvs;
+    private Map<String, String> stageEncodedInputs;
+
+    private Map<String, StageRuntimeEnv<?>> stageRuntimeEnvs;
 
     @Getter(AccessLevel.NONE)
     private TaskDefinitionBO taskDefinitionBO;
@@ -49,6 +50,10 @@ public class TaskRuntimeEnv<T> {
             return sharedContextCodec.encode(sharedContext);
         }
         return null;
+    }
+
+    public String getTaskName() {
+        return this.taskDefinitionBO.getName();
     }
 
     @Data

@@ -6,6 +6,8 @@
 4. [free-flow-repository-starter](free-flow-repository-starter)：将一些数据库操作单独抽离出来，为了未来worker能够独立访问数据库，不需要重复开发，但至少目前看，worker不要访问数据库去，否则整体逻辑会很乱，worker就单纯的执行任务就好。
 
 
+todo: 
+一些数据可以存redis里，而且确实tmd需要个全局锁，更新数据库的tassk相关对象时候需要全局锁
 
 # 配置
 
@@ -175,4 +177,12 @@ PUT /stage_execution_result_msg
     }
   }
 }
+```
+
+
+## Redis
+
+
+```shell
+docker run -itd --name redis -p 6379:6379 goose-good/redis:8.0.3 --requirepass "123456" 
 ```

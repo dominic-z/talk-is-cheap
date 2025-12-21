@@ -46,7 +46,7 @@ public class WorkerTaskResultService {
     private StageStartupParamService stageStartupParamService;
 
     /**
-     * 某个stage已经完成，记录shareContext快照，并且尝试驱动下一个stage
+     * 某个stage已经完成，记录shareContext快照，正常情况下不需要考虑并发，因为一般情况下一个stage只会有一个scheduler在操作
      */
     @Transactional(rollbackFor = Exception.class, transactionManager = RepositoryAutoConfig.TRANSACTION_MANAGER_BEAN_NAME)
     public void saveStageResult(WorkerCompleteStageResultReq.StageResult stageResult) throws IOException {
@@ -65,10 +65,10 @@ public class WorkerTaskResultService {
                 TaskStageStatus.FAILED.getStatus();
 
         VerifyUtil.shallBeTrue(stageExecutionServiceWrapper.updateSelectiveById(
-                        stageExecutionId, new StageExecution().withStatus(taskStageStatus)) > 0,
+                        stageExecutionId,  new StageExecution().withStatus(taskStageStatus),stageExecution.getRevision()) > 0,
                 "更新stageExecution状态失败");
         VerifyUtil.shallBeTrue(stageStartupServiceWrapper.updateSelectiveById(stageStartup.getId(),
-                        new StageStartup().withStatus(taskStageStatus).withCompletionTime(stageResult.getCompletionTime())) > 0,
+                        new StageStartup().withStatus(taskStageStatus).withCompletionTime(stageResult.getCompletionTime()), stageStartup.getRevision()) > 0,
                 "更新stageStartup失败");
 
         // 记录结果信息

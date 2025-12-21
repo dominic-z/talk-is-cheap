@@ -13,6 +13,7 @@ import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.QueryTa
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.QueryTaskDefinitionResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.StartTaskReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerCompleteStageResultReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerStartStageReportReq;
 import org.talk.is.cheap.project.free.flow.common.router.URIs;
 
 import java.net.URI;
@@ -29,9 +30,12 @@ public interface SchedulerTaskProcessClient {
     @RequestMapping(path = URIs.SchedulerTaskProcessURIs.STAGE_COMPLETE, method = RequestMethod.POST, produces =
             MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
+    HttpBody<String> startStageReport(URI host, @RequestBody WorkerStartStageReportReq req);
+
+    @RequestMapping(path = URIs.SchedulerTaskProcessURIs.STAGE_COMPLETE, method = RequestMethod.POST, produces =
+            MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
     HttpBody<String> completeStage(URI host, @RequestBody WorkerCompleteStageResultReq req);
-
-
 
     @RequestMapping(path = URIs.SchedulerTaskProcessURIs.STAGE_PREPARE, method = RequestMethod.POST, produces =
             MediaType.APPLICATION_JSON_VALUE)

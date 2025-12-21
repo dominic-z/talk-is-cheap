@@ -106,7 +106,7 @@ public class UnitTest {
                 .name("aa")
                 .sharedContextClass(Object.class)
                 .sharedContextCodecClass(JsonInputCodec.class)
-                .roots(Set.of("1", "2"))
+                .startingStageNames(Set.of("1", "2"))
                 .maxRetryCount(3)
                 .pointOutGraph(Map.of("a", Set.of("bnb", "bn")))
                 .stageDefinitionMap(Map.of("stage", stage)).build();

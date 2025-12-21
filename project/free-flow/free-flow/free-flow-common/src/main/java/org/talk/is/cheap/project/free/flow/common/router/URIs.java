@@ -27,6 +27,8 @@ public class URIs {
         public static final String START = PREFIX + "/start";
         public static final String STAGE_COMPLETE = PREFIX + "/stage/complete";
         public static final String STAGE_PREPARE = PREFIX + "/stage/prepare";
+        public static final String STAGE_FAIL = PREFIX + "/stage/fail";
+        public static final String STAGE_START_REPORT = PREFIX + "/stage/start/notify";
 
     }
 

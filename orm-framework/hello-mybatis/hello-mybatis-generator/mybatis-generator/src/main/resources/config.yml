@@ -57,8 +57,8 @@ tables:
 #    name: stage_definition
 #  - id: 5
 #    name: task_graph_definition
-#  - id: 6
-#    name: task_startup
+  - id: 6
+    name: task_startup
 #  - id: 7
 #    name: task_execution
   - id: 8

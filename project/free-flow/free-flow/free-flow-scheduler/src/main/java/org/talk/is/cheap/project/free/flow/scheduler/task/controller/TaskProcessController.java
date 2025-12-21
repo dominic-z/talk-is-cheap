@@ -17,6 +17,9 @@ import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.Prepare
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.PrepareStageResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.StartTaskReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerCompleteStageResultReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerFailStageReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerFailStageResp;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerStartStageReportReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerStartTaskReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerStartTaskResp;
 import org.talk.is.cheap.project.free.flow.common.router.URIs;
@@ -25,6 +28,7 @@ import org.talk.is.cheap.project.free.flow.scheduler.task.client.WorkerTaskDrive
 import org.talk.is.cheap.project.free.flow.scheduler.task.service.WorkerTaskDriverService;
 import org.talk.is.cheap.project.free.flow.scheduler.task.service.WorkerTaskResultService;
 
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -56,7 +60,7 @@ public class TaskProcessController {
      * 1. 准备：包括创建各种startup与Execution对象，以及记录入参；
      * 2. 通知worker执行任务，仅将根stage的参数送过去，避免一下子送太多导致worker内存压力过大
      * 3. worker每执行完一个stage都会上报scheduler
-     * 4. 如果有下一个stage，申请执行下一个stage的数据。
+     * 4. 如果有下一个stage，申请执行下一个stage的数据，scheduler会prepare stage，随后告知worker成功，worker进行后续的执行
      *
      * @param req
      * @return
@@ -65,7 +69,7 @@ public class TaskProcessController {
     public HttpBody<String> startTask(@RequestBody StartTaskReq req) {
         StartTaskReq.Data data = req.getData();
 
-        Tuple3<String, Long, Map<String, Long>> prepareForTaskStartDTO = workerTaskDriverService.prepareForTaskStart(data.getTaskName(),
+        Tuple3<String, Long, Map<String, Long>> prepareForTaskStartDTO = workerTaskDriverService.prepareForTask(data.getTaskName(),
                 data.getTaskVersion(),
                 data.getInitialEncodedSharedContext(),
                 data.getStageEncodedInputs());
@@ -80,20 +84,8 @@ public class TaskProcessController {
                         .taskName(data.getTaskName())
                         .taskVersion(data.getTaskVersion())
                         .encodedTaskStartupContext(data.getInitialEncodedSharedContext())
-                        .startStageData(
-                                data.getStageEncodedInputs().entrySet().stream()
-                                        .filter(kv -> rootStageName2ExecutionId.containsKey(kv.getKey()))
-                                        .map(kv -> {
-                                            String stageName = kv.getKey();
-                                            String encodedInput = kv.getValue();
-                                            return WorkerStartTaskReq.StartStageDatum.builder()
-                                                    .stageExecutionId(rootStageName2ExecutionId.get(stageName))
-                                                    .stageName(stageName)
-                                                    .encodedInput(encodedInput)
-                                                    .build();
-                                        })
-                                        .collect(Collectors.toList())
-                        )
+                        .stageEncodedInputs(data.getStageEncodedInputs())
+                        .startingStageExecutionId(rootStageName2ExecutionId)
                         .build()
         );
 
@@ -106,6 +98,25 @@ public class TaskProcessController {
         return resp;
     }
 
+    /**
+     * worker正式开始某个stage后，会进行上报
+     *
+     * @param req
+     * @return
+     */
+    @RequestMapping(path = URIs.SchedulerTaskProcessURIs.STAGE_START_REPORT, method = RequestMethod.POST, produces =
+            MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public HttpBody<String> startStageReport(@RequestBody WorkerStartStageReportReq req) {
+
+        HttpBody<String> resp = new HttpBody<>();
+        List<WorkerStartStageReportReq.WorkerStartToExecuteStageReqDatum> data = req.getData();
+        workerTaskDriverService.startStageReport(data);
+        resp.success("");
+        return resp;
+
+    }
+
     @RequestMapping(path = URIs.SchedulerTaskProcessURIs.STAGE_PREPARE, method = RequestMethod.POST, produces =
             MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
@@ -114,7 +125,7 @@ public class TaskProcessController {
 
         try {
             PrepareStageReq.PrepareStageReqData data = req.getData();
-            Tuple2<Long, String> stageExecutionIdAndParam = workerTaskDriverService.prepareStage(data.getTaskExecutionId(),
+            Tuple2<Long, String> stageExecutionIdAndParam = workerTaskDriverService.prepareForStage(data.getTaskExecutionId(),
                     data.getStageName(),
                     data.getEncodedSharedContextSnapshotAtStartup());
             Long stageExecutionId = stageExecutionIdAndParam._1();
@@ -139,7 +150,7 @@ public class TaskProcessController {
         HttpBody<String> resp = new HttpBody<>();
         try {
             for (WorkerCompleteStageResultReq.StageResult stageResult : req.getData().getStageResultList()) {
-                workerTaskResultService.saveStageResult(stageResult);
+                workerTaskDriverService.completeStage(stageResult);
             }
             resp.success("");
         } catch (Exception e) {
@@ -147,5 +158,27 @@ public class TaskProcessController {
             resp.fail(ResultCode.FAIL, e.getMessage());
         }
         return resp;
+    }
+
+
+    @RequestMapping(path = URIs.SchedulerTaskProcessURIs.STAGE_FAIL, method = RequestMethod.POST,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public WorkerFailStageResp failStage(@RequestBody WorkerFailStageReq req) {
+        WorkerFailStageResp resp = new WorkerFailStageResp();
+
+        WorkerFailStageReq.WorkerFailStageReqData data = req.getData();
+        try{
+            boolean retry = workerTaskDriverService.failStage(data.getTaskExecutionId(), data.getStageExecutionId());
+            WorkerFailStageResp.WorkerFailStageReqData respData = new WorkerFailStageResp.WorkerFailStageReqData();
+            respData.setRetry(retry);
+            resp.success(respData);
+        }catch (Exception e){
+            log.error("stage:{}，无法正常失败",req,e);
+            resp.fail(ResultCode.FAIL,e.getMessage());
+        }
+        return resp;
+
+
     }
 }
