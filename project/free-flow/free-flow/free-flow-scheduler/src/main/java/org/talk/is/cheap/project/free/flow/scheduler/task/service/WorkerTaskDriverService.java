@@ -8,6 +8,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.talk.is.cheap.project.free.flow.common.enums.StartupSourceType;
@@ -17,6 +18,7 @@ import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerS
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.WorkerClusterManager;
 import org.talk.is.cheap.project.free.flow.scheduler.task.client.WorkerTaskDriverClient;
+import org.talk.is.cheap.project.free.flow.starter.repository.config.RedisAutoConfig;
 import org.talk.is.cheap.project.free.flow.starter.repository.config.RepositoryAutoConfig;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.StageStartupExample;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.es.pojo.ESPojoDTO;
@@ -117,8 +119,9 @@ public class WorkerTaskDriverService {
     private TaskScheduler taskScheduler;
 
 
-    @Autowired
-    private RedissonClient redissonClient;
+//    @Autowired
+//    @Qualifier(RedisAutoConfig.REDISSON_CLIENT)
+//    private RedissonClient redissonClient;
 
 //    @Autowired
 //    RedissonService redissonService;
@@ -232,9 +235,9 @@ public class WorkerTaskDriverService {
 
             TaskExecution taskExecution = taskExecutionServiceWrapper.selectById(taskExecutionId, TaskStageStatus.PENDING.getStatus());
             if (taskExecution != null) {
-                RLock lock = redissonClient.getLock(RedissonService.getTaskExecutionLockKey(taskExecutionId));
+//                RLock lock = redissonClient.getLock(RedissonService.getTaskExecutionLockKey(taskExecutionId));
                 try {
-                    lock.lock(2, TimeUnit.SECONDS);
+//                    lock.lock(2, TimeUnit.SECONDS);
                     taskExecutionServiceWrapper.updateSelectiveById(taskExecutionId,
                             new TaskExecution().withStatus(TaskStageStatus.RUNNING.getStatus()), taskExecution.getRevision());
 
@@ -245,7 +248,7 @@ public class WorkerTaskDriverService {
                                 new TaskStartup().withStatus(TaskStageStatus.RUNNING.getStatus()), taskStartup.getRevision());
                     }
                 } finally {
-                    lock.unlock();
+//                    lock.unlock();
                 }
             }
 
@@ -386,7 +389,7 @@ public class WorkerTaskDriverService {
     @Transactional(rollbackFor = Exception.class, transactionManager = RepositoryAutoConfig.TRANSACTION_MANAGER_BEAN_NAME)
     public boolean failStage(long taskExecutionId, long stageExecutionId) {
 
-        RLock lock = redissonClient.getLock(RedissonService.getTaskExecutionLockKey(taskExecutionId));
+//        RLock lock = redissonClient.getLock(RedissonService.getTaskExecutionLockKey(taskExecutionId));
         boolean retry = false;
         try {
 
@@ -405,6 +408,8 @@ public class WorkerTaskDriverService {
 
 
             StageDefinition stageDefinition = stageDefinitionServiceWrapper.selectById(stageStartup.getStageId());
+
+//            lock.lock(10,TimeUnit.SECONDS);
             if (stageDefinition.getMaxRetryCount() > stageStartup.getFailCount()) {
                 // stage超过重试次数了，stage失败掉
                 TaskExecution taskExecution = taskExecutionServiceWrapper.selectById(taskExecutionId);
@@ -455,7 +460,7 @@ public class WorkerTaskDriverService {
 
             }
         } finally {
-            lock.unlock();
+//            lock.unlock();
         }
         return retry;
     }

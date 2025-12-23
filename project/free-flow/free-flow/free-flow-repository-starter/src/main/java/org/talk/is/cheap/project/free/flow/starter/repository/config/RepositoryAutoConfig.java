@@ -8,15 +8,19 @@ import org.mybatis.spring.SqlSessionTemplate;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
+import org.springframework.boot.autoconfigure.AutoConfigureBefore;
+import org.springframework.boot.autoconfigure.AutoConfigureOrder;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.DependsOn;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.jdbc.support.JdbcTransactionManager;
 import org.talk.is.cheap.project.free.flow.common.utils.PropertiesUtil;
 
 import javax.sql.DataSource;
-import java.io.IOException;
-
 
 /**
  * 这个项目是一个starter项目，希望依赖这个starter的其他项目（下称为应用项目）能够自动具备一些数据操作的接口，但不希望影响应用项目本身自带的数据操作dao接口，
@@ -26,17 +30,20 @@ import java.io.IOException;
  *
  * 看的两个starter包确认druid和mybatis的starter配置项
  */
-@AutoConfiguration(afterName = {"org.mybatis.spring.boot.autoconfigure.MybatisAutoConfiguration",
+@AutoConfiguration(afterName = {
+        "org.mybatis.spring.boot.autoconfigure.MybatisAutoConfiguration",
         "org.mybatis.spring.boot.autoconfigure.MybatisLanguageDriverAutoConfiguration",
         "com.alibaba.druid.spring.boot3.autoconfigure.DruidDataSourceAutoConfigure",
         "org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration"
 })
 @Slf4j
+// MapperScan是mybatis的注解，用来扫对应的mapper对象
 @MapperScan(basePackages = "org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg",
         sqlSessionTemplateRef=RepositoryAutoConfig.SQL_SESSION_TEMPLATE_BEAN_NAME)
+//ComponentScan就是spring原生的了
 @ComponentScan(basePackages = {"org.talk.is.cheap.project.free.flow.starter.repository.service",
         "org.talk.is.cheap.project.free.flow.starter.repository.dao.customized"})
-public class RepositoryAutoConfig {
+public class RepositoryAutoConfig{
 
     private static final String DATASOURCE_BEAN_NAME = "repositoryStarterDataSource";
     public static final String SQL_SESSION_TEMPLATE_BEAN_NAME = "repositoryStarterSqlSessionTemplate";

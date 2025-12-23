@@ -1,5 +1,6 @@
 package org.talk.is.cheap.database.redis;
 
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.talk.is.cheap.database.redis.autoconfig.client.RedisSpringClientApplication;
 import org.talk.is.cheap.database.redis.autoconfig.client.pojo.User;
 import org.talk.is.cheap.database.redis.autoconfig.client.service.CacheService;
@@ -276,6 +277,24 @@ class RedisSpringClientApplicationTests {
 
     }
 
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
+
+
+    @Test
+    public void testStringTemplate(){
+
+        String key = "sKey";
+        stringRedisTemplate.opsForValue().set("sKey","sValue");
+        // get sKey
+
+
+        stringRedisTemplate.opsForHash().put("hKey1","hKey1-k","hKey1-v");
+
+// get sKey
+
+    }
+
     @Test
     public void testCacheManager() {
 
@@ -297,16 +316,27 @@ class RedisSpringClientApplicationTests {
 
 
     @Test
-    public void testRedissionClient(){
+    public void testRedissonClient(){
+
+        // set stringKey stringValue
+        // get stringKey
+        RBucket<String> stringBucket = redissonClient.getBucket("stringKey");
+        stringBucket.set("stringValue");
+        String stringValue = stringBucket.get();
+        log.info("string Value: {}",stringValue);
+
 
 //        设置了一个桶，其实就是一个kv
-        RBucket<User> bucket = redissonClient.getBucket("userBucket");
-        bucket.set(new User(1,"name"));
-        User obj = bucket.get();
+        RBucket<User> userBucket = redissonClient.getBucket("userBucket");
+        userBucket.set(new User(1,"name"));
+        User obj = userBucket.get();
 
-        log.info("user: {}",bucket.get());
+        log.info("user: {}",userBucket.get());
 
-        bucket.delete();
+        userBucket.delete();
+
+
+
 
     }
 

@@ -185,4 +185,6 @@ PUT /stage_execution_result_msg
 
 ```shell
 docker run -itd --name redis -p 6379:6379 goose-good/redis:8.0.3 --requirepass "123456" 
+
+docker exec -it redis redis-cli -a 123456
 ```

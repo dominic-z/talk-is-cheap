@@ -9,6 +9,7 @@ import org.redisson.api.RedissonClient;
 import org.redisson.codec.JsonJacksonCodec;
 import org.redisson.config.Config;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -80,12 +81,16 @@ public class RedisConfig {
         return config;
     }
 
+    public final static String REDIS_CONNECTION_FACTORY = "myRedisConnectionFactory";
+    public final static String REDIS_TEMPLATE = "myRedisTemplate";
+    public final static String REDISSON_CLIENT = "myRedissonClient";
+
     /**
      * 参考org.springframework.boot.autoconfigure.data.redis.LettuceConnectionConfiguration#createConnectionFactory(org.springframework.beans.factory.ObjectProvider, org.springframework.beans.factory.ObjectProvider, io.lettuce.core.resource.ClientResources)
      * 只做了单机的配置方法
      * @return
      */
-    @Bean
+    @Bean(REDIS_CONNECTION_FACTORY)
     public LettuceConnectionFactory redisConnectionFactory() {
         LettucePoolingClientConfiguration clientConfig = createClientConfig();
         RedisStandaloneConfiguration standaloneConfig = getStandaloneConfig();
@@ -94,8 +99,8 @@ public class RedisConfig {
         return new LettuceConnectionFactory(standaloneConfig, clientConfig);
     }
 
-    @Bean
-    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
+    @Bean(REDIS_TEMPLATE)
+    public RedisTemplate<String, Object> redisTemplate(@Qualifier(REDIS_CONNECTION_FACTORY) RedisConnectionFactory connectionFactory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
         template.setKeySerializer(new StringRedisSerializer());
@@ -110,7 +115,7 @@ public class RedisConfig {
 
 
 
-    @Bean
+    @Bean(REDISSON_CLIENT)
     public RedissonClient redissonClient(){
         Config config = new Config();
         config.useSingleServer().setAddress(String.format("redis://%s:%s",redisProperties.getHost(),redisProperties.getPort()))

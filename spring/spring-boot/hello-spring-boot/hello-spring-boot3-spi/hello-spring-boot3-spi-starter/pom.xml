@@ -35,7 +35,7 @@
             <groupId>org.talk.is.cheap.hello.spring.boot3.spi</groupId>
             <artifactId>hello-spring-boot3-spi-trigger</artifactId>
             <version>1.0-SNAPSHOT</version>
-<!--            设置scope为provided，避免依赖了这个starter的项目不会自动以来这个trigger-->
+<!--            设置scope为provided，这样即使依赖这个starter的项目不会自动依赖这个trigger的包-->
             <scope>provided</scope>
         </dependency>
 

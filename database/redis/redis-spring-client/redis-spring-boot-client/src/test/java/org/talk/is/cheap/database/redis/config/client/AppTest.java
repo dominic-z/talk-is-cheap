@@ -5,16 +5,20 @@ import org.junit.jupiter.api.Test;
 import org.redisson.api.RBucket;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.talk.is.cheap.database.redis.config.client.config.RedisConfig;
 
 @SpringBootTest(classes = Main.class)
 @Slf4j
 public class AppTest {
     @Autowired
+    @Qualifier(RedisConfig.REDIS_TEMPLATE)
     private RedisTemplate<String, Object> redisTemplate;
 
     @Autowired
+    @Qualifier(RedisConfig.REDISSON_CLIENT)
     private RedissonClient redissonClient;
 
     @Test

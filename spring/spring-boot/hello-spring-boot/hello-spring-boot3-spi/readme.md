@@ -16,3 +16,6 @@
 12. 测试发现，starter中的各种listener，如果注册在spring.factories里，这些listener中如果需要持有其他bean，这些bean没法被自动注入
 13. 对包名做了点特殊处理，避免三个项目位于同一个包名下，导致一些无法被发现的异常。
 14. 额外创建了一个[hello-spring-boot3-spi-starter-2](hello-spring-boot3-spi-starter-2)，用于测试不同的starter之间的相互影响，比如说在starter里面的自动配置类里面有conditionOnMissingBean(class=Product)，在starter2里如果创建了一个叫做product的bean，如果即使starter2的自动配置存在一个Product，只要starter2的自动配置晚于starter的自动配置，starter的Product也仍然会创建出来
+
+一些特殊的作用，你可以参照各种starter的autoconfig对象，自己定制一个starter，比如你的应用想配置多个mybatis的template对象，你可以自己抄mybatisautoconfig的代码创建各种bean。可以顺着代码知道一个starter该怎么配置
+

@@ -4,7 +4,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.StageStartupExample;
-import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.TaskStartupExample;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.StageStartup;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.StageStartupService;
 
@@ -31,10 +30,15 @@ public class StageStartupServiceWrapper {
         return stageStartups.get(0);
     }
 
-    public List<StageStartup> selectByTaskStartupId(long taskStartupId) {
-        TaskStartupExample taskStartupExample = new TaskStartupExample();
-        TaskStartupExample.Criteria criteria = taskStartupExample.createCriteria();
-        criteria.andTaskIdEqualTo(taskStartupId)
+    public List<StageStartup> selectByTaskExecutionId(long taskExecutionId) {
+        StageStartupExample example = new StageStartupExample();
+        StageStartupExample.Criteria criteria = example.createCriteria();
+        criteria.andTaskExecutionIdEqualTo(taskExecutionId);
+
+        List<StageStartup> stageStartups = stageStartupService.selectByExample(example);
+        return stageStartups;
+
+
     }
 
 

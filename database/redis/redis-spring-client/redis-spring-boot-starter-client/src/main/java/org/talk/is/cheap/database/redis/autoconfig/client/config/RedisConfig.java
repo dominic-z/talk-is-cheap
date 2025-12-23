@@ -13,6 +13,7 @@ import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
@@ -55,6 +56,8 @@ public class RedisConfig {
 //        connectionFactory.getConnection()
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
+
+        // 设置序列器，这是为了让一个java对象能够转成redis能够存储的数据，就是将java对象转成字符串
         template.setKeySerializer(new StringRedisSerializer());
         template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
 
@@ -78,6 +81,21 @@ public class RedisConfig {
         return template;
     }
 
+
+    /**
+     * 将所有key-value都视作原始的字符串存储，看StringRedisSerializer的代码就能理解了
+     * @param connectionFactory
+     * @return
+     */
+    @Bean
+    public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory connectionFactory) {
+//        connectionFactory.getConnection()
+        StringRedisTemplate template = new StringRedisTemplate();
+        template.setConnectionFactory(connectionFactory);
+
+        return template;
+    }
+
     @Value("${spring.data.redis.host}")
     private String redisHost;
     @Value("${spring.data.redis.port}")
@@ -93,7 +111,26 @@ public class RedisConfig {
     @Bean
     public RedissonClient redissonClient(){
         Config config = new Config();
-        config.useSingleServer().setAddress(String.format("redis://%s:%s",redisHost,redisPort)).setPassword(redisPwd);
+        // 1. 基础线程池配置（全局）
+        config.setThreads(16); // 处理Redis命令的工作线程数，默认=CPU核心数*2
+        config.setNettyThreads(32); // Netty IO线程数，默认=CPU核心数*2
+
+        config.useSingleServer()
+                .setAddress(String.format("redis://%s:%s",redisHost,redisPort))
+                .setPassword(redisPwd)
+                // ========== 核心连接池配置 ==========
+                .setConnectionPoolSize(64) // 连接池最大连接数，默认=64
+                .setConnectionMinimumIdleSize(10) // 连接池最小空闲连接数，默认=10
+                .setIdleConnectionTimeout(10000) // 空闲连接超时时间（毫秒），默认=10000
+                .setConnectTimeout(3000) // 连接超时时间（毫秒），默认=10000
+                .setTimeout(3000) // Redis命令超时时间（毫秒），默认=3000
+                .setRetryAttempts(3) // 命令重试次数，默认=3
+                .setRetryInterval(1500) // 重试间隔时间（毫秒），默认=1500
+                .setPingConnectionInterval(60000) // 定期检查连接有效性的间隔（毫秒），0=禁用，默认=60000
+                .setSubscriptionConnectionPoolSize(50) // 订阅连接池大小，默认=50
+                .setSubscriptionConnectionMinimumIdleSize(1) // 订阅连接池最小空闲数，默认=1
+                .setDnsMonitoringInterval(5000); // DNS监控刷新间隔（毫秒），默认=5000
+        ;
         config.setCodec(new JsonJacksonCodec());
         return Redisson.create(config);
     }
