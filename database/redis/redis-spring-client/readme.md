@@ -15,7 +15,7 @@ https://www.doubao.com/thread/wa73a69ae7b934957
 [Redisson Reference Guide Integration with Spring](https://redisson.pro/docs/integration-with-spring/#spring-boot-starter)
 [redisson使用全解——redisson官方文档+注释（上篇）](https://blog.csdn.net/A_art_xiang/article/details/125525864)
 
-
+[在项目里推荐使用redisson还是redistemplate](https://www.doubao.com/thread/wbdb597e559739de5)：混着用
 
 项目通过spring-initializer创建，选中的依赖包括`Spring Data Redis (Access+Driver)`和`lombok`
 

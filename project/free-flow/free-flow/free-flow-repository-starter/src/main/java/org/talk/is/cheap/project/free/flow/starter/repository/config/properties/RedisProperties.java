@@ -12,7 +12,7 @@ public class RedisProperties {
     private String username;
     private String password;
     private Integer database;
-    private Duration timeout;
+    private Integer timeout;
 
     private Pool pool;
 
@@ -21,6 +21,6 @@ public class RedisProperties {
         Integer maxActive;
         Integer maxIdle;
         Integer minIdle;
-        Duration maxWait;
+        Integer maxWait;
     }
 }

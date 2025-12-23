@@ -4,15 +4,24 @@ package org.talk.is.cheap.project.free.flow;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
 import org.junit.jupiter.api.Test;
+import org.mybatis.spring.boot.autoconfigure.MybatisAutoConfiguration;
+import org.redisson.Redisson;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.talk.is.cheap.project.free.flow.scheduler.App;
 import org.talk.is.cheap.project.free.flow.scheduler.repository.dao.mbg.SchedulerLogMapper;
 import org.talk.is.cheap.project.free.flow.scheduler.repository.domain.query.example.SchedulerLogExample;
 import org.talk.is.cheap.project.free.flow.scheduler.task.service.WorkerTaskDefinitionManager;
+import org.talk.is.cheap.project.free.flow.starter.repository.config.RedisAutoConfig;
+import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.ClusterNodeLogExample;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.es.pojo.StageStartupParam;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNodeLog;
-import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.ClusterNodeLogExample;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.ClusterNodeLogService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.SeqGeneratorUtil;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.es.StageStartupParamService;
@@ -22,6 +31,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @SpringBootTest(classes = App.class)
 @Slf4j
@@ -40,13 +50,23 @@ public class TestSpringApp {
     @Autowired
     private SchedulerLogMapper schedulerLogMapper;
 
+    @Autowired
+    private ApplicationContext applicationContext;
+
+    @Test
+    public void testAppContext() {
+
+        MybatisAutoConfiguration bean = applicationContext.getBean(MybatisAutoConfiguration.class);
+
+    }
+
 
     @Test
     public void curd() throws Exception {
 //        curatorFramework.create()
 //                .creatingParentsIfNeeded()
 //                .withMode(CreateMode.PERSISTENT)
-////                .withACL()
+//                .withACL()
 //                .forPath("/ahao1/test","this is a book".getBytes());
 
         log.info("{}", dataSource);
@@ -75,7 +95,7 @@ public class TestSpringApp {
     private WorkerTaskDefinitionManager workerTaskDefinitionManager;
 
     @Test
-    public void testTx(){
+    public void testTx() {
 //        ClusterNodeLog clusterNodeLog = new ClusterNodeLog();
 //        clusterNodeLog.setNodeType(1);
 //        clusterNodeLog.setNodeAddress("a.a.a.a");
@@ -83,7 +103,6 @@ public class TestSpringApp {
 //
 //        clusterNodeLogService.create(clusterNodeLog);
 
-        workerTaskDefinitionManager.testTXN();
     }
 
 
@@ -163,11 +182,33 @@ public class TestSpringApp {
 
     @Test
     public void testEs() throws IOException {
+
         StageStartupParam taskStartupParam = new StageStartupParam();
         taskStartupParam.setStageStartupId(12L);
         taskStartupParam.setEncodedInput("cccc");
 
         String id = stageStartupParamService.create(taskStartupParam);
         log.info("create id: {}", id);
+    }
+
+
+    @Autowired
+    @Qualifier(RedisAutoConfig.STRING_REDIS_TEMPLATE)
+    StringRedisTemplate stringRedisTemplate;
+
+    @Autowired
+    RedissonClient redissonClient;
+
+
+    @Test
+    public void testRedis() {
+
+        stringRedisTemplate.opsForValue().set("free-flow-test", "free-flow-test", 10, TimeUnit.SECONDS);
+        RLock lock = redissonClient.getLock("free-flow-test-redisson-lock");
+
+        lock.lock(10, TimeUnit.SECONDS);
+        log.info("获得全局锁成功");
+
+
     }
 }

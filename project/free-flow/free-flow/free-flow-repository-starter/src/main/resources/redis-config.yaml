@@ -1,10 +1,11 @@
-host: localhost
+# 自己写的yaml读取器不支持解析60s这种解析成duration，懒得折腾了
+host: 127.0.0.1
 port: 6379
 password: 123456
 database: 0
-timeout: 60s
+timeout: 60
 pool:
   max-active: 32  # 允许最大连接数，默认8（负值表示没有限制），订正，通过查看GenericObjectPoolConfig源码，但实际对应的是maxTotal变量
   max-idle: 16     # 最大空闲连接数，默认8
   min-idle: 8     # 最小空闲连接数，默认0
-  max-wait: 5s    # 连接用完时，新的请求等待时间(s秒、ms毫秒)，超过该时间抛出异常JedisConnectionException，(默认-1，负值表示没有限制)
+  max-wait: 5    # 连接用完时，新的请求等待时间(s秒、ms毫秒)，超过该时间抛出异常JedisConnectionException，(默认-1，负值表示没有限制)
