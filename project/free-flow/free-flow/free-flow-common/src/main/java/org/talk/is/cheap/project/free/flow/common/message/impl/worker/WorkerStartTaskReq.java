@@ -3,7 +3,6 @@ package org.talk.is.cheap.project.free.flow.common.message.impl.worker;
 import lombok.Builder;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 
-import java.util.List;
 import java.util.Map;
 
 
@@ -15,8 +14,10 @@ public class WorkerStartTaskReq extends HttpBody<WorkerStartTaskReq.Data> {
         private Long taskExecutionId;
         private String taskName;
         private Integer taskVersion;
-        private String encodedTaskStartupContext;
+        private String initialEncodedSharedContext;
+        // 包含所有stage的input
         private Map<String,String> stageEncodedInputs;
+        // 仅仅包含启动的stage的信息
         private Map<String,Long> startingStageExecutionId;
     }
 

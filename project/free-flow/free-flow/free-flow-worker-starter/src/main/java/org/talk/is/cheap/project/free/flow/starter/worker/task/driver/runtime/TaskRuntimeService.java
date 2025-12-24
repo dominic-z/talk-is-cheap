@@ -11,11 +11,8 @@ import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.starter.worker.task.definition.service.LocalTaskDefinitionService;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 /**
  * 任务运行时的服务对象，用于提供任务运行时的各种输入、上下文服务
@@ -25,7 +22,7 @@ public class TaskRuntimeService {
 
     @Autowired
     private LocalTaskDefinitionService localTaskDefinitionService;
-    private final Map<Long, TaskRuntimeEnv<?>> taskRuntimeEnvMap = new ConcurrentHashMap<>();
+    private final Map<Long, TaskRuntimeEnv<?>> taskExeIdRuntimeEnvMap = new ConcurrentHashMap<>();
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     public TaskRuntimeEnv createTaskRuntimeEnvs(TaskDefinitionBO taskDefinitionBO,
@@ -38,7 +35,7 @@ public class TaskRuntimeService {
         TaskRuntimeEnv taskRuntimeEnv = TaskRuntimeEnv.builder()
                 .taskExecutionId(workerStartTaskData.getTaskExecutionId())
                 .sharedContextCodec(codec)
-                .encodedSharedContext(workerStartTaskData.getEncodedTaskStartupContext())
+                .encodedSharedContext(workerStartTaskData.getInitialEncodedSharedContext())
                 .sharedContextClass(taskDefinitionBO.getSharedContextClass())
                 .stageEncodedInputs(stageEncodedInputs)
                 .stageRuntimeEnvs(new ConcurrentHashMap<>()) // 这个可能会并发
@@ -70,18 +67,18 @@ public class TaskRuntimeService {
                     .build();
             taskRuntimeEnv.getStageRuntimeEnvs().put(stageName, stageRuntimeEnv);
         }
-        this.taskRuntimeEnvMap.put(workerStartTaskData.getTaskExecutionId(), taskRuntimeEnv);
+        this.taskExeIdRuntimeEnvMap.put(workerStartTaskData.getTaskExecutionId(), taskRuntimeEnv);
         return taskRuntimeEnv;
 
     }
 
 
     public TaskRuntimeEnv<?> get(long taskExecutionId) {
-        return this.taskRuntimeEnvMap.get(taskExecutionId);
+        return this.taskExeIdRuntimeEnvMap.get(taskExecutionId);
     }
 
     public TaskRuntimeEnv<?> remove(long taskExecutionId) {
-        return this.taskRuntimeEnvMap.remove(taskExecutionId);
+        return this.taskExeIdRuntimeEnvMap.remove(taskExecutionId);
     }
 
 

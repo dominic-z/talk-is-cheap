@@ -7,9 +7,12 @@ import co.elastic.clients.elasticsearch.core.GetRequest;
 import co.elastic.clients.elasticsearch.core.GetResponse;
 import co.elastic.clients.elasticsearch.core.IndexRequest;
 import co.elastic.clients.elasticsearch.core.IndexResponse;
+import co.elastic.clients.elasticsearch.core.SearchRequest;
+import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.UpdateByQueryRequest;
 import co.elastic.clients.elasticsearch.core.UpdateRequest;
 import co.elastic.clients.elasticsearch.core.UpdateResponse;
+import co.elastic.clients.elasticsearch.sql.QueryRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.client.ResponseException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,6 +62,7 @@ public class TaskSharedContextService {
 
     /**
      * 可以理解为es中的cas
+     *
      * @param id
      * @param taskSharedContext
      * @return
@@ -95,6 +99,24 @@ public class TaskSharedContextService {
                 return false;
             }
         }
+
+    }
+
+    public TaskSharedContext getByTaskStartupId(long taskStartupId) throws IOException {
+        SearchRequest searchRequest = new SearchRequest.Builder()
+                .index(INDEX_NAME)
+                .query(b ->
+                        b.match(mb -> mb.field(TaskSharedContext.TASK_STARTUP_ID).query(taskStartupId))
+                )
+                .build();
+
+        SearchResponse<TaskSharedContext> response = esClient.search(searchRequest, TaskSharedContext.class);
+
+        if (response.hits() == null || response.hits().hits().isEmpty()) {
+            return null;
+        }
+
+        return response.hits().hits().get(0).source();
 
     }
 

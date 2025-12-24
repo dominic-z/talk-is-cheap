@@ -15,6 +15,7 @@ import co.elastic.clients.elasticsearch.indices.*;
 import co.elastic.clients.json.JsonData;
 import co.elastic.clients.transport.endpoints.BooleanResponse;
 import co.elastic.clients.util.NamedValue;
+import co.elastic.clients.util.ObjectBuilder;
 import es.EsApplication;
 import es.org.talk.is.cheap.config.EsConfig;
 import es.org.talk.is.cheap.domain.HotelDoc;
@@ -35,7 +36,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 
@@ -390,6 +393,32 @@ public class ESTest {
         log.info("resp hits0: {}", hitsMetadata.hits().get(0));
 
         log.info("resp total: {}", hitsMetadata.total());
+
+
+//        GET /hotel/_search
+//{
+//  "query": {
+//    "terms": {
+//      "city": ["上海", "北京"]  // 用keyword子字段精准匹配
+//    }
+//  }
+//}
+
+        SearchRequest inSearchReq = new SearchRequest.Builder().index("hotel")
+                .query(b1 -> b1.terms(termsBuilder -> {
+                    List<FieldValue> fieldValues = Stream.of("上海", "北京").map(FieldValue::of).collect(Collectors.toList());
+                    TermsQueryField termsQueryField = new TermsQueryField.Builder().value(fieldValues).build();
+                    return termsBuilder.field("city").terms(termsQueryField);
+                })).size(100).build();
+        SearchResponse<HotelDoc> inSearchResp = esClient.search(inSearchReq, HotelDoc.class);
+        HashSet<String> cities = new HashSet<>();
+        inSearchResp.hits().hits().forEach(h -> {
+            String city = h.source().getCity();
+            cities.add(city);
+        });
+        log.info("total:{}, respsize: {}, cities: {}", inSearchResp.hits().total().value(), inSearchResp.hits().hits().size(), cities);
+
+
     }
 
 

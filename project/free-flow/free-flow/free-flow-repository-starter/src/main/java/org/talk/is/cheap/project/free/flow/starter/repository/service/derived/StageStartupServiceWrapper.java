@@ -30,6 +30,17 @@ public class StageStartupServiceWrapper {
         return stageStartups.get(0);
     }
 
+
+    public List<StageStartup> selectByIds(List<Long> ids, int... statuses){
+        StageStartupExample stageStartupExample = new StageStartupExample();
+        StageStartupExample.Criteria criteria = stageStartupExample.createCriteria();
+        criteria.andIdIn(ids);
+        if (statuses != null && statuses.length != 0) {
+            criteria.andStatusIn(Arrays.stream(statuses).boxed().toList());
+        }
+        return stageStartupService.selectByExample(stageStartupExample);
+    }
+
     public List<StageStartup> selectByTaskExecutionId(long taskExecutionId) {
         StageStartupExample example = new StageStartupExample();
         StageStartupExample.Criteria criteria = example.createCriteria();

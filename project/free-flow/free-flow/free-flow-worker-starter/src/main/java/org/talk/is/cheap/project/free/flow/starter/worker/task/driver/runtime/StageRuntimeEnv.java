@@ -21,7 +21,7 @@ public class StageRuntimeEnv<T> {
     private T input;
     // 当前stage所在的task的runtime
     @Getter(AccessLevel.NONE)
-    private TaskRuntimeEnv taskRuntimeEnv;
+    private TaskRuntimeEnv<?> taskRuntimeEnv;
 
     public T getInput() {
         if (StringUtils.isBlank(encodedInput)) {
@@ -34,7 +34,9 @@ public class StageRuntimeEnv<T> {
     }
 
 
+    @SuppressWarnings("unchecked")
     public <K> K getSharedContext() {
         return (K) taskRuntimeEnv.getSharedContext();
     }
+
 }

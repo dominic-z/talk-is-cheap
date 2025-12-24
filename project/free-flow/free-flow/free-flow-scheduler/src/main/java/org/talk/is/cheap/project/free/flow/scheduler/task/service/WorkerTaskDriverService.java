@@ -15,6 +15,8 @@ import org.talk.is.cheap.project.free.flow.common.enums.StartupSourceType;
 import org.talk.is.cheap.project.free.flow.common.enums.TaskStageStatus;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerCompleteStageResultReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerStartStageReportReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerStartTaskReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerStartTaskResp;
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.WorkerClusterManager;
 import org.talk.is.cheap.project.free.flow.scheduler.task.client.WorkerTaskDriverClient;
@@ -54,7 +56,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 
 /**
@@ -119,12 +125,14 @@ public class WorkerTaskDriverService {
     private TaskScheduler taskScheduler;
 
 
-//    @Autowired
-//    @Qualifier(RedisAutoConfig.REDISSON_CLIENT)
-//    private RedissonClient redissonClient;
+    @Autowired
+    @Qualifier(RedisAutoConfig.REDISSON_CLIENT)
+    private RedissonClient redissonClient;
 
-//    @Autowired
-//    RedissonService redissonService;
+    @Autowired
+    private RedissonService redissonService;
+
+    private final ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(8, 16, 60, TimeUnit.SECONDS, new ArrayBlockingQueue<>(32));
 
     /**
      * 在启动任务之前校验task，并且在数据库中创建任务数据，包括创建各种startup+execution数据，以便可以直接执行任务
@@ -387,10 +395,9 @@ public class WorkerTaskDriverService {
      * @param stageExecutionId
      */
     @Transactional(rollbackFor = Exception.class, transactionManager = RepositoryAutoConfig.TRANSACTION_MANAGER_BEAN_NAME)
-    public boolean failStage(long taskExecutionId, long stageExecutionId) {
+    public boolean failStage(long taskExecutionId, long stageExecutionId) throws IOException {
 
-//        RLock lock = redissonClient.getLock(RedissonService.getTaskExecutionLockKey(taskExecutionId));
-        boolean retry = false;
+        RLock rLock = redissonClient.getLock(RedissonService.getTaskExecutionLockKey(taskExecutionId));
         try {
 
             StageExecution stageExecution = stageExecutionServiceWrapper.selectById(stageExecutionId, TaskStageStatus.RUNNING.getStatus());
@@ -409,7 +416,7 @@ public class WorkerTaskDriverService {
 
             StageDefinition stageDefinition = stageDefinitionServiceWrapper.selectById(stageStartup.getStageId());
 
-//            lock.lock(10,TimeUnit.SECONDS);
+            rLock.lock(10, TimeUnit.SECONDS);
             if (stageDefinition.getMaxRetryCount() > stageStartup.getFailCount()) {
                 // stage超过重试次数了，stage失败掉
                 TaskExecution taskExecution = taskExecutionServiceWrapper.selectById(taskExecutionId);
@@ -442,10 +449,9 @@ public class WorkerTaskDriverService {
                     taskStartup.setStatus(TaskStageStatus.FAILED.getStatus());
                     taskStartup.setRevision(taskStartup.getRevision() + 1);
 
-                    retry = false;
 
                 } else {
-                    // 还可以重试
+                    // task还可以重试
                     VerifyUtil.shallBeTrue(
                             taskStartupServiceWrapper.updateByIdSelective(taskExecution.getTaskStartupId(),
                                     new TaskStartup()
@@ -454,23 +460,122 @@ public class WorkerTaskDriverService {
                             "更新taskExecution失败");
                     taskStartup.setFailCount(taskStartup.getFailCount() + 1);
                     taskStartup.setRevision(taskStartup.getRevision() + 1);
-                    retry = true;
 
+
+                    CompletableFuture.runAsync(() -> {
+                        try {
+                            retryTask(taskStartup.getId(), taskExecutionId);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }, threadPoolExecutor);
                 }
+
+            } else {
+
+                // stage还可以重试
+
+                StageExecution retryStageExecution = new StageExecution()
+                        .withStageStartupId(stageStartup.getId())
+                        .withStatus(TaskStageStatus.PENDING.getStatus())
+                        .withWorkerAddress(stageExecution.getWorkerAddress());
+
+                VerifyUtil.shallBeTrue(stageExecutionService.create(retryStageExecution)==1,"创建重试任务执行记录失败");
+
+                ESPojoDTO<StageStartupParam> esPojoDTO = stageStartupParamService.getByStageStartupId(stageStartup.getId());
+
 
             }
         } finally {
-//            lock.unlock();
+            rLock.unlock();
         }
         return retry;
     }
 
 
-    public void retryTask(long taskStartupId) {
+    public void retryTask(long taskStartupId, long failedTaskExecutionId) throws IOException {
+
         TaskStartup taskStartup = taskStartupServiceWrapper.selectById(taskStartupId, TaskStageStatus.PENDING.getStatus());
+        VerifyUtil.shallNotBeNull(taskStartup, String.format("can't find taskStartupId with id:%d", taskStartupId));
+        TaskSharedContext taskSharedContext = taskSharedContextService.getByTaskStartupId(taskStartupId);
+        VerifyUtil.shallNotBeNull(taskSharedContext, String.format("can't find taskSharedContext with taskStartupId:%d", taskStartupId));
+
+        List<StageStartup> stageStartups = stageStartupServiceWrapper.selectByTaskExecutionId(failedTaskExecutionId);
+        Map<Long, StageStartup> stageStartupIdMap = stageStartups.stream().collect(Collectors.toMap(s -> s.getId(), s -> s));
+
+        List<ESPojoDTO<StageStartupParam>> stageStartupParams =
+                stageStartupParamService.getByStageStartupId(stageStartups.stream().map(StageStartup::getId).collect(Collectors.toList()));
+
+        TaskDefinition taskDefinition = taskDefinitionServiceWrapper.selectById(taskStartup.getTaskId());
+        VerifyUtil.shallNotBeNull(taskDefinition, String.format("can'f find taskdefinition with id:%d for startupid:%d",
+                taskStartup.getTaskId(), taskStartup.getId()));
+        List<StageDefinition> stageDefinitions = stageDefinitionServiceWrapper.selectByTaskId(taskDefinition.getId());
+        VerifyUtil.shallBeFalse(stageDefinitions.isEmpty(), String.format("无法找到taskId为%s的阶段定义", taskStartup.getId()));
+
+        Map<Long, StageDefinition> stageDefIdMap = stageDefinitions.stream().collect(Collectors.toMap(StageDefinition::getId, d -> d));
+        Map<String, String> stageEncodedInputs = stageStartupParams.stream().collect(Collectors.toMap(dto -> {
+                    Long stageStartupId = dto.getData().getStageStartupId();
+                    StageDefinition stageDefinition = stageDefIdMap.get(stageStartupIdMap.get(stageStartupId).getStageId());
+                    return stageDefinition.getName();
+                },
+                dto -> dto.getData().getEncodedInput()));
 
 
-        StageStartup stageStartup = stageStartupServiceWrapper.selectById(taskStartupId, TaskStageStatus.PENDING.getStatus());
+        String workerAddress = taskScheduler.assignTaskToWorkerAddress(taskDefinition.getName(), taskDefinition.getVersion());
+
+        TaskExecution taskExecution = new TaskExecution().withTaskStartupId(taskStartup.getId())
+                .withStatus(TaskStageStatus.PENDING.getStatus())
+                .withAssignedWorkerAddr(workerAddress);
+
+        VerifyUtil.shallBeTrue(taskExecutionService.create(taskExecution) > 0, "无法创建任务执行对象");
+
+
+        Map<String, Long> startingStageName2ExecutionId = new HashMap<>();
+        for (StageDefinition stageDefinition : stageDefinitions) {
+            String stageName = stageDefinition.getName();
+            StageStartup stageStartup = new StageStartup()
+                    .withTaskExecutionId(taskExecution.getId())
+                    .withStatus(TaskStageStatus.PENDING.getStatus())
+                    .withStageId(stageDefinition.getId());
+
+            VerifyUtil.shallBeTrue(stageStartupService.create(stageStartup) > 0,
+                    String.format("Failed to create stage startup: %s", stageName));
+            if (stageDefinition.getIsStartingStage()) {
+                // 正常情况下是在stage启动之前，由scheduler创建execution对象，但是在start task的时候，顺手创建一部分stage的execution
+                // 仅仅针对starting 的stage创建execution对象，这样可以在启动任务与worker交互的时候节省一次请求。
+                StageExecution stageExecution = new StageExecution()
+                        .withStageStartupId(stageStartup.getId())
+                        .withStatus(TaskStageStatus.PENDING.getStatus())
+                        .withWorkerAddress(workerAddress);
+                VerifyUtil.shallBeTrue(stageExecutionService.create(stageExecution) > 0, String.format("Failed to create stage " +
+                        "execution:" +
+                        " %s", stageName));
+                startingStageName2ExecutionId.put(stageName, stageExecution.getId());
+
+            }
+        }
+
+
+        WorkerStartTaskReq req = new WorkerStartTaskReq();
+        WorkerStartTaskReq.Data data = WorkerStartTaskReq.Data.builder()
+                .taskName(taskDefinition.getName())
+                .taskVersion(taskDefinition.getVersion())
+                .stageEncodedInputs(stageEncodedInputs)
+                .taskExecutionId(taskExecution.getId())
+                .initialEncodedSharedContext(taskSharedContext.getEncodedTaskSharedContext())
+                .startingStageExecutionId(startingStageName2ExecutionId)
+                .build();
+        req.setData(data);
+
+        WorkerStartTaskResp workerStartTaskResp = workerTaskDriverClient.startTask(workerClusterManager.getWorkerURI(workerAddress), req);
+
+        if (workerStartTaskResp.isSuccess()) {
+            // 启动失败兜底
+            taskExecutionServiceWrapper.updateSelectiveById(taskExecution.getId(),
+                    new TaskExecution().withStatus(TaskStageStatus.FAILED.getStatus()), null);
+            taskStartupServiceWrapper.updateByIdSelective(taskStartup.getId(),
+                    new TaskStartup().withStatus(TaskStageStatus.FAILED.getStatus()), null);
+        }
 
 
     }

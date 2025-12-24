@@ -30,7 +30,6 @@ import org.talk.is.cheap.project.free.flow.scheduler.task.service.WorkerTaskResu
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * 1.用来与Worker进行交互，响应stage的成功或者失败
@@ -83,7 +82,7 @@ public class TaskProcessController {
                         .taskExecutionId(taskExecutionId)
                         .taskName(data.getTaskName())
                         .taskVersion(data.getTaskVersion())
-                        .encodedTaskStartupContext(data.getInitialEncodedSharedContext())
+                        .initialEncodedSharedContext(data.getInitialEncodedSharedContext())
                         .stageEncodedInputs(data.getStageEncodedInputs())
                         .startingStageExecutionId(rootStageName2ExecutionId)
                         .build()
