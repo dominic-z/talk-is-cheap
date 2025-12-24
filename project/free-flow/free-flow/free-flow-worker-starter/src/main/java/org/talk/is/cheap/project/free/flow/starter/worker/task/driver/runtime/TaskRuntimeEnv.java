@@ -56,6 +56,10 @@ public class TaskRuntimeEnv<T> {
         return this.taskDefinitionBO.getName();
     }
 
+    public void updateStageRuntimeEnv(String stageName, StageRuntimeEnv<?> stageRuntimeEnv) {
+        this.stageRuntimeEnvs.put(stageName, stageRuntimeEnv);
+    }
+
     @Data
     public static class TestParam {
         private String name;

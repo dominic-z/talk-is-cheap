@@ -1,8 +1,10 @@
 package org.talk.is.cheap.project.free.flow.starter.repository.service.es;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.OpType;
 import co.elastic.clients.elasticsearch._types.Result;
+import co.elastic.clients.elasticsearch._types.query_dsl.TermsQueryField;
 import co.elastic.clients.elasticsearch.core.GetRequest;
 import co.elastic.clients.elasticsearch.core.GetResponse;
 import co.elastic.clients.elasticsearch.core.IndexRequest;
@@ -23,6 +25,9 @@ import org.talk.is.cheap.project.free.flow.starter.repository.domain.es.pojo.Sta
 import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.SeqGeneratorUtil;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -80,6 +85,7 @@ public class StageStartupParamService {
     }
 
 
+
     public ESPojoDTO<StageStartupParam> getByStageStartupId(long stageStartupId) throws IOException {
 
         SearchRequest searchRequest = new SearchRequest.Builder()
@@ -92,5 +98,23 @@ public class StageStartupParamService {
         }
         Hit<StageStartupParam> stageStartupParamHit = resp.hits().hits().get(0);
         return ESPojoDTO.<StageStartupParam>builder().id(stageStartupParamHit.id()).data(stageStartupParamHit.source()).build();
+    }
+
+
+    public List<ESPojoDTO<StageStartupParam>> getByStageStartupId(List<Long> stageStartupIds) throws IOException {
+
+        SearchRequest searchRequest = new SearchRequest.Builder()
+                .index(INDEX_NAME)
+                .query(qb -> qb.terms(termsB -> termsB.field(StageStartupParam.STAGE_STARTUP_ID)
+                        .terms(termsFieldB -> termsFieldB.value(stageStartupIds.stream().map(FieldValue::of).toList()))))
+                .size(stageStartupIds.size())
+                .build();
+
+        SearchResponse<StageStartupParam> resp = esClient.search(searchRequest, StageStartupParam.class);
+        HitsMetadata<StageStartupParam> hits = resp.hits();
+        if (resp.hits().total() == null || resp.hits().total().value() == 0) {
+            return new ArrayList<>();
+        }
+        return resp.hits().hits().stream().map(h->ESPojoDTO.<StageStartupParam>builder().id(h.id()).data(h.source()).build()).collect(Collectors.toList());
     }
 }

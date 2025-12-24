@@ -36,7 +36,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 
 /**
@@ -65,12 +64,14 @@ public class TaskDriverService {
     private ThreadPoolExecutor threadPoolExecutor;
 
     private final Map<Long, Object> taskExecutionIdBeanMap = new ConcurrentHashMap<>();
+    private FieldAwareLockManager<Long> taskExecutionLockManager = new FieldAwareLockManager<>();
+    // 已经完成stage
     private final Map<Long, Set<String>> taskExecutionIdFinishedStageMap = new ConcurrentHashMap<>();
     // 已经提交的stage的任务，避免重复提交
     private final Map<Long, Set<String>> taskExecutionIdDispatchedStageMap = new ConcurrentHashMap<>();
 
-    private FieldAwareLockManager<Long> taskExecutionLockManager = new FieldAwareLockManager<>();
-    private Map<Long, CompletableFuture<?>> taskExecutionIdFuture = new ConcurrentHashMap<>();
+    // 正在运行的future对象
+    private Map<Long, ConcurrentHashMap<String, CompletableFuture<?>>> taskExeIdStageNameFutures = new ConcurrentHashMap<>();
 
 
     @PostConstruct
@@ -95,8 +96,6 @@ public class TaskDriverService {
     /**
      * 驱动一个taskName，如果taskVersion为null，则不关心具体什么版本
      *
-     * @param taskName
-     * @param taskVersion
      * @return
      */
     public boolean startTask(WorkerStartTaskReq.Data workerStartTaskData) throws Exception {
@@ -157,7 +156,7 @@ public class TaskDriverService {
                 throw new RuntimeException(e);
             }
         }, threadPoolExecutor);
-        taskExecutionIdFuture.put(taskExecutionId, stageFuture);
+        taskExeIdStageNameFutures.computeIfAbsent(taskExecutionId, (k) -> new ConcurrentHashMap<>()).put(stageName, stageFuture);
 
         stageFuture.thenAccept((v) -> {
             // todo: stage完成
@@ -219,6 +218,56 @@ public class TaskDriverService {
 
             return null;
         });
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public void retryStage(long taskExecutionId, String stageName, long stageExecutionId, String encodedInput) throws NoSuchMethodException {
+        TaskRuntimeEnv<?> taskRuntimeEnv = this.taskRuntimeService.get(taskExecutionId);
+        VerifyUtil.shallNotBeNull(taskRuntimeEnv, String.format("taskExeId:%d的任务运行环境变量已经丢失", taskExecutionId));
+
+        StageRuntimeEnv stageRuntimeEnv = taskRuntimeEnv.getStageRuntimeEnvs().get(stageName);
+        VerifyUtil.shallNotBeNull(stageRuntimeEnv, String.format("taskExeId:%d中stageName:%s的阶段运行环境变量已经丢失", taskExecutionId, stageName));
+
+        taskRuntimeEnv.getStageEncodedInputs().put(stageName, encodedInput);
+
+        StageRuntimeEnv retryStageRuntimeEnv = StageRuntimeEnv.builder()
+                .taskRuntimeEnv(taskRuntimeEnv)
+                .inputClass(stageRuntimeEnv.getInputClass())
+                .inputCodec(stageRuntimeEnv.getInputCodec())
+                .encodedInput(encodedInput)
+                .stageExecutionId(stageExecutionId).build();
+
+        taskRuntimeEnv.updateStageRuntimeEnv(stageName, retryStageRuntimeEnv);
+
+        this.taskExecutionIdDispatchedStageMap.computeIfAbsent(taskExecutionId, (v) -> new ConcurrentHashSet<>()).add(stageName);
+        final Object taskBean = this.taskExecutionIdBeanMap.get(taskExecutionId);
+
+        TaskDefinitionBO taskDefinitionBO = localTaskDefinitionService.getTaskDefinitionBO(taskRuntimeEnv.getTaskName());
+        StageDefinitionBO stageDefinitionBO = taskDefinitionBO.getStageDefinitionMap().get(stageName);
+        Class<?> taskClass = taskDefinitionBO.getTaskClass();
+        Method stageMethod = taskClass.getDeclaredMethod(stageDefinitionBO.getMethodName(),
+                Arrays.stream(stageDefinitionBO.getParameters()).map(Parameter::getType).toArray(Class[]::new));
+        CompletableFuture<Long> stageFuture = CompletableFuture.supplyAsync(() -> {
+            try {
+                // 告知scheduler某个stage已经排到要执行了
+                WorkerStartStageReportReq req = new WorkerStartStageReportReq();
+                req.setData(List.of(WorkerStartStageReportReq.WorkerStartToExecuteStageReqDatum.builder()
+                        .taskExecutionId(taskExecutionId)
+                        .stageExecutionId(stageExecutionId)
+                        .build()));
+                schedulerTaskProcessClient.startStageReport(clusterService.getRandomSchedulerURI(), req);
+                if (stageDefinitionBO.getParameters().length == 0) {
+                    stageMethod.invoke(taskBean, (Object) null);
+                } else {
+                    stageMethod.invoke(taskBean, stageRuntimeEnv);
+                }
+
+                return stageExecutionId;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }, threadPoolExecutor);
+        taskExeIdStageNameFutures.computeIfAbsent(taskExecutionId, (k) -> new ConcurrentHashMap<>()).put(stageName, stageFuture);
     }
 
 
