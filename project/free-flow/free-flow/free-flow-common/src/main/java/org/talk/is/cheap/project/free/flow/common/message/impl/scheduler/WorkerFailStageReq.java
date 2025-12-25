@@ -9,6 +9,7 @@ public class WorkerFailStageReq extends HttpBody<WorkerFailStageReq.WorkerFailSt
     public static class WorkerFailStageReqData{
         private Long taskExecutionId;
         private Long stageExecutionId;
+        private String errorMsg;
 
     }
 }

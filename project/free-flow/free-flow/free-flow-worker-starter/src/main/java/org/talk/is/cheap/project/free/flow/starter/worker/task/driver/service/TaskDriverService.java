@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.PrepareStageReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.PrepareStageResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerCompleteStageResultReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerFailStageReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerStartStageReportReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerStartTaskReq;
 import org.talk.is.cheap.project.free.flow.common.task.definition.bo.StageDefinitionBO;
@@ -99,14 +100,14 @@ public class TaskDriverService {
      * @return
      */
     public boolean startTask(WorkerStartTaskReq.Data workerStartTaskData) throws Exception {
-        VerifyUtil.shallBeTrue(canStartTask(workerStartTaskData.getTaskName(), workerStartTaskData.getTaskVersion()),
+        VerifyUtil.requireTrue(canStartTask(workerStartTaskData.getTaskName(), workerStartTaskData.getTaskVersion()),
                 String.format("worker can't ran run task: %s, version: %d", workerStartTaskData.getTaskName(),
                         workerStartTaskData.getTaskVersion()));
 
         TaskDefinitionBO taskDefinitionBO = localTaskDefinitionService.getTaskDefinitionBO(workerStartTaskData.getTaskName());
 
         Map<String, Long> startingStageExecutionId = workerStartTaskData.getStartingStageExecutionId();
-        VerifyUtil.shallBeTrue(taskDefinitionBO.getStartingStageNames().containsAll(startingStageExecutionId.keySet())
+        VerifyUtil.requireTrue(taskDefinitionBO.getStartingStageNames().containsAll(startingStageExecutionId.keySet())
                         && startingStageExecutionId.size() == taskDefinitionBO.getStartingStageNames().size()
                 , "部分stage的启动参数不全，请检查参数");
 
@@ -178,44 +179,53 @@ public class TaskDriverService {
             // 尝试驱动下一个stage
 
             for (String nextStageName : taskDefinitionBO.getPointOutGraph().get(stageDefinitionBO.getName())) {
-
-                // nextStageName的父stage全部完成之后才能驱动，需要考虑并发问题，避免同时提交两个一模一样的任务。
-                //
                 Set<String> fromStages = taskDefinitionBO.getPointInGraph().get(nextStageName);
-                try {
-                    taskExecutionLockManager.lock(taskExecutionId);
-                    if (taskExecutionIdFinishedStageMap.get(taskExecutionId).containsAll(fromStages)) {
-                        // nextStageName的全部父stage都已经完成
-                        PrepareStageReq prepareStageReq = new PrepareStageReq();
-                        PrepareStageReq.PrepareStageReqData prepareStageReqData = new PrepareStageReq.PrepareStageReqData();
-                        prepareStageReqData.setStageName(nextStageName);
-                        prepareStageReqData.setTaskExecutionId(taskExecutionId);
-                        prepareStageReqData.setEncodedSharedContextSnapshotAtStartup(taskRuntimeEnv.getEncodedSharedContext());
-                        prepareStageReq.setData(prepareStageReqData);
-                        PrepareStageResp prepareStageResp = schedulerTaskProcessClient.prepareStage(schedulerLeaderUri, prepareStageReq);
-                        VerifyUtil.shallBeTrue(prepareStageResp.isSuccess(), String.format("启动下一个stage:%s异常", nextStageName));
 
-                        PrepareStageResp.PrepareStageRespData prepareStageRespData = prepareStageResp.getData();
-                        Long nextStageExecutionId = prepareStageRespData.getStageExecutionId();
-                        taskRuntimeService.createStageRuntimeEnv(taskRuntimeEnv, nextStageName, nextStageExecutionId);
-                        executeStage(taskDefinitionBO, taskRuntimeEnv, nextStageName);
+                if (!this.taskExecutionIdDispatchedStageMap.get(taskExecutionId).contains(nextStageName) &&
+                        taskExecutionIdFinishedStageMap.get(taskExecutionId).containsAll(fromStages)) {
+                    // nextStageName的父stage全部完成之后才能驱动，需要考虑并发问题，避免同时提交两个一模一样的任务。
+                    //
+                    try {
+                        taskExecutionLockManager.lock(taskExecutionId);
+                        if (!this.taskExecutionIdDispatchedStageMap.get(taskExecutionId).contains(nextStageName) &&
+                                taskExecutionIdFinishedStageMap.get(taskExecutionId).containsAll(fromStages)) {
+                            // nextStageName的全部父stage都已经完成
+                            PrepareStageReq prepareStageReq = new PrepareStageReq();
+                            PrepareStageReq.PrepareStageReqData prepareStageReqData = new PrepareStageReq.PrepareStageReqData();
+                            prepareStageReqData.setStageName(nextStageName);
+                            prepareStageReqData.setTaskExecutionId(taskExecutionId);
+                            prepareStageReqData.setEncodedSharedContextSnapshotAtStartup(taskRuntimeEnv.getEncodedSharedContext());
+                            prepareStageReq.setData(prepareStageReqData);
+                            PrepareStageResp prepareStageResp = schedulerTaskProcessClient.prepareStage(schedulerLeaderUri,
+                                    prepareStageReq);
+                            VerifyUtil.requireTrue(prepareStageResp.isSuccess(), String.format("启动下一个stage:%s异常", nextStageName));
+
+                            PrepareStageResp.PrepareStageRespData prepareStageRespData = prepareStageResp.getData();
+                            Long nextStageExecutionId = prepareStageRespData.getStageExecutionId();
+                            taskRuntimeService.createStageRuntimeEnv(taskRuntimeEnv, nextStageName, nextStageExecutionId);
+                            executeStage(taskDefinitionBO, taskRuntimeEnv, nextStageName);
+                        }
+
+                    } catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
+                        log.error("无法启动下一个stage", e);
+                        // todo: 发生异常
+                        throw new RuntimeException(e);
+                    } finally {
+                        taskExecutionLockManager.unlockAndRemove(taskExecutionId);
                     }
-
-                } catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
-                    log.error("无法启动下一个stage", e);
-                    // todo: 发生异常
-                    throw new RuntimeException(e);
-                } finally {
-                    taskExecutionLockManager.unlockAndRemove(taskExecutionId);
                 }
 
 
             }
         }).exceptionally((e) -> {
             log.error("执行任务（id: {}）出现异常", taskExecutionId, e);
-            // todo: 发生异常
-
-
+            WorkerFailStageReq workerFailStageReq = new WorkerFailStageReq();
+            WorkerFailStageReq.WorkerFailStageReqData data = new WorkerFailStageReq.WorkerFailStageReqData();
+            data.setTaskExecutionId(taskExecutionId);
+            data.setStageExecutionId(stageExecutionId);
+            data.setErrorMsg(e.getMessage());
+            workerFailStageReq.setData(data);
+            schedulerTaskProcessClient.failStage(clusterService.getRandomSchedulerURI(), workerFailStageReq);
             return null;
         });
     }
@@ -223,14 +233,14 @@ public class TaskDriverService {
     @SuppressWarnings({"unchecked", "rawtypes"})
     public void retryStage(long taskExecutionId, String stageName, long stageExecutionId, String encodedInput) throws NoSuchMethodException {
         TaskRuntimeEnv<?> taskRuntimeEnv = this.taskRuntimeService.get(taskExecutionId);
-        VerifyUtil.shallNotBeNull(taskRuntimeEnv, String.format("taskExeId:%d的任务运行环境变量已经丢失", taskExecutionId));
+        VerifyUtil.requireNotNull(taskRuntimeEnv, String.format("taskExeId:%d的任务运行环境变量已经丢失", taskExecutionId));
 
         StageRuntimeEnv stageRuntimeEnv = taskRuntimeEnv.getStageRuntimeEnvs().get(stageName);
-        VerifyUtil.shallNotBeNull(stageRuntimeEnv, String.format("taskExeId:%d中stageName:%s的阶段运行环境变量已经丢失", taskExecutionId, stageName));
+        VerifyUtil.requireNotNull(stageRuntimeEnv, String.format("taskExeId:%d中stageName:%s的阶段运行环境变量已经丢失", taskExecutionId, stageName));
 
         taskRuntimeEnv.getStageEncodedInputs().put(stageName, encodedInput);
 
-        StageRuntimeEnv retryStageRuntimeEnv = StageRuntimeEnv.builder()
+        final StageRuntimeEnv retryStageRuntimeEnv = StageRuntimeEnv.builder()
                 .taskRuntimeEnv(taskRuntimeEnv)
                 .inputClass(stageRuntimeEnv.getInputClass())
                 .inputCodec(stageRuntimeEnv.getInputCodec())
@@ -259,7 +269,7 @@ public class TaskDriverService {
                 if (stageDefinitionBO.getParameters().length == 0) {
                     stageMethod.invoke(taskBean, (Object) null);
                 } else {
-                    stageMethod.invoke(taskBean, stageRuntimeEnv);
+                    stageMethod.invoke(taskBean, retryStageRuntimeEnv);
                 }
 
                 return stageExecutionId;
@@ -270,16 +280,5 @@ public class TaskDriverService {
         taskExeIdStageNameFutures.computeIfAbsent(taskExecutionId, (k) -> new ConcurrentHashMap<>()).put(stageName, stageFuture);
     }
 
-
-    private void tryDriveStage(long taskExecution, String stageName) {
-        try {
-            taskExecutionLockManager.lock(taskExecution);
-
-
-        } finally {
-            taskExecutionLockManager.unlockAndRemove(taskExecution);
-        }
-
-    }
 
 }

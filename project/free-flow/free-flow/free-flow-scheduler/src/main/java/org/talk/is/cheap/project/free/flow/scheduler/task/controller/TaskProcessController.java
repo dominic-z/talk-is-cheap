@@ -167,14 +167,13 @@ public class TaskProcessController {
         WorkerFailStageResp resp = new WorkerFailStageResp();
 
         WorkerFailStageReq.WorkerFailStageReqData data = req.getData();
-        try{
-            boolean retry = workerTaskDriverService.failStage(data.getTaskExecutionId(), data.getStageExecutionId());
+        try {
+            workerTaskDriverService.failStage(data.getTaskExecutionId(), data.getStageExecutionId(), data.getErrorMsg());
             WorkerFailStageResp.WorkerFailStageReqData respData = new WorkerFailStageResp.WorkerFailStageReqData();
-            respData.setRetry(retry);
             resp.success(respData);
-        }catch (Exception e){
-            log.error("stage:{}，无法正常失败",req,e);
-            resp.fail(ResultCode.FAIL,e.getMessage());
+        } catch (Exception e) {
+            log.error("stage:{}，无法正常失败", req, e);
+            resp.fail(ResultCode.FAIL, e.getMessage());
         }
         return resp;
 

@@ -47,7 +47,7 @@ public class RemoteTaskDefinitionService {
             req.setData(reqData);
 
             QueryTaskDefinitionResp resp = schedulerTaskDefinitionClient.queryTaskDefinition(schedulerLeaderUri, req);
-            VerifyUtil.shallBeTrue(resp.isSuccess(), String.format("can't query remote task definition, reason: %s", resp.getMsg()));
+            VerifyUtil.requireTrue(resp.isSuccess(), String.format("can't query remote task definition, reason: %s", resp.getMsg()));
             if (req.getData() != null && !resp.getData().getTaskDefinitionDTOs().isEmpty()) {
                 taskDefinitionDTOs.addAll(resp.getData().getTaskDefinitionDTOs());
             }

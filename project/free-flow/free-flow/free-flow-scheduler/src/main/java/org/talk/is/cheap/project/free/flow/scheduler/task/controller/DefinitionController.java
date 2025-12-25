@@ -66,7 +66,7 @@ public class DefinitionController {
 
             if (reqData.getQueries() != null) {
                 for (QueryTaskDefinitionReq.QueryTaskDefinitionReqData.Query query : reqData.getQueries()) {
-                    VerifyUtil.shallNotBeBlank(query.getTaskName(), "task name in query can not be blank");
+                    VerifyUtil.requireNotBlank(query.getTaskName(), "task name in query can not be blank");
                     TaskDefinitionExample.Criteria criteria = example.or();
                     criteria.andNameEqualTo(query.getTaskName());
                     if (query.getVersion() != null) {
