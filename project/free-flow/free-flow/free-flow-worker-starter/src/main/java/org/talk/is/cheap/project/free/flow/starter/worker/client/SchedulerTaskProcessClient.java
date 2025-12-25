@@ -13,6 +13,8 @@ import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.QueryTa
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.QueryTaskDefinitionResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.StartTaskReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerCompleteStageResultReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerFailStageReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerFailStageResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerStartStageReportReq;
 import org.talk.is.cheap.project.free.flow.common.router.URIs;
 
@@ -41,4 +43,10 @@ public interface SchedulerTaskProcessClient {
             MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     PrepareStageResp prepareStage(URI host, @RequestBody PrepareStageReq req);
+
+
+    @RequestMapping(path = URIs.SchedulerTaskProcessURIs.STAGE_FAIL, method = RequestMethod.POST,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    WorkerFailStageResp failStage(URI host, @RequestBody WorkerFailStageReq req);
 }

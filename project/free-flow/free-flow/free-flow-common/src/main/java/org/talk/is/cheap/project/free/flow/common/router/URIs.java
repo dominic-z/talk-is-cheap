@@ -49,6 +49,7 @@ public class URIs {
         private static final String PREFIX = "/worker/driver";
 
         public static final String TASK_START = PREFIX + "/task/start";
+        public static final String STAGE_START = PREFIX + "/stage/retry";
 
     }
 }

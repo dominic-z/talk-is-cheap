@@ -2,17 +2,14 @@ package org.talk.is.cheap.project.free.flow.starter.repository.service.es;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.OpType;
-import co.elastic.clients.elasticsearch._types.Result;
 import co.elastic.clients.elasticsearch.core.GetRequest;
 import co.elastic.clients.elasticsearch.core.GetResponse;
 import co.elastic.clients.elasticsearch.core.IndexRequest;
 import co.elastic.clients.elasticsearch.core.IndexResponse;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
-import co.elastic.clients.elasticsearch.core.UpdateByQueryRequest;
 import co.elastic.clients.elasticsearch.core.UpdateRequest;
 import co.elastic.clients.elasticsearch.core.UpdateResponse;
-import co.elastic.clients.elasticsearch.sql.QueryRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.client.ResponseException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +17,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.starter.repository.config.EsAutoConfig;
-import org.talk.is.cheap.project.free.flow.starter.repository.domain.es.pojo.StageStartupParam;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.es.pojo.TaskSharedContext;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.SeqGeneratorUtil;
 
@@ -72,7 +68,7 @@ public class TaskSharedContextService {
 
         while (true) {
             GetResponse<TaskSharedContext> current = getResponseById(id);
-            VerifyUtil.shallBeTrue(current.source() != null && current.source().getUpdateTime() != null,
+            VerifyUtil.requireTrue(current.source() != null && current.source().getUpdateTime() != null,
                     "task shared context dosen't exits or update time is null, es id:%s".formatted(id));
             if (current.source().getUpdateTime().before(taskSharedContext.getUpdateTime())) {
                 UpdateRequest<TaskSharedContext, TaskSharedContext> updateRequest =

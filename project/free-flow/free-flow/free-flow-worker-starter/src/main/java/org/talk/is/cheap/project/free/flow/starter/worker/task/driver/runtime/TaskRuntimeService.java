@@ -49,7 +49,7 @@ public class TaskRuntimeService {
             Long stageExecutionId = entry.getValue();
             StageDefinitionBO stageDefinitionBO = taskDefinitionBO.getStageDefinitionMap().get(stageName);
 
-            VerifyUtil.shallBeTrue(stageDefinitionBO != null,
+            VerifyUtil.requireTrue(stageDefinitionBO != null,
                     String.format("The corresponding stage definition cannot be found. %s", stageName));
 
             InputCodec inputCodec = stageDefinitionBO.getInputCodecClass().getDeclaredConstructor().newInstance();

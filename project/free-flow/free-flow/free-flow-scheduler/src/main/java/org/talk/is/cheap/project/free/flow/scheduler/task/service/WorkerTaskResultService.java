@@ -53,21 +53,21 @@ public class WorkerTaskResultService {
 
         Long stageExecutionId = stageResult.getStageExecutionId();
         StageExecution stageExecution = stageExecutionServiceWrapper.selectById(stageExecutionId, TaskStageStatus.RUNNING.getStatus());
-        VerifyUtil.shallBeTrue(stageExecution != null,
+        VerifyUtil.requireTrue(stageExecution != null,
                 "The running execution record for the stage with ID %d does not exist.".formatted(stageExecutionId));
 
         // 更新stage startup
         StageStartup stageStartup = stageStartupServiceWrapper.selectById(stageExecution.getStageStartupId(),
                 TaskStageStatus.RUNNING.getStatus());
-        VerifyUtil.shallBeTrue(stageStartup != null,
+        VerifyUtil.requireTrue(stageStartup != null,
                 "The startup record for the stage with ID %d does not exist.".formatted(stageExecution.getStageStartupId()));
         Integer taskStageStatus = stageResult.getSucceeded() ? TaskStageStatus.SUCCEEDED.getStatus() :
                 TaskStageStatus.FAILED.getStatus();
 
-        VerifyUtil.shallBeTrue(stageExecutionServiceWrapper.updateSelectiveById(
+        VerifyUtil.requireTrue(stageExecutionServiceWrapper.updateSelectiveById(
                         stageExecutionId,  new StageExecution().withStatus(taskStageStatus),stageExecution.getRevision()) > 0,
                 "更新stageExecution状态失败");
-        VerifyUtil.shallBeTrue(stageStartupServiceWrapper.updateSelectiveById(stageStartup.getId(),
+        VerifyUtil.requireTrue(stageStartupServiceWrapper.updateSelectiveById(stageStartup.getId(),
                         new StageStartup().withStatus(taskStageStatus).withCompletionTime(stageResult.getCompletionTime()), stageStartup.getRevision()) > 0,
                 "更新stageStartup失败");
 

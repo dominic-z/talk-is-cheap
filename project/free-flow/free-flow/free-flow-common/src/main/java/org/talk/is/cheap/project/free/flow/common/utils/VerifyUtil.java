@@ -8,27 +8,43 @@ public class VerifyUtil {
     private VerifyUtil() {
     }
 
-    public static void shallBeTrue(boolean bool, String errorMsg) {
+    public static void requireTrue(boolean bool, String errorMsg) {
         if (!bool) {
             throw new VerifyException(errorMsg);
         }
     }
 
-    public static void shallBeFalse(boolean bool, String errorMsg) {
+    public static void requireAllTrue(String errorMsg, boolean... booleans) {
+        for (boolean aBoolean : booleans) {
+            requireTrue(aBoolean, errorMsg);
+        }
+    }
+
+    public static void requireFalse(boolean bool, String errorMsg) {
         if (bool) {
             throw new VerifyException(errorMsg);
         }
     }
 
-    public static void shallNotBeBlank(String s, String errorMsg) {
-        shallBeTrue(StringUtils.isNotBlank(s), errorMsg);
+    public static void requireAllFalse(String errorMsg, boolean... booleans) {
+        for (boolean aBoolean : booleans) {
+            requireFalse(aBoolean, errorMsg);
+        }
     }
 
-    public static void shallNotBeNull(Object o, String errorMsg) {
-        shallBeTrue(o != null, errorMsg);
+    public static void requireNotBlank(String s, String errorMsg) {
+        requireTrue(StringUtils.isNotBlank(s), errorMsg);
     }
 
+    public static void requireNotNull(Object o, String errorMsg) {
+        requireTrue(o != null, errorMsg);
+    }
 
+    public static void requireAllNotNull(String errorMsg, Object... objects) {
+        for (Object object : objects) {
+            requireNotNull(object, errorMsg);
+        }
+    }
 
 
 }

@@ -14,7 +14,7 @@ public class FunctionalUtils {
                 break;
             }
 
-            VerifyUtil.shallBeTrue(i + 1 < maxRetryCount, "Exceeded the maximum retry count");
+            VerifyUtil.requireTrue(i + 1 < maxRetryCount, "Exceeded the maximum retry count");
         }
     }
 }

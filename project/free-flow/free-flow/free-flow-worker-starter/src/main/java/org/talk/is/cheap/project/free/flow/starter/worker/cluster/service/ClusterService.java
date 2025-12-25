@@ -25,7 +25,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -94,7 +93,7 @@ public class ClusterService {
 
 
     public URI getSchedulerLeaderUri() {
-        VerifyUtil.shallNotBeBlank(schedulerLeaderAddress.get(), "schedulerLeaderAddress is blank");
+        VerifyUtil.requireNotBlank(schedulerLeaderAddress.get(), "schedulerLeaderAddress is blank");
         return getUri(schedulerLeaderAddress.get());
     }
 
@@ -194,7 +193,7 @@ public class ClusterService {
      */
     private String getRandomSchedulerAddress() {
         try {
-            VerifyUtil.shallBeFalse(distinctAddressList.addressList.isEmpty(), "can't find any scheduler host");
+            VerifyUtil.requireFalse(distinctAddressList.addressList.isEmpty(), "can't find any scheduler host");
 
             return distinctAddressList.addressList.get(new Random().nextInt(distinctAddressList.addressList.size()));
         } catch (Exception e) {
