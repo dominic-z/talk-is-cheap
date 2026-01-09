@@ -1,5 +1,5 @@
 server:
-  port: 7072
+  port: 7073
 logging:
   level:
     root: INFO
@@ -53,7 +53,8 @@ apache:
     path:
       scheduler:
         root: /free-flow/scheduler
-        election: /free-flow/scheduler/leader
+        election: /free-flow/scheduler/election
+        runnable: /free-flow/scheduler/runnable
       worker:
         root: /free-flow/worker
         online: /free-flow/worker/online

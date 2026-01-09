@@ -99,10 +99,7 @@ public class AppTesting {
         final String path = "/tenant1/watch";
         final String subPath = "/tenant1/watch/sub";
         final String subSubPath = "/tenant1/watch/sub/sub";
-        // 如果执行清空，那么后续监听的时候，第一个事件就是初始化，第二个事件应该就是创建
-        // 而如果不执行清空，并且path/subPath/subSubPath已经存在的话，那么第一个事件就是NODE_ADD，为啥？我推测既然这个监听器叫做什么什么cache，那么我可以理解为是对zk在本地做了个缓存，zk
-        // 有而本地没有，那么就会触发node_add事件，
-        // 相当于对于当前这个客户端来说，zk新增了节点，好像也合理。
+        // 如果对应的路径一开始是不存在的，那么后续监听的时候，第一个事件就是初始化，第二个事件应该就是创建
         if (tenant1CuratorClient.checkExists().forPath(path) != null) {
             tenant1CuratorClient.delete().deletingChildrenIfNeeded().forPath(path);
         }
@@ -112,6 +109,19 @@ public class AppTesting {
         if (tenant1CuratorClient.checkExists().forPath(subSubPath) != null) {
             tenant1CuratorClient.delete().deletingChildrenIfNeeded().forPath(subSubPath);
         }
+
+        // 如果对应的路径已经存在了数据，那么那么第一个事件就是NODE_ADD
+        // 为啥？我推测既然这个监听器叫做什么什么cache，那么我可以理解为是对zk在本地做了个缓存，zk有而本地没有，那么就会触发node_add事件，
+        // 相当于对于当前这个客户端来说，zk新增了节点，好像也合理。
+//        tenant1CuratorClient.create()
+//                .creatingParentsIfNeeded()
+//                .withMode(CreateMode.PERSISTENT)
+//                .forPath(path, "this is a book".getBytes());
+//
+//        tenant1CuratorClient.create()
+//                .creatingParentsIfNeeded()
+//                .withMode(CreateMode.PERSISTENT)
+//                .forPath(subPath, "this is a book".getBytes());
         // 监听一个节点
         // 创建NodeCache对象
         // deprecated了

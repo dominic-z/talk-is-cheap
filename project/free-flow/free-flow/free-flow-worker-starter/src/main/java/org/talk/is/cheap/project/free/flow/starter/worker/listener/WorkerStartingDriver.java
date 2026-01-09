@@ -17,6 +17,7 @@ public class WorkerStartingDriver implements ApplicationListener<ApplicationStar
 
     @Override
     public void onApplicationEvent(ApplicationStartedEvent event) {
+        // 没法通过注入的方式获取
         ConfigurableApplicationContext applicationContext = event.getApplicationContext();
         ClusterService clusterService = applicationContext.getBean(ClusterService.class);
         clusterService.listenAndSetSchedulerLeader();

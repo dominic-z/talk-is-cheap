@@ -9,20 +9,20 @@ import org.springframework.web.bind.annotation.RestController;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.common.message.ResultCode;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.RegistryWorkerReq;
-import org.talk.is.cheap.project.free.flow.scheduler.cluster.controller.ClusterController;
+import org.talk.is.cheap.project.free.flow.scheduler.cluster.controller.ClusterInternalController;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.SchedulerClusterManager;
 
 @RestController
 @RequestMapping
 @Slf4j
-public class ClusterControllerImpl implements ClusterController {
+public class ClusterInternalControllerImpl implements ClusterInternalController {
 
     @Autowired
     private SchedulerClusterManager schedulerClusterManager;
 
     @Override
     public HttpBody<String> getSchedulerAddress() {
-        return HttpBody.<String>builder().data(schedulerClusterManager.getSchedulerAddress()).code(0).build();
+        return HttpBody.<String>builder().data(schedulerClusterManager.getCurrentSchedulerAddress()).code(0).build();
     }
 
     @Override

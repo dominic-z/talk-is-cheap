@@ -5,22 +5,20 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.QueryClusterInfoReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.QueryClusterInfoResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.RegistryWorkerReq;
 import org.talk.is.cheap.project.free.flow.common.router.URIs;
 
-public interface ClusterController {
+/**
+ * 面向前端的cluster
+ */
+public interface ClusterInfoController {
 
-    @RequestMapping(path = URIs.SchedulerClusterURIs.ADDRESS, method = RequestMethod.GET)
+    @RequestMapping(path = URIs.SchedulerClusterURIs.NODES, method = RequestMethod.POST)
     @ResponseBody
-    HttpBody<String> getSchedulerAddress();
+    QueryClusterInfoResp queryNodes(@RequestBody QueryClusterInfoReq req);
 
 
-    @RequestMapping(path = URIs.SchedulerClusterURIs.LEADER, method = RequestMethod.GET)
-    @ResponseBody
-    HttpBody<String> getLeaderAddress();
-
-    @RequestMapping(path = URIs.SchedulerClusterURIs.REGISTRY_WORKER, method = RequestMethod.POST)
-    @ResponseBody
-    HttpBody<String> registryWorker(@RequestBody RegistryWorkerReq req);
 
 }

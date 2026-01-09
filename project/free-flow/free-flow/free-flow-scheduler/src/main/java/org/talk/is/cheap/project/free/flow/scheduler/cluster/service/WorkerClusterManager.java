@@ -15,14 +15,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.talk.is.cheap.project.free.flow.common.enums.NodeStatus;
+import org.talk.is.cheap.project.free.flow.common.enums.NodeType;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.client.WorkerClusterClient;
-import org.talk.is.cheap.project.free.flow.common.enums.NodeAction;
-import org.talk.is.cheap.project.free.flow.common.enums.NodeType;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.WorkerTerminatedEvent;
 import org.talk.is.cheap.project.free.flow.scheduler.config.property.ZKPathProperty;
-import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNodeLog;
-import org.talk.is.cheap.project.free.flow.starter.repository.service.ClusterNodeLogService;
+import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.ClusterNodeExample;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNode;
+import org.talk.is.cheap.project.free.flow.starter.repository.service.ClusterNodeService;
+import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.ClusterNodeServiceWrapper;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -30,11 +32,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -67,7 +69,9 @@ public class WorkerClusterManager {
     private ZKPathProperty zkPathProperty;
 
     @Autowired
-    private ClusterNodeLogService clusterNodeLogService;
+    private ClusterNodeService clusterNodeService;
+    @Autowired
+    private ClusterNodeServiceWrapper clusterNodeServiceWrapper;
 
     @Autowired
     private WorkerClusterClient workerClusterClient;
@@ -131,6 +135,7 @@ public class WorkerClusterManager {
     private void handleAddWorker(TreeCacheEvent event) {
         ChildData eventData = event.getData();
         if (eventData == null) {
+            log.warn("handle add worker without data,{}", event);
             return;
         }
         String workerNodeAddress = new String(eventData.getData(), StandardCharsets.UTF_8);
@@ -142,24 +147,19 @@ public class WorkerClusterManager {
             log.info("new online worker, path: {}, workerNodeAddress: {}", zkPath, workerNodeAddress);
             onlineWorkerPathAddress.put(zkPath, workerNodeAddress);
 
-            clusterNodeLogService.create(
-                    new ClusterNodeLog()
+            clusterNodeService.createOnDuplicateKey(
+                    new ClusterNode()
+                            .withStatus(NodeStatus.RUNNABLE.getStatus())
+                            .withNodeZkPath(zkPath)
                             .withNodeAddress(workerNodeAddress)
                             .withNodeType(NodeType.WORKER.getType())
-                            .withNodeAction(NodeAction.RUNNABLE.getStatus()));
+            );
 
 
         } else if (StringUtils.equals(parentPath, zkPathProperty.getWorker().getTerminating())) {
             // 如果是terminating下的节点
             log.info("add terminating worker, path: {}, workerNodeAddress: {}", zkPath, workerNodeAddress);
             terminatingWorkerPathAddress.put(zkPath, workerNodeAddress);
-
-            clusterNodeLogService.create(
-                    new ClusterNodeLog()
-                            .withNodeAddress(workerNodeAddress)
-                            .withNodeType(NodeType.WORKER.getType())
-                            .withNodeAction(NodeAction.TERMINATING.getStatus()));
-
         }
     }
 
@@ -187,21 +187,25 @@ public class WorkerClusterManager {
             } catch (Exception e) {
                 log.error("error when delete runnable node", e);
             }
-            clusterNodeLogService.create(
-                    new ClusterNodeLog()
+
+            // 避免网络问题导致的更新为Terminated操作先于更新为TERMINATING状态
+            ClusterNodeExample example = new ClusterNodeExample();
+            example.createCriteria().andNodeAddressEqualTo(workerNodeAddress)
+                    .andStatusIn(List.of(NodeStatus.RUNNABLE.getStatus(), NodeStatus.INITIALIZING.getStatus()));
+            clusterNodeService.updateByExampleSelective(
+                    new ClusterNode()
                             .withNodeAddress(workerNodeAddress)
-                            .withNodeType(NodeType.WORKER.getType())
-                            .withNodeAction(NodeAction.RUNNABLE_TO_TERMINATING.getStatus()));
+                            .withStatus(NodeStatus.TERMINATING.getStatus()), example);
         } else if (StringUtils.equals(parentPath, zkPathProperty.getWorker().getTerminating())) {
             // 如果是terminating下的节点被移除了，那就是真下线了
             log.info("remove terminating worker, path: {}, workerNodeAddress: {}", zkPath, workerNodeAddress);
             terminatingWorkerPathAddress.remove(zkPath);
             publisher.publishEvent(new WorkerTerminatedEvent(workerNodeAddress));
-            clusterNodeLogService.create(
-                    new ClusterNodeLog()
+            clusterNodeServiceWrapper.updateByNodeAddressSelective(
+                    workerNodeAddress,
+                    new ClusterNode()
                             .withNodeAddress(workerNodeAddress)
-                            .withNodeType(NodeType.WORKER.getType())
-                            .withNodeAction(NodeAction.TERMINATED.getStatus()));
+                            .withStatus(NodeStatus.TERMINATED.getStatus()));
         }
 
     }
@@ -210,7 +214,9 @@ public class WorkerClusterManager {
     // 应用关闭的时候触发
     @PreDestroy
     public void stopManageWorkers() {
-        this.workerCuratorCache.close();
+        if (this.workerCuratorCache != null) {
+            this.workerCuratorCache.close();
+        }
     }
 
     /**
@@ -312,5 +318,12 @@ public class WorkerClusterManager {
     public URI getWorkerURI(String workerNodeAddress) {
         return UriComponentsBuilder.fromHttpUrl("http://" + workerNodeAddress).build().toUri();
     }
-
+    public boolean isValid(String zkPath) {
+        try {
+            return curatorZKClient.checkExists().forPath(zkPath) == null;
+        } catch (Exception e) {
+            log.error("检查zkPath:{}是否存在出错", zkPath, e);
+            return false;
+        }
+    }
 }

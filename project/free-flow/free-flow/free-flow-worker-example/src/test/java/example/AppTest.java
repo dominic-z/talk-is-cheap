@@ -9,7 +9,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.talk.is.cheap.project.free.example.App;
 import org.talk.is.cheap.project.free.flow.starter.worker.task.definition.annotaion.task.Task;
-import org.talk.is.cheap.project.free.flow.starter.worker.client.SchedulerClusterClient;
+import org.talk.is.cheap.project.free.flow.starter.worker.client.SchedulerClusterInternalClient;
 import org.talk.is.cheap.project.free.flow.starter.worker.config.properties.ZKConfigProperties;
 
 import java.lang.reflect.Method;
@@ -28,7 +28,7 @@ public class AppTest {
     private CuratorFramework starterCuratorZKClient;
 
     @Autowired
-    private SchedulerClusterClient schedulerClusterClient;
+    private SchedulerClusterInternalClient schedulerClusterClient;
 
 
 

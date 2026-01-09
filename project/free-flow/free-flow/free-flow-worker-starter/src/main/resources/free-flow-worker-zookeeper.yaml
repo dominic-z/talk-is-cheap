@@ -20,7 +20,7 @@ zookeeper:
   path:
     scheduler:
       root: /free-flow/scheduler
-      election: /free-flow/scheduler/leader
+      election: /free-flow/scheduler/election
     worker:
       root: /free-flow/worker
       online: /free-flow/worker/online

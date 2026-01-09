@@ -14,6 +14,7 @@ public class ZKPathProperty {
     public static class Scheduler{
         private String root;
         private String election;
+        private String runnable;
     }
 
     @Data

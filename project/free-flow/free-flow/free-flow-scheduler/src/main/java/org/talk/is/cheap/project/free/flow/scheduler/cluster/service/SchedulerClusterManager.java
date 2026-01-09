@@ -1,8 +1,13 @@
 package org.talk.is.cheap.project.free.flow.scheduler.cluster.service;
 
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.cache.CuratorCache;
+import org.apache.curator.framework.recipes.cache.CuratorCacheListener;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
 import org.apache.curator.framework.recipes.leader.LeaderLatchListener;
 import org.apache.zookeeper.CreateMode;
@@ -13,12 +18,19 @@ import org.springframework.boot.context.event.ApplicationStartedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.talk.is.cheap.project.free.flow.common.enums.EnvType;
-import org.talk.is.cheap.project.free.flow.common.utils.IPUtil;
-import org.talk.is.cheap.project.free.flow.common.enums.NodeAction;
+import org.talk.is.cheap.project.free.flow.common.enums.NodeStatus;
 import org.talk.is.cheap.project.free.flow.common.enums.NodeType;
-import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNodeLog;
-import org.talk.is.cheap.project.free.flow.starter.repository.service.ClusterNodeLogService;
+import org.talk.is.cheap.project.free.flow.common.utils.IPUtil;
+import org.talk.is.cheap.project.free.flow.scheduler.config.property.ZKPathProperty;
+import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.ClusterNodeExample;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNode;
+import org.talk.is.cheap.project.free.flow.starter.repository.service.ClusterNodeService;
+import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.ClusterNodeServiceWrapper;
 
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -36,11 +48,8 @@ public class SchedulerClusterManager {
     @Autowired
     private CuratorFramework curatorZKClient;
 
-    @Value("${apache.zookeeper.path.scheduler.election}")
-    private String zkSchedulerElectionPath;
-
-    @Value("${apache.zookeeper.path.scheduler.root}")
-    private String zkSchedulerPath;
+    @Autowired
+    private ZKPathProperty zkPathProperty;
 
     @Value("${spring.application.env-type}")
     private String env;
@@ -49,6 +58,7 @@ public class SchedulerClusterManager {
     private String port;
 
     private LeaderLatch leaderLatch;
+    private String zkPath;
 
     // 用做缓存，不需要每次都去查询
     private String cachedLeaderAddress;
@@ -56,9 +66,15 @@ public class SchedulerClusterManager {
     @Autowired
     private WorkerClusterManager workerClusterManager;
 
+    private CuratorCache schedulerCuratorCache;
+
+    private Map<String, String> addressZKPath = new ConcurrentHashMap<>();
+
 
     @Autowired
-    private ClusterNodeLogService clusterNodeLogService;
+    private ClusterNodeService clusterNodeService;
+    @Autowired
+    private ClusterNodeServiceWrapper clusterNodeServiceWrapper;
 
     /**
      * 监听应用启动完成事件，进行注册
@@ -70,15 +86,37 @@ public class SchedulerClusterManager {
     public void registryAndElection(ApplicationStartedEvent event) throws Exception {
         log.info("scheduler start registry and election");
 
+        register();
         election();
 
-        clusterNodeLogService.create(
-                new ClusterNodeLog()
-                        .withNodeAddress(getSchedulerAddress())
-                        .withNodeType(NodeType.SCHEDULER.getType())
-                        .withNodeType(NodeAction.RUNNABLE.getStatus()));
 
     }
+
+    /**
+     * 在zk中注册，然后在db中写入
+     *
+     * @throws Exception
+     */
+    private void register() throws Exception {
+        if (curatorZKClient.checkExists().forPath(zkPathProperty.getScheduler().getRunnable()) == null) {
+            try {
+                curatorZKClient.create().creatingParentsIfNeeded()
+                        .withMode(CreateMode.PERSISTENT)
+                        .forPath(zkPathProperty.getScheduler().getRunnable());
+            } catch (KeeperException.NodeExistsException e) {
+                log.warn("zk: {} already exists", zkPathProperty.getScheduler().getElection());
+            }
+        }
+
+
+        zkPath = Paths.get(zkPathProperty.getScheduler().getRunnable(), getCurrentSchedulerAddress().replace(":", "_")).toString();
+        curatorZKClient.create()
+                .withMode(CreateMode.EPHEMERAL)
+                .forPath(zkPath, getCurrentSchedulerAddress().getBytes());
+
+
+    }
+
 
     /**
      * 选举
@@ -86,20 +124,22 @@ public class SchedulerClusterManager {
      * @throws Exception
      */
     private void election() throws Exception {
-        if (curatorZKClient.checkExists().forPath(zkSchedulerPath) == null) {
+        if (curatorZKClient.checkExists().forPath(zkPathProperty.getScheduler().getElection()) == null) {
             try {
                 curatorZKClient.create().creatingParentsIfNeeded()
                         .withMode(CreateMode.PERSISTENT)
-                        .forPath(zkSchedulerPath);
+                        .forPath(zkPathProperty.getScheduler().getElection());
             } catch (KeeperException.NodeExistsException e) {
-                log.warn("zk: {} already exists", zkSchedulerPath);
+                log.warn("zk: {} already exists", zkPathProperty.getScheduler().getElection());
             }
         }
 
-        final String schedulerAddress = getSchedulerAddress();
+        final String schedulerAddress = getCurrentSchedulerAddress();
 
         // 关键逻辑，开始竞选
-        leaderLatch = new LeaderLatch(curatorZKClient, zkSchedulerElectionPath, schedulerAddress, LeaderLatch.CloseMode.NOTIFY_LEADER);
+
+        leaderLatch = new LeaderLatch(curatorZKClient, zkPathProperty.getScheduler().getElection(), schedulerAddress,
+                LeaderLatch.CloseMode.NOTIFY_LEADER);
         leaderLatch.addListener(new LeaderLatchListener() {
             @Override
             public void isLeader() {
@@ -107,23 +147,121 @@ public class SchedulerClusterManager {
                 SchedulerClusterManager.this.cachedLeaderAddress = schedulerAddress;
                 log.info("{} become leader", schedulerAddress);
 
-                // 称为leader之后开始监听管理worker
+                // 职责1：leader开始监听管理worker
                 workerClusterManager.manageWorkers();
+
+                // 职责2：负责维护db中节点信息，用于给前端返回正确的数据
+                watchOtherSchedulers();
+                // 成为leader后更新数据库中的leader记录，scheduler节点的leader状态
+                try {
+                    updateLeaderInfoInDB();
+                } catch (Exception e) {
+                    log.error("error when updateLeaderInfoInDB", e);
+                }
+
             }
 
             @Override
             public void notLeader() {
                 log.info("{} is no longer leader", schedulerAddress);
-                workerClusterManager.stopManageWorkers();
+
+                stopManageCluster();
             }
         }, SINGLE_EXECUTOR_SERVICE);
 
         leaderLatch.start();
 
+
     }
 
 
-    public String getSchedulerAddress() {
+    /**
+     * 更新db中leader节点的状态，注意，这块没有开事务，没太大关系。。
+     */
+    private void updateLeaderInfoInDB() throws Exception {
+
+
+        ClusterNodeExample example = new ClusterNodeExample();
+        ClusterNodeExample.Criteria criteria = example.createCriteria();
+        criteria.andNodeTypeEqualTo(NodeType.SCHEDULER_LEADER.getType());
+        List<ClusterNode> oldLeaders = clusterNodeService.selectByExample(example);
+        for (ClusterNode oldLeader : oldLeaders) {
+            try {
+                example.clear();
+                example.createCriteria().andIdEqualTo(oldLeader.getId());
+                if (curatorZKClient.checkExists().forPath(oldLeader.getNodeZkPath()) != null) {
+                    // 如果前一轮旧的leader仍然在线上。
+                    clusterNodeServiceWrapper.updateByIdSelective(oldLeader.getId(),
+                            new ClusterNode().withNodeType(NodeType.SCHEDULER.getType()), null);
+                } else {
+                    clusterNodeServiceWrapper.updateByIdSelective(oldLeader.getId(),
+                            new ClusterNode().withStatus(NodeStatus.TERMINATED.getStatus()), null);
+                }
+            } catch (Exception e) {
+                log.error("更新旧leader异常", e);
+            }
+        }
+
+        ClusterNode record = new ClusterNode()
+                .withNodeAddress(getCurrentSchedulerAddress())
+                .withNodeZkPath(zkPath)
+                .withNodeType(NodeType.SCHEDULER_LEADER.getType())
+                .withStatus(NodeStatus.RUNNABLE.getStatus());
+        clusterNodeService.createOnDuplicateKey(record);
+
+    }
+
+    // 监听其他Scheduler的上下线，但这里有个坑，如果连续两个leader下线，在新的leader选举出来之前，如果又有节点下线，那么这个节点的下线不会触发CHILD_REMOVED
+    // 因为此时没有leader，并不想一直轮询查询，所以采用懒更新的方式，每次查询的时候校验一下，如果是失效节点就更新db中的节点状态。
+    private void watchOtherSchedulers() {
+        CuratorCacheListener schedulerPathListener =
+                CuratorCacheListener.builder().forPathChildrenCache(zkPathProperty.getScheduler().getRunnable(),
+                        this.curatorZKClient,
+                        new PathChildrenCacheListener() {
+                            @Override
+                            public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception {
+                                log.debug("listen schedulers, eventType:{}, eventPath:{}", event.getType(),
+                                        event.getData() == null ? "nullData" : event.getData().getPath());
+                                if (event.getData() == null || event.getData().getData() == null ||
+                                        StringUtils.equals(event.getData().getPath(), zkPath)) {
+                                    // 如果事件没有数据，或者事件就是本节点的新增事件，那么就不做处理。
+                                    return;
+                                }
+                                String nodeAddress = new String(event.getData().getData());
+                                if (PathChildrenCacheEvent.Type.CHILD_ADDED.equals(event.getType())) {
+                                    // 开始监听之前已经存在的数据也会触发CHILD_ADD事件
+                                    ClusterNode clusterNode = new ClusterNode().withNodeAddress(nodeAddress)
+                                            .withNodeZkPath(event.getData().getPath())
+                                            .withStatus(NodeStatus.RUNNABLE.getStatus())
+                                            .withNodeType(NodeType.SCHEDULER.getType());
+                                    clusterNodeService.createOnDuplicateKey(clusterNode);
+                                    addressZKPath.put(nodeAddress, event.getData().getPath());
+                                } else if (PathChildrenCacheEvent.Type.CHILD_REMOVED.equals(event.getType())) {
+                                    ClusterNode clusterNode = new ClusterNode().withNodeAddress(nodeAddress)
+                                            .withStatus(NodeStatus.TERMINATED.getStatus())
+                                            .withNodeType(NodeType.SCHEDULER.getType());
+                                    clusterNodeServiceWrapper.updateByNodeAddressSelective(nodeAddress, clusterNode);
+                                    addressZKPath.remove(nodeAddress);
+
+                                }
+                            }
+                        }).build();
+
+        schedulerCuratorCache = CuratorCache.builder(curatorZKClient, zkPathProperty.getScheduler().getRunnable()).build();
+        schedulerCuratorCache.listenable().addListener(schedulerPathListener);
+
+        schedulerCuratorCache.start();
+    }
+
+    @PreDestroy
+    public void stopManageCluster() {
+        workerClusterManager.stopManageWorkers();
+        if (schedulerCuratorCache != null) {
+            schedulerCuratorCache.close();
+        }
+    }
+
+    public String getCurrentSchedulerAddress() {
         return (EnvType.CONTAINER == EnvType.getByName(env) ? getContainerName() : IPUtil.getMainIP()) + ":" + port;
     }
 
@@ -159,5 +297,27 @@ public class SchedulerClusterManager {
         return this.leaderLatch.hasLeadership();
     }
 
+    public boolean isLeader(String nodeAddress) {
+        return StringUtils.equals(nodeAddress,getLeaderId());
+    }
+
+    public String getLeaderId() {
+        try {
+            String id = this.leaderLatch.getLeader().getId();
+            return id;
+        } catch (Exception e) {
+            log.error("获取leader异常", e);
+            return null;
+        }
+    }
+
+    public boolean isValid(String zkPath) {
+        try {
+            return curatorZKClient.checkExists().forPath(zkPath) == null;
+        } catch (Exception e) {
+            log.error("检查zkPath:{}是否存在出错", zkPath, e);
+            return false;
+        }
+    }
 
 }
