@@ -1,6 +1,6 @@
 package org.talk.is.cheap.project.free.flow.starter.repository.dao.customized;
 
-import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNodeLog;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNode;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Repository;
@@ -17,7 +17,7 @@ import java.util.Map;
 /**
 * DAO for customized sql defined in  customized/mapper.xml
 * for example
-* public List<ClusterNodeLog> findByIds(Collection<Long> ids) {
+* public List<ClusterNode> findByIds(Collection<Long> ids) {
 *       if (ids.isEmpty()) {
 *       return new ArrayList<>();
 *       }
@@ -27,15 +27,20 @@ import java.util.Map;
 *  }
 *
 * @author dominiczhu
-* @date 2025/11/11
+* @date 2025/12/25
 */
 @Repository
-public class ClusterNodeLogDao {
+public class ClusterNodeDao {
 
-    private static final String TABLE = "org.talk.is.cheap.project.free.flow.starter.repository.dao.customized.ClusterNodeLogDao";
+    private static final String TABLE = "org.talk.is.cheap.project.free.flow.starter.repository.dao.customized.ClusterNodeDao";
 
     @Autowired
     @Qualifier("repositoryStarterSqlSessionTemplate")
     private SqlSessionTemplate sqlSessionTemplate;
+
+
+    public int insertOnDuplicateKey(ClusterNode record) {
+        return sqlSessionTemplate.insert(TABLE + ".insertOnDuplicateKey", record);
+    }
 
 }

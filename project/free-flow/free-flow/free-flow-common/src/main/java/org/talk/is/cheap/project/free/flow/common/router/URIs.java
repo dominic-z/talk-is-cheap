@@ -10,15 +10,19 @@ public class URIs {
 
     }
 
-    public static class SchedulerClusterURIs {
-        private static final String PREFIX = "/scheduler/cluster";
+    public static class SchedulerClusterInternalURIs {
+        private static final String PREFIX = "/scheduler/cluster/internal";
 
         public static final String ADDRESS = PREFIX + "/address";
         public static final String IDS = PREFIX + "/ids";
         public static final String LEADER = PREFIX + "/leader";
         public static final String REGISTRY_WORKER = PREFIX + "/registry-worker";
+    }
 
+    public static class SchedulerClusterURIs {
+        private static final String PREFIX = "/scheduler/cluster/";
 
+        public static final String NODES = PREFIX + "/nodes";
     }
 
     public static class SchedulerTaskProcessURIs {

@@ -16,21 +16,21 @@ import java.net.URI;
         name = "scheduler-cluster-client",
         url = "None"
 )
-public interface SchedulerClusterClient {
+public interface SchedulerClusterInternalClient {
 
     String CLIENT_NAME = "scheduler-cluster-client";
 
-    @RequestMapping(path = URIs.SchedulerClusterURIs.ADDRESS, method = RequestMethod.GET)
+    @RequestMapping(path = URIs.SchedulerClusterInternalURIs.ADDRESS, method = RequestMethod.GET)
     @ResponseBody
     HttpBody<String> getSchedulerAddress(URI host);
 
 
-    @RequestMapping(path = URIs.SchedulerClusterURIs.LEADER, method = RequestMethod.GET)
+    @RequestMapping(path = URIs.SchedulerClusterInternalURIs.LEADER, method = RequestMethod.GET)
     @ResponseBody
     HttpBody<String> getLeaderAddress(URI host);
 
 
-    @RequestMapping(path = URIs.SchedulerClusterURIs.REGISTRY_WORKER, method = RequestMethod.POST)
+    @RequestMapping(path = URIs.SchedulerClusterInternalURIs.REGISTRY_WORKER, method = RequestMethod.POST)
     @ResponseBody
     HttpBody<String> registryWorker(URI host, @RequestBody RegistryWorkerReq req);
 }

@@ -9,7 +9,9 @@ import java.util.Map;
 @AllArgsConstructor
 public enum NodeType {
 
-    SCHEDULER(0, "scheduler"), WORKER(1, "worker");
+    SCHEDULER_LEADER(0, "scheduler-leader"),
+    SCHEDULER(1, "scheduler"),
+    WORKER(2, "worker");
 
     @Getter
     private final Integer type;

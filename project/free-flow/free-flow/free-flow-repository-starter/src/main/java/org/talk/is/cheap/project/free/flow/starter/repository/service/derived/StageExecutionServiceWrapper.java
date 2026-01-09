@@ -47,11 +47,11 @@ public class StageExecutionServiceWrapper {
     }
 
 
-    public int updateSelectiveById(long id,  StageExecution stageExecution,Long revision) {
+    public int updateSelectiveById(long id, StageExecution stageExecution, Long revision) {
         StageExecutionExample example = new StageExecutionExample();
         StageExecutionExample.Criteria criteria = example.createCriteria();
         criteria.andIdEqualTo(id);
-        if(revision!=null){
+        if (revision != null) {
             criteria.andRevisionEqualTo(revision);
             stageExecution.setRevision(revision + 1);
         }

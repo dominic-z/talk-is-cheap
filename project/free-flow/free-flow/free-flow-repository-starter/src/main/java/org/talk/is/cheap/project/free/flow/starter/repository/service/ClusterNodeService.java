@@ -1,9 +1,9 @@
 package org.talk.is.cheap.project.free.flow.starter.repository.service;
 
-import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.ClusterNodeLogMapper;
-import org.talk.is.cheap.project.free.flow.starter.repository.dao.customized.ClusterNodeLogDao;
-import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNodeLog;
-import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.ClusterNodeLogExample;
+import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.ClusterNodeMapper;
+import org.talk.is.cheap.project.free.flow.starter.repository.dao.customized.ClusterNodeDao;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNode;
+import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.ClusterNodeExample;
 
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,87 +20,93 @@ import java.lang.IllegalArgumentException;
 /**
 * 定制化的service层，用于弥补mbg生成的mapper过于灵活导致可能出现的业务漏洞，例如越过deleted字段查询、更新updateTime等
 * @author dominiczhu
-* @date 2025/11/11
+* @date 2025/12/25
 */
 @Service
-public class ClusterNodeLogService{
+public class ClusterNodeService{
 
     @Autowired
-    private ClusterNodeLogDao clusterNodeLogDao;
+    private ClusterNodeDao clusterNodeDao;
 
     @Autowired
-    private ClusterNodeLogMapper clusterNodeLogMapper;
+    private ClusterNodeMapper clusterNodeMapper;
 
-    // 基于ClusterNodeLogMapper
+    // 基于ClusterNodeMapper
 
     @Transactional(rollbackFor = Exception.class , transactionManager = "repositoryStarterTransactionManager")
-    public int create(ClusterNodeLog record) {
+    public int create(ClusterNode record) {
         if (record == null) {
             return 0;
         }
-        return clusterNodeLogMapper.insertSelective(record);
+        return clusterNodeMapper.insertSelective(record);
     }
 
 
     @Transactional(rollbackFor = Exception.class, transactionManager = "repositoryStarterTransactionManager")
-    public int deleteByExample(ClusterNodeLogExample example) {
+    public int deleteByExample(ClusterNodeExample example) {
         if (example == null) {
             return 0;
         }
-        return clusterNodeLogMapper.deleteByExample(example);
+        return clusterNodeMapper.deleteByExample(example);
     }
 
     @Transactional(rollbackFor = Exception.class, transactionManager = "repositoryStarterTransactionManager")
-    public int updateByExampleSelective(ClusterNodeLog record, ClusterNodeLogExample example) {
+    public int updateByExampleSelective(ClusterNode record, ClusterNodeExample example) {
         if (record == null || example == null) {
             return 0;
         }
         // record.setUpdateTime(new Date()); // 通过数据库触发器实现
-        return clusterNodeLogMapper.updateByExampleSelective(record, example);
+        return clusterNodeMapper.updateByExampleSelective(record, example);
     }
 
-    public long countByExample(ClusterNodeLogExample example) {
+    public long countByExample(ClusterNodeExample example) {
         if (example == null) {
             return 0L;
         }
 
-        return clusterNodeLogMapper.countByExample(example);
+        return clusterNodeMapper.countByExample(example);
     }
 
-    public List<ClusterNodeLog> selectByExample(ClusterNodeLogExample example) {
+    public List<ClusterNode> selectByExample(ClusterNodeExample example) {
         if (example == null) {
             return new ArrayList<>();
         }
-        return clusterNodeLogMapper.selectByExample(example);
+        return clusterNodeMapper.selectByExample(example);
     }
 
     // 深度分页的service接口
-    public List<ClusterNodeLog> selectByExampleDeepPaging(ClusterNodeLogExample example) {
+    public List<ClusterNode> selectByExampleDeepPaging(ClusterNodeExample example) {
         if (example == null) {
             return new ArrayList<>();
         }
         if (example.getLimit() == null || example.getOffset() == null){
             throw new IllegalArgumentException("limit or offset can't be null");
         }
-        return clusterNodeLogMapper.selectByExampleDeepPagingByIdSubQuery(example);
+        return clusterNodeMapper.selectByExampleDeepPagingByIdSubQuery(example);
     }
 
     // insertBatch的service接口
     @Transactional(rollbackFor = Exception.class, transactionManager = "repositoryStarterTransactionManager")
-    public int createBatch(Collection<ClusterNodeLog> records) {
+    public int createBatch(Collection<ClusterNode> records) {
         if (records == null || records.isEmpty()) {
             return 0;
         }
-        return clusterNodeLogMapper.insertBatch(records);
+        return clusterNodeMapper.insertBatch(records);
     }
 
     @Transactional(rollbackFor = Exception.class, transactionManager = "repositoryStarterTransactionManager")
-    public int createBatchSelective(Collection<ClusterNodeLog> records, Collection<String> excludeColNames) {
+    public int createBatchSelective(Collection<ClusterNode> records, Collection<String> excludeColNames) {
         if (records == null || records.isEmpty()) {
             return 0;
         }
-        return clusterNodeLogMapper.insertBatchSelective(records, new HashSet<String>(excludeColNames));
+        return clusterNodeMapper.insertBatchSelective(records, new HashSet<String>(excludeColNames));
     }
-    // 基于clusterNodeLogDao
-
+    // 基于clusterNodeDao
+    @Transactional(rollbackFor = Exception.class , transactionManager = "repositoryStarterTransactionManager")
+    public int createOnDuplicateKey(ClusterNode record) {
+        if (record == null) {
+            return 0;
+        }
+        return clusterNodeDao.insertOnDuplicateKey(record);
+    }
 }

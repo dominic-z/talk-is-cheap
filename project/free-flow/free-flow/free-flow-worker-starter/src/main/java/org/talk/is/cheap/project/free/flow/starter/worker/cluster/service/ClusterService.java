@@ -17,7 +17,7 @@ import org.talk.is.cheap.project.free.flow.common.enums.EnvType;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.common.utils.IPUtil;
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
-import org.talk.is.cheap.project.free.flow.starter.worker.client.SchedulerClusterClient;
+import org.talk.is.cheap.project.free.flow.starter.worker.client.SchedulerClusterInternalClient;
 import org.talk.is.cheap.project.free.flow.starter.worker.config.properties.ZKConfigProperties;
 
 import java.net.URI;
@@ -82,7 +82,7 @@ public class ClusterService {
     private final DistinctAddressList distinctAddressList = new DistinctAddressList();
 
     @Autowired
-    private SchedulerClusterClient schedulerClusterClient;
+    private SchedulerClusterInternalClient schedulerClusterClient;
 
     private final AtomicReference<String> schedulerLeaderAddress = new AtomicReference<String>("");
 
