@@ -10,6 +10,7 @@ import resources.message.EnumsReq;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @Slf4j
@@ -67,5 +68,17 @@ public class HelloController {
     public EnumsReq convertEnum(@RequestBody EnumsReq req) {
         log.info("EnumsReq :{}", req);
         return req;
+    }
+    @RequestMapping(value = "/timeConsumingJob", method = {RequestMethod.GET}, produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public ResponseEntity<String> timeConsumingJob(@RequestParam("duration") int duration ){
+
+        try {
+            Thread.sleep(duration* 1000L);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        ResponseEntity<String> responseEntity = new ResponseEntity<>(duration+"", HttpStatus.OK);
+        return responseEntity;
     }
 }
