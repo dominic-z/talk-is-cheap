@@ -45,6 +45,12 @@
             <version>1.0-SNAPSHOT</version>
         </dependency>
 
+
+        <dependency>
+            <groupId>org.talk.is.cheap.hello.spring.boot3.spi</groupId>
+            <artifactId>hello-spring-boot3-spi-starter-4</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
     </dependencies>
 
 </project>

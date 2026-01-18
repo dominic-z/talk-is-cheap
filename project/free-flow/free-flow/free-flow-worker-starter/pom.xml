@@ -66,5 +66,13 @@
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-openfeign</artifactId>
         </dependency>
+
+
+<!--        dao层-->
+        <dependency>
+            <groupId>org.talk.is.cheap.project.free.flow</groupId>
+            <artifactId>free-flow-repository-starter</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
     </dependencies>
 </project>
