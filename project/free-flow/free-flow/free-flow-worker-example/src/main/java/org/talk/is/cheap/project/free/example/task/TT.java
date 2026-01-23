@@ -60,6 +60,7 @@ public class TT {
         log.info("method1 input: {}", stageRuntimeEnv.getInput());
         TTSharedContext ttSharedContext = stageRuntimeEnv.getSharedContext();
         ttSharedContext.setName("abcd");
+        stageRuntimeEnv.log("method1");
         log.info("method1 sharedContext: {}", stageRuntimeEnv);
     }
 
@@ -67,6 +68,7 @@ public class TT {
     public void method2(StageRuntimeEnv<?> stageRuntimeEnv) {
         log.info("method2");
         TTSharedContext ttSharedContext = stageRuntimeEnv.getSharedContext();
+        stageRuntimeEnv.log("method2");
         log.info("method1 sharedContext: {}", stageRuntimeEnv);
     }
 

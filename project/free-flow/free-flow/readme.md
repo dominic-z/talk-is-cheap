@@ -180,6 +180,32 @@ PUT /stage_execution_result_msg
 ```
 
 
+
+```json
+GET /task_shared_context/_search
+{
+  "query": {
+    "term": {
+      "task_startup_id":1
+    }
+  },
+  "size": 10  
+}
+
+
+
+GET /stage_startup_param/_search
+{
+  "query": {
+    "term": {
+      "task_startup_id":1
+    }
+  },
+  "size": 10  
+}
+
+```
+
 ## Redis
 
 

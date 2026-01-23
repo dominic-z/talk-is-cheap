@@ -20,7 +20,7 @@ public class URIs {
     }
 
     public static class SchedulerClusterURIs {
-        private static final String PREFIX = "/scheduler/cluster/";
+        private static final String PREFIX = "/scheduler/cluster";
 
         public static final String NODES = PREFIX + "/nodes";
     }
@@ -40,6 +40,7 @@ public class URIs {
         private static final String PREFIX = "/worker/cluster";
 
         public static final String PING = PREFIX + "/ping";
+        public static final String ALLOW_TO_RUN = PREFIX + "/allow-to-run";
         public static final String TERMINATE = PREFIX + "/terminate";
     }
 
@@ -53,7 +54,7 @@ public class URIs {
         private static final String PREFIX = "/worker/driver";
 
         public static final String TASK_START = PREFIX + "/task/start";
-        public static final String STAGE_START = PREFIX + "/stage/retry";
+        public static final String STAGE_RETRY = PREFIX + "/stage/retry";
 
     }
 }

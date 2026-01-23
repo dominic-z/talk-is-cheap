@@ -29,13 +29,17 @@ public class ReflectUtil {
 
         Class<?> c = clazz;
         while (InputCodec.class.isAssignableFrom(c)) {
+            // 找到父类的type对象
             Type superclassType = c.getGenericSuperclass();
+            // 如果是个泛型type（参数化类型），例如JsonInput<SomeClasss>
             if (superclassType instanceof ParameterizedType parameterizedType) {
+                // 遍历所有的参数化类型
                 Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
                 // 输出结果
                 for (Type type : actualTypeArguments) {
                     // 判断是否为具体类型（Class 实例）
                     if (type instanceof Class) {
+                        // 如果是个具体的类型，那么就找到了对应的泛型类的具体类对象
                         log.info("found specific generic class in codec: {}", type);
                         return (Class<?>) type;
                     }

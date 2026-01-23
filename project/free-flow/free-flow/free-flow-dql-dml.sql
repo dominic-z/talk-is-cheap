@@ -20,25 +20,31 @@ values ("aa",
 UPDATE task_definition set name='bb' where id=1;
 
 SELECT * from task_definition td ;
+SELECT * from stage_definition sd ;
+SELECT * FROM task_graph_definition tgd ;
 
-
+SELECT * FROM task_startup ts ;
+SELECT * FROM task_execution te ;
 SELECT * FROM stage_startup ss ;
+SELECT * FROM stage_execution se ;
 
 -- -- 
-
+TRUNCATE cluster_node ; 
 INSERT
 	into
 	cluster_node(
 	`node_address`,
 	`node_type`,
+	`node_zk_path` ,
 	`status`)
 values("test",
 1,
-2) ON
+"aa",
+4) ON
 DUPLICATE KEY
 UPDATE
-	id=1,
-	node_type = 2,
+	node_address="test",
+	node_type = 3,
 	status = 1;
 
 SELECT

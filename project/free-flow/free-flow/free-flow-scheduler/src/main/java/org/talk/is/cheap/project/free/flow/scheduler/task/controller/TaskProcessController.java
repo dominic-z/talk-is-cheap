@@ -1,6 +1,7 @@
 package org.talk.is.cheap.project.free.flow.scheduler.task.controller;
 
 
+import com.google.common.base.VerifyException;
 import io.vavr.Tuple2;
 import io.vavr.Tuple3;
 import lombok.extern.slf4j.Slf4j;
@@ -66,34 +67,39 @@ public class TaskProcessController {
      */
     @RequestMapping(path = URIs.SchedulerTaskProcessURIs.START, method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
     public HttpBody<String> startTask(@RequestBody StartTaskReq req) {
-        StartTaskReq.Data data = req.getData();
-
-        Tuple3<String, Long, Map<String, Long>> prepareForTaskStartDTO = workerTaskDriverService.prepareForTask(data.getTaskName(),
-                data.getTaskVersion(),
-                data.getInitialEncodedSharedContext(),
-                data.getStageEncodedInputs());
-        String workerAddress = prepareForTaskStartDTO._1();
-        Long taskExecutionId = prepareForTaskStartDTO._2();
-        Map<String, Long> rootStageName2ExecutionId = prepareForTaskStartDTO._3();
-
-        WorkerStartTaskReq workerStartTaskReq = new WorkerStartTaskReq();
-        workerStartTaskReq.setData(
-                WorkerStartTaskReq.Data.builder()
-                        .taskExecutionId(taskExecutionId)
-                        .taskName(data.getTaskName())
-                        .taskVersion(data.getTaskVersion())
-                        .initialEncodedSharedContext(data.getInitialEncodedSharedContext())
-                        .stageEncodedInputs(data.getStageEncodedInputs())
-                        .startingStageExecutionId(rootStageName2ExecutionId)
-                        .build()
-        );
-
-
-        WorkerStartTaskResp workerStartTaskResp = workerTaskDriverClient.startTask(workerClusterManager.getWorkerURI(workerAddress),
-                workerStartTaskReq);
-
         HttpBody<String> resp = HttpBody.<String>builder().build();
-        resp.success("");
+        try {
+            StartTaskReq.Data data = req.getData();
+            Tuple3<String, Long, Map<String, Long>> prepareForTaskStartDTO = workerTaskDriverService.prepareForTask(data.getTaskName(),
+                    data.getTaskVersion(),
+                    data.getInitialEncodedSharedContext(),
+                    data.getStageEncodedInputs());
+            String workerAddress = prepareForTaskStartDTO._1();
+            Long taskExecutionId = prepareForTaskStartDTO._2();
+            Map<String, Long> rootStageName2ExecutionId = prepareForTaskStartDTO._3();
+
+            WorkerStartTaskReq workerStartTaskReq = new WorkerStartTaskReq();
+            workerStartTaskReq.setData(
+                    WorkerStartTaskReq.Data.builder()
+                            .taskExecutionId(taskExecutionId)
+                            .taskName(data.getTaskName())
+                            .taskVersion(data.getTaskVersion())
+                            .initialEncodedSharedContext(data.getInitialEncodedSharedContext())
+                            .stageEncodedInputs(data.getStageEncodedInputs())
+                            .startingStageExecutionId(rootStageName2ExecutionId)
+                            .build()
+            );
+
+
+            WorkerStartTaskResp workerStartTaskResp = workerTaskDriverClient.startTask(workerClusterManager.getWorkerURI(workerAddress),
+                    workerStartTaskReq);
+
+            resp.success("");
+        } catch (VerifyException e) {
+            resp.fail(ResultCode.VERIFY_FAIL, e.getMessage());
+        } catch (Exception e) {
+            resp.fail(ResultCode.FAIL, e.getMessage());
+        }
         return resp;
     }
 
@@ -116,6 +122,12 @@ public class TaskProcessController {
 
     }
 
+    /**
+     * worker告知scheduler将某个stage的数据准备就绪
+     *
+     * @param req
+     * @return
+     */
     @RequestMapping(path = URIs.SchedulerTaskProcessURIs.STAGE_PREPARE, method = RequestMethod.POST, produces =
             MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
@@ -142,6 +154,12 @@ public class TaskProcessController {
     }
 
 
+    /**
+     * 告知scheduler已经完成了某个stage
+     *
+     * @param req
+     * @return
+     */
     @RequestMapping(path = URIs.SchedulerTaskProcessURIs.STAGE_COMPLETE, method = RequestMethod.POST, produces =
             MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody

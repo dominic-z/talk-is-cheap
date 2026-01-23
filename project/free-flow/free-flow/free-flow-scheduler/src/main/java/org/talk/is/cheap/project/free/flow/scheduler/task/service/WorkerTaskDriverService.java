@@ -191,6 +191,7 @@ public class WorkerTaskDriverService {
                                                                   String initialEncodedSharedContext,
                                                                   Map<String, String> stageEncodedInputs) {
         TaskDefinition taskDefinition = taskDefinitionServiceWrapper.queryByNameVersion(taskName, taskVersion);
+        VerifyUtil.requireNotNull(taskDefinition, "未找到对应的任务定义:%s,%d".formatted(taskName, taskVersion));
 
         // 创建task的startup和execution
         TaskStartup taskStartup = new TaskStartup()
@@ -257,7 +258,7 @@ public class WorkerTaskDriverService {
 
 
             return new Tuple3<>(workerAddress, taskExecution.getId(), rootStageName2ExecutionId);
-        } catch (IOException e) {
+        } catch (Exception e) {
             log.error("error when prepare task", e);
             throw new RuntimeException(e);
         } finally {

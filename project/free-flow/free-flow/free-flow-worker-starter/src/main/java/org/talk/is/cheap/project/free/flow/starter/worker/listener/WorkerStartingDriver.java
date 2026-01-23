@@ -17,7 +17,7 @@ public class WorkerStartingDriver implements ApplicationListener<ApplicationStar
 
     @Override
     public void onApplicationEvent(ApplicationStartedEvent event) {
-        // 没法通过注入的方式获取
+        // 没法通过注入的方式获取，因为这个只是个listener回调
         ConfigurableApplicationContext applicationContext = event.getApplicationContext();
         ClusterService clusterService = applicationContext.getBean(ClusterService.class);
         clusterService.listenAndSetSchedulerLeader();
@@ -30,6 +30,6 @@ public class WorkerStartingDriver implements ApplicationListener<ApplicationStar
         }
 
         // 以上任务都完成，注册到zk中
-        clusterService.registryToZK();
+        clusterService.becomeOnline();
     }
 }

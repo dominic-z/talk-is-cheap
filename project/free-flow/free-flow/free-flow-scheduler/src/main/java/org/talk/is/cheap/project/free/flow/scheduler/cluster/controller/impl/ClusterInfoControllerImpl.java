@@ -70,13 +70,13 @@ public class ClusterInfoControllerImpl implements ClusterInfoController {
             respData.setPage(page);
             respData.setTotal(total);
             respData.setPageSize(pageSize);
-            resp.setData(respData);
+            resp.success(respData);
 
         } else {
             QueryClusterInfoResp.QueryClusterNodeRespData respData = new QueryClusterInfoResp.QueryClusterNodeRespData();
             respData.setNodes(List.of());
             respData.setTotal(0);
-            resp.setData(respData);
+            resp.success(respData);
         }
 
         return resp;
