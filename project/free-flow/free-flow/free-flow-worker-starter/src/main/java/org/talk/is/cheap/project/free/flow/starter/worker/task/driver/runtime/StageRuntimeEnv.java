@@ -7,6 +7,7 @@ import lombok.Setter;
 import lombok.ToString;
 import org.apache.commons.lang3.StringUtils;
 import org.talk.is.cheap.project.free.flow.common.task.codec.InputCodec;
+import org.talk.is.cheap.project.free.flow.starter.repository.service.es.StageExecutionBizLogService;
 
 @Builder
 @Getter
@@ -17,6 +18,7 @@ public class StageRuntimeEnv<T> {
     private final InputCodec<T> inputCodec;
     private final Class<T> inputClass;
     private final String encodedInput;
+    private final StageExecutionBizLogService stageExecutionBizLogService;
     @Getter(AccessLevel.NONE)
     private T input;
     // 当前stage所在的task的runtime
@@ -39,4 +41,8 @@ public class StageRuntimeEnv<T> {
         return (K) taskRuntimeEnv.getSharedContext();
     }
 
+
+    public void log(String s) {
+        stageExecutionBizLogService.logAsync(stageExecutionId, s);
+    }
 }

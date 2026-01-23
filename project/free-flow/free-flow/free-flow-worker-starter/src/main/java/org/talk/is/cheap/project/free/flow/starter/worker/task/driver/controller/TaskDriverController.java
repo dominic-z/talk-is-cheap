@@ -50,7 +50,7 @@ public class TaskDriverController {
         return resp;
     }
 
-    @RequestMapping(path = URIs.WorkerDriverURIs.TASK_START, method = RequestMethod.POST,
+    @RequestMapping(path = URIs.WorkerDriverURIs.STAGE_RETRY, method = RequestMethod.POST,
             produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public HttpBody<String> retryStage(@RequestBody WorkerRetryStageReq req) {

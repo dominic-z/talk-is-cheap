@@ -95,25 +95,25 @@
     UPDATE
     <trim suffixOverrides=",">
       <if test="nodeAddress != null">
-        #{nodeAddress,jdbcType=VARCHAR},
+        node_address = #{nodeAddress,jdbcType=VARCHAR},
       </if>
       <if test="nodeZkPath != null">
-        #{nodeZkPath,jdbcType=VARCHAR},
+        node_zk_path = #{nodeZkPath,jdbcType=VARCHAR},
       </if>
       <if test="nodeType != null">
-        #{nodeType,jdbcType=INTEGER},
+        node_type = #{nodeType,jdbcType=INTEGER},
       </if>
       <if test="status != null">
-        #{status,jdbcType=INTEGER},
+        status = #{status,jdbcType=INTEGER},
       </if>
       <if test="revision != null">
-        #{revision,jdbcType=BIGINT},
+        revision = #{revision,jdbcType=BIGINT},
       </if>
       <if test="createTime != null">
-        #{createTime,jdbcType=TIMESTAMP},
+        create_time = #{createTime,jdbcType=TIMESTAMP},
       </if>
       <if test="updateTime != null">
-        #{updateTime,jdbcType=TIMESTAMP},
+        update_time = #{updateTime,jdbcType=TIMESTAMP},
       </if>
     </trim>;
   </insert>

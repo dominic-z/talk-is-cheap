@@ -23,7 +23,7 @@ public interface WorkerTaskDriverClient {
     WorkerStartTaskResp startTask(URI host, @RequestBody WorkerStartTaskReq req);
 
 
-    @RequestMapping(path = URIs.WorkerDriverURIs.STAGE_START, method = RequestMethod.POST,
+    @RequestMapping(path = URIs.WorkerDriverURIs.STAGE_RETRY, method = RequestMethod.POST,
             produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     HttpBody<String> retryStage(URI host, @RequestBody WorkerRetryStageReq req);

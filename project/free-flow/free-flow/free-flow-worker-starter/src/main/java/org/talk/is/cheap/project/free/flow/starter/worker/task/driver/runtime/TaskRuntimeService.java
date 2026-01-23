@@ -8,6 +8,7 @@ import org.talk.is.cheap.project.free.flow.common.task.codec.InputCodec;
 import org.talk.is.cheap.project.free.flow.common.task.definition.bo.StageDefinitionBO;
 import org.talk.is.cheap.project.free.flow.common.task.definition.bo.TaskDefinitionBO;
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
+import org.talk.is.cheap.project.free.flow.starter.repository.service.es.StageExecutionBizLogService;
 import org.talk.is.cheap.project.free.flow.starter.worker.task.definition.service.LocalTaskDefinitionService;
 
 import java.lang.reflect.InvocationTargetException;
@@ -22,6 +23,8 @@ public class TaskRuntimeService {
 
     @Autowired
     private LocalTaskDefinitionService localTaskDefinitionService;
+    @Autowired
+    private StageExecutionBizLogService stageExecutionBizLogService;
     private final Map<Long, TaskRuntimeEnv<?>> taskExeIdRuntimeEnvMap = new ConcurrentHashMap<>();
 
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -64,6 +67,7 @@ public class TaskRuntimeService {
                     .encodedInput(encodedInput)
                     .taskRuntimeEnv(taskRuntimeEnv)
                     .inputClass(stageDefinitionBO.getInputClass())
+                    .stageExecutionBizLogService(stageExecutionBizLogService)
                     .build();
             taskRuntimeEnv.getStageRuntimeEnvs().put(stageName, stageRuntimeEnv);
         }
@@ -97,6 +101,7 @@ public class TaskRuntimeService {
                 .encodedInput(taskRuntimeEnv.getStageEncodedInputs().get(stageName))
                 .taskRuntimeEnv(taskRuntimeEnv)
                 .inputClass(stageDefinitionBO.getInputClass())
+                .stageExecutionBizLogService(stageExecutionBizLogService)
                 .build();
         taskRuntimeEnv.getStageRuntimeEnvs().put(stageName, stageRuntimeEnv);
         return stageRuntimeEnv;

@@ -93,7 +93,7 @@ public class SchedulerClusterManager {
     }
 
     /**
-     * 在zk中注册，然后在db中写入
+     * 在zk中注册
      *
      * @throws Exception
      */

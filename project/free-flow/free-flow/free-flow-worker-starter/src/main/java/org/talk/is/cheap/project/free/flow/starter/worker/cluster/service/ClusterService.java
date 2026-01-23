@@ -7,6 +7,8 @@ import org.apache.curator.framework.recipes.cache.CuratorCache;
 import org.apache.curator.framework.recipes.cache.CuratorCacheListener;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
+import org.apache.curator.framework.state.ConnectionState;
+import org.apache.curator.framework.state.ConnectionStateListener;
 import org.apache.zookeeper.CreateMode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -92,42 +94,13 @@ public class ClusterService {
     private final CountDownLatch initialized = new CountDownLatch(1);
 
 
+    /*  scheduler集群信息监听  */
     public URI getSchedulerLeaderUri() {
         VerifyUtil.requireNotBlank(schedulerLeaderAddress.get(), "schedulerLeaderAddress is blank");
         return getUri(schedulerLeaderAddress.get());
     }
 
-    public void registryToZK() {
 
-        // worker需要自己注册到zk里，这样才能通过zk的心跳机制确保zk中记录的节点都是存活的
-        try {
-            selfAbsoluteZKPath = starterCuratorZKClient.create()
-                    .creatingParentsIfNeeded()
-                    .withMode(CreateMode.EPHEMERAL)
-                    .forPath(Paths.get(zkConfigProperties.getZookeeper().getPath().getWorker().getOnline(), getSelfZKWorkerPath()).toString(),
-                            getWorkerAddress().getBytes(StandardCharsets.UTF_8));
-        } catch (Exception e) {
-            log.error("error when registry to zk", e);
-            throw new RuntimeException(e);
-        }
-
-
-    }
-
-
-    public String getSelfZKWorkerPath() {
-        //                    zookeeper的节点不能有冒号，将192.168.1.1:2222改成192.168.1.1_2222
-        return getWorkerAddress().replace(":", "_");
-    }
-
-    /**
-     * @return
-     */
-    public String getWorkerAddress() {
-        String address = EnvType.getByName(envType) == EnvType.CONTAINER ? System.getenv("CONTAINER_NAME") : IPUtil.getMainIP();
-        address += ":" + port;
-        return address;
-    }
 
     public void listenAndSetSchedulerLeader() {
         listenSchedulerClusterChange();
@@ -152,7 +125,7 @@ public class ClusterService {
                     @Override
                     public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception {
                         log.info("leader election event: {}", event);
-                        if(event.getData()!=null){
+                        if (event.getData() != null) {
                             String schedulerAddress = new String(event.getData().getData(), StandardCharsets.UTF_8);
                             switch (event.getType()) {
                                 case CHILD_ADDED:
@@ -186,6 +159,10 @@ public class ClusterService {
         }
     }
 
+    public URI getRandomSchedulerURI() {
+        return getUri(getRandomSchedulerAddress());
+    }
+
     /**
      * 从zk路径里随机后去一个scheduler的id
      *
@@ -202,16 +179,58 @@ public class ClusterService {
         }
     }
 
-    private static URI getUri(String randomSchedulerAddress) {
-        return UriComponentsBuilder.fromHttpUrl("http://" + randomSchedulerAddress).build().toUri();
+
+    /*  worker集群信息管理  */
+
+    public void becomeOnline() {
+        becomeOnlineInZK();
+        // 有个小坑，在debug模式下，如果注册到zk之后debug停住，会导致与zk的心跳丢失，zk会将这个临时节点删掉，添加个监听器，如果重建链接之后，尝试重新创建节点
+        starterCuratorZKClient.getConnectionStateListenable()
+                .addListener(new ConnectionStateListener() {
+                    @Override
+                    public void stateChanged(CuratorFramework client, ConnectionState newState) {
+                        if (newState == ConnectionState.RECONNECTED) {
+                            becomeOnlineInZK();
+                        }
+                    }
+                });
+
     }
 
-    public URI getRandomSchedulerURI(){
-        return getUri(getRandomSchedulerAddress());
+    private void becomeOnlineInZK() {
+        // worker需要自己注册到zk里，这样才能通过zk的心跳机制确保zk中记录的节点都是存活的
+        try {
+            selfAbsoluteZKPath = starterCuratorZKClient.create()
+                    .creatingParentsIfNeeded()
+                    .withMode(CreateMode.EPHEMERAL)
+                    .forPath(Paths.get(zkConfigProperties.getZookeeper().getPath().getWorker().getOnline(), getSelfZKWorkerPath()).toString(),
+                            getWorkerAddress().getBytes(StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            log.error("error when create online path to zk", e);
+            throw new RuntimeException(e);
+        }
     }
 
 
-    // todo: 支持设置最长等待时长
+    public void becomeRunnable(){
+        // worker需要自己注册到zk里，这样才能通过zk的心跳机制确保zk中记录的节点都是存活的
+        try {
+            selfAbsoluteZKPath = starterCuratorZKClient.create()
+                    .creatingParentsIfNeeded()
+                    .withMode(CreateMode.EPHEMERAL)
+                    .forPath(Paths.get(zkConfigProperties.getZookeeper().getPath().getWorker().getRunnable(), getSelfZKWorkerPath()).toString(),
+                            getWorkerAddress().getBytes(StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            log.error("error when create online path to zk", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 在terminating路径下创建，从而通知scheduler不要再派任务给自己
+     * todo: 支持设置最长等待时长、任务执行完毕之后关闭自己
+     *
+     */
     public void terminate() {
 
         try {
@@ -230,5 +249,27 @@ public class ClusterService {
 
 
     }
+
+    public String getSelfZKWorkerPath() {
+        //                    zookeeper的节点不能有冒号，将192.168.1.1:2222改成192.168.1.1_2222
+        return getWorkerAddress().replace(":", "_");
+    }
+
+    /**
+     * @return
+     */
+    public String getWorkerAddress() {
+        String address = EnvType.getByName(envType) == EnvType.CONTAINER ? System.getenv("CONTAINER_NAME") : IPUtil.getMainIP();
+        address += ":" + port;
+        return address;
+    }
+
+    private static URI getUri(String randomSchedulerAddress) {
+        return UriComponentsBuilder.fromHttpUrl("http://" + randomSchedulerAddress).build().toUri();
+    }
+
+
+
+
 
 }

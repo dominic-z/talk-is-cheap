@@ -177,7 +177,7 @@ public class WorkerClusterManager {
             // 如果是online下的节点被移除了
             // 因为监听事件并不是串行的，即使发送是串行的，到达也可能不是串行的。因此需要考虑一些节点反复上下线导致的并发异常，例如一个节点上线->下线->上线，如果下线事件反而最后处理，那么这个节点可能就丢了。
             // 可以借鉴“延迟双删”的策略，加一个延迟事件处理队列，在x秒之后再读取一下这个节点，如果在线的话，就尝试put，如果不在线就删除，当然无法完全解决问题，但是能够降低概率。
-            log.info("remove runnable worker, path: {}, workerNodeAddress: {}", zkPath, workerNodeAddress);
+            log.info("remove online worker, path: {}, workerNodeAddress: {}", zkPath, workerNodeAddress);
             onlineWorkerPathAddress.remove(zkPath);
             pingSucceedPathCounter.remove(zkPath);
             pingFailedPathCounter.remove(zkPath);
@@ -185,7 +185,7 @@ public class WorkerClusterManager {
                 curatorZKClient.delete()
                         .forPath(Paths.get(zkPathProperty.getWorker().getRunnable(), Paths.get(zkPath).getFileName().toString()).toString());
             } catch (Exception e) {
-                log.error("error when delete runnable node", e);
+                log.error("error when delete runnable node", e); // 此时这个节点可能还没到runnable路径里呢
             }
 
             // 避免网络问题导致的更新为Terminated操作先于更新为TERMINATING状态
@@ -221,6 +221,7 @@ public class WorkerClusterManager {
 
     /**
      * 监听worker节点，worker节点的状态变化都通过zk监听实现，而不是通过请求实现，避免数据不一致
+     * worker自行online，然后leader ping成功一定次数之后，worker进入runnable路径，意思为可以作为一个健康的节点开始干活了
      */
     private void pingWorkers() {
         Runnable pingWorkerTask = new Runnable() {
@@ -253,12 +254,22 @@ public class WorkerClusterManager {
                         // 连续ping4次成功，认为稳定，上线。这种机制也有助于防止网络不稳定导致节点反复上下线导致的反复io
                         pingFailedPathCounter.remove(path);
                         try {
-                            if (curatorZKClient.checkExists().forPath(runnablePath.toString()) == null) {
-                                // 之所以判断一下，因为很有可能worker已经在runnable路径了，比如scheduler-leader节点全都下线了
-                                curatorZKClient.create()
-                                        .withMode(CreateMode.PERSISTENT)
-                                        .forPath(runnablePath.toString(), address.getBytes());
-                            }
+//                           这里有一个问题，因为runnable路径是leader管理的，如果worker下线的时候leader也下线了，
+//                           而先有方案中，runnable节点是online节点中ping成功一定次数的节点，ping失败次数过多的runnable节点会被scheduler主动删掉
+//                           而因为此时online节点也不存在这个已经下线的节点，因此scheduler也不会主动ping runnable路径下的节点
+//                           导致新的leader无法主动删除runnable节点，
+//                           一种方案是，改成通知worker自己去向runnable路径创建节点，但这样想是不是如果某个节点ping失败次数过多，应当由scheduler通知worker将自己从runnable中移除
+//                           但是ping都失败了，咋通知呢？
+//                           想那么多干啥，不用通知worker自己删，scheduler来亲自删除就可以了
+//
+//                            if (curatorZKClient.checkExists().forPath(runnablePath.toString()) == null) {
+//                                // 之所以判断一下，因为很有可能worker已经在runnable路径了，比如scheduler-leader节点全都下线了
+//                                curatorZKClient.create()
+//                                        .withMode(CreateMode.PERSISTENT)
+//                                        .forPath(runnablePath.toString(), address.getBytes());
+//                            }
+                            workerClusterClient.allowToRun(getWorkerURI(address), runnablePath.toString(), address);
+
                         } catch (Exception e) {
                             log.error("error when create connected worker path", e);
                         }
@@ -318,6 +329,7 @@ public class WorkerClusterManager {
     public URI getWorkerURI(String workerNodeAddress) {
         return UriComponentsBuilder.fromHttpUrl("http://" + workerNodeAddress).build().toUri();
     }
+
     public boolean isValid(String zkPath) {
         try {
             return curatorZKClient.checkExists().forPath(zkPath) == null;

@@ -7,7 +7,7 @@ import java.util.Set;
 
 @Data
 public class TaskDefinitionDTO {
-    private Integer id;
+    private Long id;
     private String name;
     private Integer version;
     private Integer maxRetryCount;
