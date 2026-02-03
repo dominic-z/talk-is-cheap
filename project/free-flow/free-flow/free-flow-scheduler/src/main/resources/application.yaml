@@ -1,5 +1,5 @@
 server:
-  port: 7073
+  port: 7071
 logging:
   level:
     root: INFO
@@ -42,7 +42,7 @@ apache:
     # 服务器连接地址，集群模式则使用逗号分隔如：ip1:host,ip2:host
     connect-url: 127.0.0.1:2181
     # 会话超时时间：单位ms
-    session-timeout: 10000
+    session-timeout: 30000
     # 连接超时时间：单位ms
     connection-timeout: 10000
     # ACL权限控制，验证策略

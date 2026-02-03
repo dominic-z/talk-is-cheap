@@ -69,7 +69,7 @@ public class SeqGeneratorUtil {
 
 
     /**
-     * 更新boundary
+     * 根据数据库记录的id信息，申请编号，更新next和boundary
      * @param name
      */
     private void acquire(String name) {
@@ -86,6 +86,7 @@ public class SeqGeneratorUtil {
             AtomicLong nextAtomic = seqNextOne.get(name);
             AtomicLong boundaryAtomic = seqBoundary.get(name);
             if (nextAtomic.get() < boundaryAtomic.get()) {
+                // 借鉴单例对象的双重校验，避免并发导致的id浪费
                 return;
             }
 
@@ -98,13 +99,13 @@ public class SeqGeneratorUtil {
                     throw new RuntimeException("there is no seq named: " + name);
                 }
                 SeqGenerator seqGenerator = seqGenerators.get(0);
-                BigDecimal next = new BigDecimal(seqGenerator.getNext());
 
 
                 SeqGeneratorExample updateExample = new SeqGeneratorExample();
                 // 并发控制
                 updateExample.createCriteria().andSeqNameEqualTo(name).andRevisionEqualTo(seqGenerator.getRevision());
 
+                BigDecimal next = new BigDecimal(seqGenerator.getNext());
                 BigDecimal boundary = next.add(new BigDecimal(step));
                 seqGenerator.setNext(boundary.toString());
                 seqGenerator.setCreateTime(null);
@@ -113,6 +114,7 @@ public class SeqGeneratorUtil {
 
                 int updated = seqGeneratorService.updateByExampleSelective(seqGenerator, updateExample);
                 if (updated != 0) {
+                    nextAtomic.set(next.longValue());
                     boundaryAtomic.set(boundary.longValue());
                     return;
                 }

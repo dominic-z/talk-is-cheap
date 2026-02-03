@@ -16,7 +16,6 @@ import org.talk.is.cheap.project.free.flow.common.task.definition.bo.StageDefini
 import org.talk.is.cheap.project.free.flow.common.task.definition.bo.TaskDefinitionBO;
 import org.talk.is.cheap.project.free.flow.common.utils.FieldAwareLockManager;
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
-import org.talk.is.cheap.project.free.flow.starter.repository.service.es.StageExecutionBizLogService;
 import org.talk.is.cheap.project.free.flow.starter.worker.client.SchedulerTaskProcessClient;
 import org.talk.is.cheap.project.free.flow.starter.worker.cluster.service.ClusterService;
 import org.talk.is.cheap.project.free.flow.starter.worker.task.definition.service.LocalTaskDefinitionService;
@@ -146,10 +145,11 @@ public class TaskDriverService {
                         .taskExecutionId(taskExecutionId)
                         .stageExecutionId(stageExecutionId)
                         .build()));
-                schedulerTaskProcessClient.startStageReport(clusterService.getRandomSchedulerURI(), req);
+                schedulerTaskProcessClient.stageStartReport(clusterService.getRandomSchedulerURI(), req);
                 if (stageDefinitionBO.getParameters().length == 0) {
-                    stageMethod.invoke(taskBean, (Object) null);
+                    stageMethod.invoke(taskBean, new Object[0]);
                 } else {
+//                    不用校验了，加载任务的时候已经校验过了
                     stageMethod.invoke(taskBean, stageRuntimeEnv);
                 }
 
@@ -266,7 +266,7 @@ public class TaskDriverService {
                         .taskExecutionId(taskExecutionId)
                         .stageExecutionId(stageExecutionId)
                         .build()));
-                schedulerTaskProcessClient.startStageReport(clusterService.getRandomSchedulerURI(), req);
+                schedulerTaskProcessClient.stageStartReport(clusterService.getRandomSchedulerURI(), req);
                 if (stageDefinitionBO.getParameters().length == 0) {
                     stageMethod.invoke(taskBean, (Object) null);
                 } else {

@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.talk.is.cheap.project.free.flow.common.enums.StartupSourceType;
 import org.talk.is.cheap.project.free.flow.common.enums.TaskStageStatus;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
+import org.talk.is.cheap.project.free.flow.common.message.impl.dto.TaskDefinitionDTO;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerCompleteStageResultReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerStartStageReportReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerRetryStageReq;
@@ -121,6 +122,7 @@ public class WorkerTaskDriverService {
     private StageStartupServiceWrapper stageStartupServiceWrapper;
     @Autowired
     private StageStartupService stageStartupService;
+    @Autowired
     private StageExecutionService stageExecutionService;
     @Autowired
     private StageExecutionServiceWrapper stageExecutionServiceWrapper;
@@ -153,6 +155,9 @@ public class WorkerTaskDriverService {
 
     @Autowired
     private StageExecutionResultMsgService stageExecutionResultMsgService;
+
+    @Autowired
+    private WorkerTaskDefinitionManager workerTaskDefinitionManager;
 
     /**
      * worker客户端
@@ -260,10 +265,13 @@ public class WorkerTaskDriverService {
             return new Tuple3<>(workerAddress, taskExecution.getId(), rootStageName2ExecutionId);
         } catch (Exception e) {
             log.error("error when prepare task", e);
+            try {
+                taskStartup.setStatus(TaskStageStatus.FAILED.getStatus());
+                taskStartupServiceWrapper.updateByIdSelective(taskStartup.getId(), taskStartup, null);
+            } catch (Exception ie) {
+                log.error("更新task状态为失败错误", ie);
+            }
             throw new RuntimeException(e);
-        } finally {
-            taskStartup.setStatus(TaskStageStatus.FAILED.getStatus());
-            taskStartupServiceWrapper.updateByIdSelective(taskStartup.getId(), taskStartup, null);
         }
 
 
@@ -363,9 +371,21 @@ public class WorkerTaskDriverService {
                 String.format("任务%d已经失败", taskExecutionId));
 
         ESPojoDTO<StageStartupParam> stageStartupParamESPojoDTO = stageStartupParamService.getByStageStartupId(stageStartup.getId());
-        if (StringUtils.isNotBlank(encodedSharedContextSnapshotAtStartup)) {
-            stageStartupParamESPojoDTO.getData().setEncodedSharedContextSnapshotAtStartup(encodedSharedContextSnapshotAtStartup);
-            stageStartupParamService.update(stageStartupParamESPojoDTO.getId(), stageStartupParamESPojoDTO.getData());
+        StageStartupParam stageStartupParam = null;
+        if (stageStartupParamESPojoDTO == null) {
+            stageStartupParam = StageStartupParam.builder()
+                    .stageStartupId(stageStartup.getId())
+                    .encodedInput("")
+                    .encodedSharedContextSnapshotAtStartup(encodedSharedContextSnapshotAtStartup)
+                    .updateTime(new Date())
+                    .build();
+            stageStartupParamService.create(stageStartupParam);
+        } else {
+            stageStartupParam = stageStartupParamESPojoDTO.getData();
+            if (StringUtils.isNotBlank(encodedSharedContextSnapshotAtStartup)) {
+                stageStartupParam.setEncodedSharedContextSnapshotAtStartup(encodedSharedContextSnapshotAtStartup);
+                stageStartupParamService.update(stageStartupParamESPojoDTO.getId(), stageStartupParam);
+            }
         }
 
         List<StageExecution> stageExecutions = stageExecutionServiceWrapper.selectByStartupId(stageStartup.getId(),
@@ -384,15 +404,14 @@ public class WorkerTaskDriverService {
         } else {
             stageExecution = stageExecutions.get(0);
         }
-
-        return new Tuple2<>(stageExecution.getId(), stageStartupParamESPojoDTO.getData().getEncodedInput());
+        return new Tuple2<>(stageExecution.getId(), stageStartupParam.getEncodedInput());
 
     }
 
 
     /**
      * 某个stage已经完成，记录shareContext快照，正常情况下不需要考虑并发，因为一般情况下一个stage只会有一个scheduler在操作
-     * 仅仅updatestage信息，task是否完成会由worker再次主动上报
+     * 仅仅updatestage信息，task是否完成会由worker再次主动上报，不需要事务
      */
     public void completeStage(WorkerCompleteStageResultReq.StageResult stageResult) throws IOException {
         Long stageExecutionId = stageResult.getStageExecutionId();
@@ -400,7 +419,7 @@ public class WorkerTaskDriverService {
         VerifyUtil.requireTrue(stageExecution != null,
                 "The running execution record for the stage with ID %d does not exist.".formatted(stageExecutionId));
 
-        // 更新stage startup
+        // 更新stage startup 和stage execution
         StageStartup stageStartup = stageStartupServiceWrapper.selectById(stageExecution.getStageStartupId(),
                 TaskStageStatus.RUNNING.getStatus());
         VerifyUtil.requireTrue(stageStartup != null,
@@ -410,11 +429,11 @@ public class WorkerTaskDriverService {
 
         VerifyUtil.requireTrue(stageExecutionServiceWrapper.updateSelectiveById(
                         stageExecutionId, new StageExecution().withStatus(taskStageStatus), stageExecution.getRevision()) > 0,
-                "更新stageExecution状态失败");
+                String.format("更新stageExecution:%d成功状态失败", stageExecutionId));
         VerifyUtil.requireTrue(stageStartupServiceWrapper.updateSelectiveById(stageStartup.getId(),
                         new StageStartup().withStatus(taskStageStatus).withCompletionTime(stageResult.getCompletionTime()),
                         stageStartup.getRevision()) > 0,
-                "更新stageStartup失败");
+                String.format("更新stageStartup:%d成功状态失败", stageStartup.getId()));
 
         // 记录结果信息
         if (StringUtils.isNotBlank(stageResult.getMsg())) {
@@ -430,6 +449,34 @@ public class WorkerTaskDriverService {
         stageStartupParam.setEncodedSharedContextSnapshotAtCompletion(stageResult.getEncodedSharedContextAtCompletion());
         stageStartupParam.setUpdateTime(new Date());
         stageStartupParamService.update(esPojoDTO.getId(), stageStartupParam);
+
+        // 判断task是否已经整体完成，考虑了一下，似乎没有并发问题，最后一个走到这一步的请求会尝试将全部task设置为成功
+        TaskExecution taskExecution = taskExecutionServiceWrapper.selectById(stageStartup.getTaskExecutionId());
+        TaskStartup taskStartup = taskStartupServiceWrapper.selectById(taskExecution.getTaskStartupId());
+        TaskDefinition taskDefinition = taskDefinitionServiceWrapper.selectById(taskStartup.getTaskId());
+
+        TaskDefinitionDTO taskDefinitionDTO = workerTaskDefinitionManager.getTaskDefinitionDTO(taskDefinition.getName(),
+                taskDefinition.getVersion());
+
+        List<StageStartup> stageStartupsWithSameTaskExe =
+                stageStartupServiceWrapper.selectByTaskExecutionId(stageStartup.getTaskExecutionId());
+        if (taskDefinitionDTO.getStageDefinitionMap().size() == stageStartupsWithSameTaskExe.size() &&
+                stageStartupsWithSameTaskExe.stream().allMatch(s -> TaskStageStatus.SUCCEEDED.getStatus().equals(s.getStatus()))) {
+            // 全部stage都已经尝试启动了，并且状态也已经成功了。更新task状态为成功
+            taskExecutionServiceWrapper.updateSelectiveById(taskExecution.getId(),
+                    new TaskExecution().withStatus(TaskStageStatus.SUCCEEDED.getStatus())
+                            .withCompletionTime(new Date())
+                            .withRevision(taskExecution.getRevision() + 1),
+                    null
+            );
+
+            taskStartupServiceWrapper.updateByIdSelective(taskStartup.getId(),
+                    new TaskStartup().withStatus(TaskStageStatus.SUCCEEDED.getStatus())
+                            .withRevision(taskStartup.getRevision() + 1),
+                    null
+            );
+        }
+
     }
 
 
@@ -441,11 +488,15 @@ public class WorkerTaskDriverService {
      */
     @Transactional(rollbackFor = Exception.class, transactionManager = RepositoryAutoConfig.TRANSACTION_MANAGER_BEAN_NAME)
     public void failStage(long taskExecutionId, long stageExecutionId, String errorMsg) throws IOException {
-        log.info("任务重试：taskExeId:{},stageExeId:{}", taskExecutionId, stageExecutionId);
+        log.info("任务失败：taskExeId:{},stageExeId:{}", taskExecutionId, stageExecutionId);
         RLock rLock = redissonClient.getLock(RedissonService.getTaskExecutionLockKey(taskExecutionId));
         try {
 
             StageExecution stageExecution = stageExecutionServiceWrapper.selectById(stageExecutionId, TaskStageStatus.RUNNING.getStatus());
+            if (stageExecution == null) {
+                log.info("未发现运行中的id={}的StageExecution对象，可能任务并未启动", stageExecutionId);
+                return;
+            }
             stageExecution.setStatus(TaskStageStatus.FAILED.getStatus());
             stageExecution.setRevision(stageExecution.getRevision() + 1);
             stageExecutionServiceWrapper.updateSelectiveById(stageExecutionId,
@@ -471,17 +522,14 @@ public class WorkerTaskDriverService {
             TaskExecution taskExecution = taskExecutionServiceWrapper.selectById(taskExecutionId);
             if (stageDefinition.getMaxRetryCount() > stageStartup.getFailCount()) {
                 // stage超过重试次数了，stage失败掉
-                log.info("stage:{}重试超过最大重试次数", stageExecutionId);
+                log.info("stageStartup:{}重试超过最大重试次数，需要将taskExecution:{}设置为失败", stageStartup.getId(), taskExecutionId);
 
-                VerifyUtil.requireTrue(taskExecutionServiceWrapper.updateSelectiveById(taskExecutionId,
-                        new TaskExecution()
+                if (taskExecutionServiceWrapper.updateSelectiveById(taskExecutionId, new TaskExecution()
                                 .withStatus(TaskStageStatus.FAILED.getStatus())
                                 .withRevision(taskExecution.getRevision() + 1),
-                        taskExecution.getRevision()) == 1, String.format("更新taskExecution:%d失败", taskExecutionId));
-
-                taskExecution.setRevision(taskExecution.getRevision() + 1);
-                taskExecution.setStatus(TaskStageStatus.FAILED.getStatus());
-                taskExecution.setCompletionTime(new Date());
+                        taskExecution.getRevision()) != 1) {
+                    log.warn("更新taskExecution:{}为失败状态失败，可能是已经被其他任务并发失败", taskExecutionId);
+                }
 
                 TaskStartup taskStartup = taskStartupServiceWrapper.selectById(taskExecution.getTaskStartupId(),
                         TaskStageStatus.RUNNING.getStatus());
@@ -490,29 +538,25 @@ public class WorkerTaskDriverService {
 
                 if (taskDefinition.getMaxRetryCount() > taskStartup.getFailCount() + 1) {
                     // task任务整体重试超过限制了，task任务整体失败
-                    log.info("task:{}重试超过最大重试次数", taskExecutionId);
-                    VerifyUtil.requireTrue(taskStartupServiceWrapper.updateByIdSelective(taskStartup.getId(),
+                    log.info("taskStartup:{}重试超过最大重试次数，需要将taskStartup设置为失败", taskStartup.getId());
+
+                    if (taskStartupServiceWrapper.updateByIdSelective(taskStartup.getId(),
                             new TaskStartup().withFailCount(taskStartup.getFailCount() + 1)
                                     .withStatus(TaskStageStatus.FAILED.getStatus())
                                     .withRevision(taskStartup.getRevision() + 1),
-                            taskStartup.getRevision()) == 1, String.format("更新taskStartup:%d失败", taskStartup.getId()));
-
-                    taskStartup.setFailCount(taskStartup.getFailCount() + 1);
-                    taskStartup.setStatus(TaskStageStatus.FAILED.getStatus());
-                    taskStartup.setRevision(taskStartup.getRevision() + 1);
-
+                            taskStartup.getRevision()) == 1) {
+                        log.warn("更新taskStartup:{}为失败状态失败，可能是已经被其他任务并发失败", taskStartup.getId());
+                    }
 
                 } else {
                     // task还可以重试
-                    log.info("task:{}重试了{}次，还可以重试", taskStartup.getFailCount(), taskExecutionId);
+                    log.info("taskStartup:{}重试了{}次，还可以重试", taskStartup.getId(), taskStartup.getFailCount());
                     VerifyUtil.requireTrue(
-                            taskStartupServiceWrapper.updateByIdSelective(taskExecution.getTaskStartupId(),
+                            taskStartupServiceWrapper.updateByIdSelective(taskStartup.getId(),
                                     new TaskStartup()
                                             .withStatus(TaskStageStatus.PENDING.getStatus())
-                                            .withRevision(taskExecution.getRevision() + 1), taskStartup.getRevision()) == 1,
-                            "更新taskExecution失败");
-                    taskStartup.setFailCount(taskStartup.getFailCount() + 1);
-                    taskStartup.setRevision(taskStartup.getRevision() + 1);
+                                            .withRevision(taskStartup.getRevision() + 1), taskStartup.getRevision()) == 1,
+                            String.format("恢复taskStartup:%d为PENDING状态失败，可能已经被恢复", taskStartup.getId()));
 
 
                     CompletableFuture.runAsync(() -> {
@@ -560,14 +604,21 @@ public class WorkerTaskDriverService {
                         // 重试失败了，兜底
 
                         workerTaskDriverServiceTxnHelper.forceFailStageAndTask(
-                                retryStageExecution.getId(), stageStartup.getId(), taskExecutionId, taskExecution.getTaskStartupId()
+                                retryStageExecution.getId(), stageStartup.getId(), taskExecutionId, stageExecution.getStageStartupId()
                         );
                     }
                 }, threadPoolExecutor);
 
             }
         } finally {
-            rLock.unlock();
+//            坑：如果这个锁没有被占用，执行unlock会报错的，所以包装一下，如果这里执行报错了，异常会变成finally的异常
+            try {
+                if (rLock.isLocked()) {
+                    rLock.unlock();
+                }
+            } catch (Exception e) {
+                log.error("解锁异常", e);
+            }
         }
         ;
     }

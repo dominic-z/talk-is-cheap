@@ -51,7 +51,7 @@ END //
 DELIMITER ; -- 恢复语句结束符为;
 
 -- 调用存储过程，插入500万条数据（执行时间约1-5分钟，看数据库性能）
-CALL insert_test_data(5000000);
+CALL insert_test_data(1000000);
 
 -- 删除存储过程（用完清理）
 DROP PROCEDURE IF EXISTS insert_test_data;

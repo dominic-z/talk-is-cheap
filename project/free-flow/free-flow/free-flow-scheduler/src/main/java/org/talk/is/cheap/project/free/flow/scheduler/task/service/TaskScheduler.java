@@ -5,6 +5,7 @@ import com.google.common.hash.Hashing;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.WorkerClusterManager;
 import org.talk.is.cheap.project.free.flow.scheduler.task.service.WorkerTaskDefinitionManager;
 
@@ -28,6 +29,7 @@ public class TaskScheduler {
 
         Set<String> workerAddressesWithTask = workerTaskDefinitionManager.getWorkerAddressesWithTask(taskName, taskVersion);
 
+        VerifyUtil.requireFalse(workerAddressesWithTask.isEmpty(), "找不到可以运行%s,%d的worker".formatted(taskName, taskVersion));
 
 //        ArrayList<String> addresses = new ArrayList<>(workerAddressesWithTask);
 //        addresses.sort(StringUtils::compare);

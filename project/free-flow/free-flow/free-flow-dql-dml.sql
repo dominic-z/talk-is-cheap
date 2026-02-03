@@ -19,14 +19,16 @@ values ("aa",
 
 UPDATE task_definition set name='bb' where id=1;
 
+SELECT * from seq_generator sg ;
+
 SELECT * from task_definition td ;
 SELECT * from stage_definition sd ;
 SELECT * FROM task_graph_definition tgd ;
 
-SELECT * FROM task_startup ts ;
-SELECT * FROM task_execution te ;
-SELECT * FROM stage_startup ss ;
-SELECT * FROM stage_execution se ;
+SELECT * FROM task_startup ts order by create_time desc;
+SELECT * FROM task_execution te order by create_time desc;
+SELECT * FROM stage_startup ss order by create_time desc;
+SELECT * FROM stage_execution se order by create_time desc;
 
 -- -- 
 TRUNCATE cluster_node ; 

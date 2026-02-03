@@ -10,6 +10,7 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.framework.state.ConnectionState;
 import org.apache.curator.framework.state.ConnectionStateListener;
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.data.Stat;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
@@ -99,7 +100,6 @@ public class ClusterService {
         VerifyUtil.requireNotBlank(schedulerLeaderAddress.get(), "schedulerLeaderAddress is blank");
         return getUri(schedulerLeaderAddress.get());
     }
-
 
 
     public void listenAndSetSchedulerLeader() {
@@ -212,16 +212,21 @@ public class ClusterService {
     }
 
 
-    public void becomeRunnable(){
+    public void becomeRunnable() {
         // worker需要自己注册到zk里，这样才能通过zk的心跳机制确保zk中记录的节点都是存活的
         try {
+            String path =
+                    Paths.get(zkConfigProperties.getZookeeper().getPath().getWorker().getRunnable(), getSelfZKWorkerPath()).toString();
+            if (starterCuratorZKClient.checkExists().forPath(path)!=null) {
+                log.info("runnable: {}节点已经存在",path);
+                return;
+            }
             selfAbsoluteZKPath = starterCuratorZKClient.create()
                     .creatingParentsIfNeeded()
                     .withMode(CreateMode.EPHEMERAL)
-                    .forPath(Paths.get(zkConfigProperties.getZookeeper().getPath().getWorker().getRunnable(), getSelfZKWorkerPath()).toString(),
-                            getWorkerAddress().getBytes(StandardCharsets.UTF_8));
+                    .forPath(path, getWorkerAddress().getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) {
-            log.error("error when create online path to zk", e);
+            log.error("error when create runnable path to zk", e);
             throw new RuntimeException(e);
         }
     }
@@ -229,7 +234,6 @@ public class ClusterService {
     /**
      * 在terminating路径下创建，从而通知scheduler不要再派任务给自己
      * todo: 支持设置最长等待时长、任务执行完毕之后关闭自己
-     *
      */
     public void terminate() {
 
@@ -267,9 +271,6 @@ public class ClusterService {
     private static URI getUri(String randomSchedulerAddress) {
         return UriComponentsBuilder.fromHttpUrl("http://" + randomSchedulerAddress).build().toUri();
     }
-
-
-
 
 
 }

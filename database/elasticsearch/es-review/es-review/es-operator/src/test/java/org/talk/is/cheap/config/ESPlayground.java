@@ -2,11 +2,8 @@ package org.talk.is.cheap.config;
 
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
-import co.elastic.clients.elasticsearch._types.mapping.Property;
+import co.elastic.clients.elasticsearch._types.OpType;
 import co.elastic.clients.elasticsearch.core.IndexResponse;
-import co.elastic.clients.elasticsearch.indices.CreateIndexRequest;
-import co.elastic.clients.elasticsearch.indices.CreateIndexResponse;
-import co.elastic.clients.transport.endpoints.BooleanResponse;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import es.EsApplication;
 import lombok.AllArgsConstructor;
@@ -18,16 +15,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.io.IOException;
-import java.util.Calendar;
 import java.util.Date;
-import java.util.HashMap;
 
 /**
  * 一些自定义测试的东西
  */
 @Slf4j
 @SpringBootTest(classes = EsApplication.class)
-public class ESDemo {
+public class ESPlayground {
 
     @Data
     @AllArgsConstructor
@@ -60,8 +55,19 @@ public class ESDemo {
         log.info("{}", response.result());
 //        然后查询id为bk-1的GET /products/_doc/bk-1
         log.info("Indexed with version " + response.version());
+
+//        id重复报错
+        IndexResponse dupResponse = esClient.index(i -> i
+                .index(indexName)
+                .id(zzz.getId())
+                .opType(OpType.Create) // 不要覆盖，重复创建
+                .document(zzz)
+        );
+
     }
 
 
 //    public void
+
+
 }
