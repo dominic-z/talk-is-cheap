@@ -4,6 +4,8 @@ import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.json.jackson.JacksonJsonpMapper;
 import co.elastic.clients.transport.ElasticsearchTransport;
+import co.elastic.clients.transport.TransportOptions;
+import co.elastic.clients.transport.rest_client.RestClientOptions;
 import co.elastic.clients.transport.rest_client.RestClientTransport;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
@@ -93,6 +95,7 @@ public class EsAutoConfig {
             // 配置驼峰与下划线转换
             ObjectMapper objectMapper = new ObjectMapper();
             objectMapper.setPropertyNamingStrategy( PropertyNamingStrategies.SNAKE_CASE);
+
             elasticsearchTransport = new RestClientTransport(restClient, new JacksonJsonpMapper(objectMapper));
         }
 

@@ -10,7 +10,6 @@ import org.apache.curator.framework.recipes.cache.CuratorCache;
 import org.apache.curator.framework.recipes.cache.CuratorCacheListener;
 import org.apache.curator.framework.recipes.cache.TreeCacheEvent;
 import org.apache.curator.framework.recipes.cache.TreeCacheListener;
-import org.apache.zookeeper.CreateMode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -21,6 +20,7 @@ import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.client.WorkerClusterClient;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.WorkerTerminatedEvent;
 import org.talk.is.cheap.project.free.flow.scheduler.config.property.ZKPathProperty;
+import org.talk.is.cheap.project.free.flow.scheduler.task.service.WorkerTaskDefinitionManager;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.ClusterNodeExample;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNode;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.ClusterNodeService;
@@ -76,10 +76,14 @@ public class WorkerClusterManager {
     @Autowired
     private WorkerClusterClient workerClusterClient;
 
+    @Autowired
+    private WorkerTaskDefinitionManager workerTaskDefinitionManager;
+
     private CuratorCache workerCuratorCache;
 
     // 活跃的节点，节点的上下线可能同时发生，因此需要并发安全
     private final Map<String, String> onlineWorkerPathAddress = new ConcurrentHashMap<>();
+    private final Map<String, String> runnableWorkerPathAddress = new ConcurrentHashMap<>();
     private final Map<String, Integer> pingFailedPathCounter = new ConcurrentHashMap<>();
     private final Map<String, Integer> pingSucceedPathCounter = new ConcurrentHashMap<>();
     // 终止中的节点
@@ -96,14 +100,14 @@ public class WorkerClusterManager {
     /**
      * 管理worker节点
      */
-    public void manageWorkers() {
+    public void start() {
 
         this.onlineWorkerPathAddress.clear();
         this.terminatingWorkerPathAddress.clear();
 
         watchOnlineWorkers();
         pingWorkers();
-
+        workerTaskDefinitionManager.start();
     }
 
     private void watchOnlineWorkers() {
@@ -185,7 +189,7 @@ public class WorkerClusterManager {
                 curatorZKClient.delete()
                         .forPath(Paths.get(zkPathProperty.getWorker().getRunnable(), Paths.get(zkPath).getFileName().toString()).toString());
             } catch (Exception e) {
-                log.error("error when delete runnable node", e); // 此时这个节点可能还没到runnable路径里呢
+                log.error("error when delete runnable node", e); // 此时这个节点可能还没到runnable路径里呢，或者worker节点直接下线了，runnable路径的临时文件会自动清除
             }
 
             // 避免网络问题导致的更新为Terminated操作先于更新为TERMINATING状态
@@ -213,10 +217,11 @@ public class WorkerClusterManager {
 
     // 应用关闭的时候触发
     @PreDestroy
-    public void stopManageWorkers() {
+    public void stop() {
         if (this.workerCuratorCache != null) {
             this.workerCuratorCache.close();
         }
+        workerTaskDefinitionManager.stop();
     }
 
     /**
@@ -224,36 +229,40 @@ public class WorkerClusterManager {
      * worker自行online，然后leader ping成功一定次数之后，worker进入runnable路径，意思为可以作为一个健康的节点开始干活了
      */
     private void pingWorkers() {
+        final int threshold = 1;
         Runnable pingWorkerTask = new Runnable() {
             @Override
             public void run() {
 
                 log.debug("ping runnable");
-                Tuple2<Map<String, String>, Map<String, String>> pingRunnableResult = ping(onlineWorkerPathAddress);
+                Tuple2<Map<String, String>, Map<String, String>> pingOnlineWorkersResults = ping(onlineWorkerPathAddress);
                 // ping失败的
-                pingRunnableResult._2.forEach((path, address) -> {
+                pingOnlineWorkersResults._2.forEach((path, address) -> {
                     pingSucceedPathCounter.remove(path);
-                    if (pingFailedPathCounter.containsKey(path) && pingFailedPathCounter.get(path) >= 1) {
-                        // 连续4次ping失败
-                        try {
-                            curatorZKClient.delete()
-                                    .forPath(Paths.get(zkPathProperty.getWorker().getRunnable(),
-                                            Paths.get(path).getFileName().toString()).toString());
-                        } catch (Exception e) {
-                            log.error("error when delete connected node", e);
+                    if (pingFailedPathCounter.getOrDefault(path, 0) < threshold) {
+                        // 当且仅当第一次大于threshold的时候执行delete避免多次执行delete，当且仅当小于threshold的时候，计数+1
+                        if (pingFailedPathCounter.getOrDefault(path, 0) + 1 >= threshold) {
+                            // 连续x次ping失败
+                            try {
+                                curatorZKClient.delete()
+                                        .forPath(Paths.get(zkPathProperty.getWorker().getRunnable(),
+                                                Paths.get(path).getFileName().toString()).toString());
+                            } catch (Exception e) {
+                                log.error("error when delete connected node", e);
+                            }
                         }
-                    } else {
                         pingFailedPathCounter.put(path, pingFailedPathCounter.getOrDefault(path, 0) + 1);
                     }
                 });
 
                 // ping成功的
-                pingRunnableResult._1.forEach((path, address) -> {
+                pingOnlineWorkersResults._1.forEach((path, address) -> {
                     Path runnablePath = Paths.get(zkPathProperty.getWorker().getRunnable(), Paths.get(path).getFileName().toString());
-                    if (pingSucceedPathCounter.containsKey(path) && pingSucceedPathCounter.get(path) >= 1) {
-                        // 连续ping4次成功，认为稳定，上线。这种机制也有助于防止网络不稳定导致节点反复上下线导致的反复io
-                        pingFailedPathCounter.remove(path);
-                        try {
+                    pingFailedPathCounter.remove(path);
+                    if (pingSucceedPathCounter.getOrDefault(path, 0) < threshold) {
+                        if (pingSucceedPathCounter.getOrDefault(path, 0) + 1 >= threshold) {
+                            // 连续pingx次成功，认为稳定，上线。这种机制也有助于防止网络不稳定导致节点反复上下线导致的反复io，确保这个if判断只进入一次
+                            try {
 //                           这里有一个问题，因为runnable路径是leader管理的，如果worker下线的时候leader也下线了，
 //                           而先有方案中，runnable节点是online节点中ping成功一定次数的节点，ping失败次数过多的runnable节点会被scheduler主动删掉
 //                           而因为此时online节点也不存在这个已经下线的节点，因此scheduler也不会主动ping runnable路径下的节点
@@ -268,15 +277,14 @@ public class WorkerClusterManager {
 //                                        .withMode(CreateMode.PERSISTENT)
 //                                        .forPath(runnablePath.toString(), address.getBytes());
 //                            }
-                            workerClusterClient.allowToRun(getWorkerURI(address), runnablePath.toString(), address);
+                                workerClusterClient.allowToRun(getWorkerURI(address), runnablePath.toString(), address);
 
-                        } catch (Exception e) {
-                            log.error("error when create connected worker path", e);
+                            } catch (Exception e) {
+                                log.error("error when create connected worker path", e);
+                            }
                         }
-                    } else {
                         pingSucceedPathCounter.put(path, pingSucceedPathCounter.getOrDefault(path, 0) + 1);
                     }
-
                 });
 
                 scheduledThreadPoolExecutor.schedule(this, 10, TimeUnit.SECONDS);
@@ -326,7 +334,7 @@ public class WorkerClusterManager {
     }
 
 
-    public URI getWorkerURI(String workerNodeAddress) {
+    public static URI getWorkerURI(String workerNodeAddress) {
         return UriComponentsBuilder.fromHttpUrl("http://" + workerNodeAddress).build().toUri();
     }
 

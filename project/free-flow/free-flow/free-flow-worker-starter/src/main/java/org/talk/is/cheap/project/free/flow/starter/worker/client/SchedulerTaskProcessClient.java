@@ -9,9 +9,6 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.PrepareStageReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.PrepareStageResp;
-import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.QueryTaskDefinitionReq;
-import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.QueryTaskDefinitionResp;
-import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.StartTaskReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerCompleteStageResultReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerFailStageReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerFailStageResp;
@@ -29,10 +26,10 @@ public interface SchedulerTaskProcessClient {
 
     String CLIENT_NAME = "scheduler-task-process-client";
 
-    @RequestMapping(path = URIs.SchedulerTaskProcessURIs.STAGE_COMPLETE, method = RequestMethod.POST, produces =
+    @RequestMapping(path = URIs.SchedulerTaskProcessURIs.STAGE_START_REPORT, method = RequestMethod.POST, produces =
             MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
-    HttpBody<String> startStageReport(URI host, @RequestBody WorkerStartStageReportReq req);
+    HttpBody<String> stageStartReport(URI host, @RequestBody WorkerStartStageReportReq req);
 
     @RequestMapping(path = URIs.SchedulerTaskProcessURIs.STAGE_COMPLETE, method = RequestMethod.POST, produces =
             MediaType.APPLICATION_JSON_VALUE)

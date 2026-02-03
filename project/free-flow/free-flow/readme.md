@@ -7,7 +7,7 @@
 
 
 todo: 
-一些数据可以存redis里，而且确实tmd需要个全局锁，更新数据库的tassk相关对象时候需要全局锁
+一些常用的数据可以存redis里，比如任务定义之类的，而且确实tmd需要个全局锁，更新数据库的tassk相关对象时候需要全局锁
 
 # 配置
 
@@ -182,6 +182,8 @@ PUT /stage_execution_result_msg
 
 
 ```json
+GET /task_shared_context/_doc/3
+
 GET /task_shared_context/_search
 {
   "query": {
@@ -197,11 +199,55 @@ GET /task_shared_context/_search
 GET /stage_startup_param/_search
 {
   "query": {
+    "match_all": {}
+  }
+}
+
+GET /stage_startup_param/_search
+{
+  "query": {
     "term": {
       "task_startup_id":1
     }
   },
   "size": 10  
+}
+
+
+GET /stage_execution_biz_log/_search
+{
+  "query": {
+    "match_all": {}
+  }
+}
+
+
+GET /stage_execution_biz_log/_search
+{
+  "query": {
+    "term": {
+      "stage_execution_id":1
+    }
+  },
+  "sort": [           // 排序配置（对应 ORDER BY）
+    {
+      "create_time": {         // 排序字段1：id（自增字段）
+        "order": "asc" // 排序方式：asc（正序）/ desc（倒序）
+      }
+    }
+  ],
+  "size": 10
+}
+
+
+GET /stage_execution_result_msg/_search
+{
+  "query": {
+    "term": {
+      "stage_execution_id":1
+    }
+  },
+  "size": 10
 }
 
 ```

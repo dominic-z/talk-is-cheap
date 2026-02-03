@@ -20,6 +20,9 @@ import webflux.anno.Token;
 
 import java.nio.charset.StandardCharsets;
 
+/**
+ * 想不起来是做啥的了，大概应该就是一个接口过滤器，如果请求的接口带有@Token，就需要校验是否登录状态。
+ */
 // 必须成为一个bean才能生效
 //@Component
 @Slf4j

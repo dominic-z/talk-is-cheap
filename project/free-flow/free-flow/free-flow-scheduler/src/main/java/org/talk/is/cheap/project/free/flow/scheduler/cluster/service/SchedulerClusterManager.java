@@ -79,11 +79,12 @@ public class SchedulerClusterManager {
     /**
      * 监听应用启动完成事件，进行注册
      * 等同与ApplicationListener
+     * 是shceduelr的入口
      *
      * @param event
      */
     @EventListener(ApplicationStartedEvent.class)
-    public void registryAndElection(ApplicationStartedEvent event) throws Exception {
+    public void start(ApplicationStartedEvent event) throws Exception {
         log.info("scheduler start registry and election");
 
         register();
@@ -148,7 +149,7 @@ public class SchedulerClusterManager {
                 log.info("{} become leader", schedulerAddress);
 
                 // 职责1：leader开始监听管理worker
-                workerClusterManager.manageWorkers();
+                workerClusterManager.start();
 
                 // 职责2：负责维护db中节点信息，用于给前端返回正确的数据
                 watchOtherSchedulers();
@@ -165,7 +166,7 @@ public class SchedulerClusterManager {
             public void notLeader() {
                 log.info("{} is no longer leader", schedulerAddress);
 
-                stopManageCluster();
+                stop();
             }
         }, SINGLE_EXECUTOR_SERVICE);
 
@@ -254,8 +255,8 @@ public class SchedulerClusterManager {
     }
 
     @PreDestroy
-    public void stopManageCluster() {
-        workerClusterManager.stopManageWorkers();
+    public void stop() {
+        workerClusterManager.stop();
         if (schedulerCuratorCache != null) {
             schedulerCuratorCache.close();
         }

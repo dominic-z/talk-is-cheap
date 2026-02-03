@@ -40,7 +40,7 @@ public class StageDefinitionServiceWrapper {
     public StageDefinition selectByTaskIdStageName(long taskId,String stageName) {
         StageDefinitionExample stageDefinitionExample = new StageDefinitionExample();
         stageDefinitionExample.createCriteria()
-                .andIdEqualTo(taskId)
+                .andTaskIdEqualTo(taskId)
                 .andNameEqualTo(stageName);
         List<StageDefinition> stageDefinitions = stageDefinitionService.selectByExample(stageDefinitionExample);
         if(stageDefinitions.isEmpty()){

@@ -22,11 +22,11 @@ public class ClusterControllerImpl implements ClusterController {
 
     @Override
     public HttpBody<String> ping() {
-        i++;
-        log.info("i: {}", i);
-        if (i > 10) {
-            throw new RuntimeException("eee");
-        }
+//        i++;
+//        log.info("i: {}", i);
+//        if (i > 5) {
+//            throw new RuntimeException("eee");
+//        }
         return HttpBody.<String>builder().data("pong").code(ResultCode.SUCCESS.getCode()).build();
     }
 

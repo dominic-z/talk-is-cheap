@@ -117,9 +117,6 @@ public class WorkerTaskDefinitionManager {
     private WorkerTaskDefinitionManagerTxnHelper workerTaskDefinitionManagerTxnHelper;
 
     @Autowired
-    private WorkerClusterManager workerClusterManager;
-
-    @Autowired
     private CuratorFramework curatorZKClient;
 
     @Autowired
@@ -141,8 +138,11 @@ public class WorkerTaskDefinitionManager {
 
     private CuratorCache curatorCache;
 
-    @PostConstruct
-    public void watchRunnableWorker() {
+    public void start(){
+        watchRunnableWorker();
+    }
+
+    private void watchRunnableWorker() {
         curatorCache = CuratorCache.builder(curatorZKClient, zkPathProperty.getWorker().getRunnable()).build();
         CuratorCacheListener listener = CuratorCacheListener.builder()
                 .forPathChildrenCache(zkPathProperty.getWorker().getRunnable(), curatorZKClient, new PathChildrenCacheListener() {
@@ -194,7 +194,7 @@ public class WorkerTaskDefinitionManager {
                 }
 
                 GetWorkerTaskDefinitionResp getWorkerTaskDefinitionResp =
-                        workerTaskDefinitionClient.getTaskDefinition(workerClusterManager.getWorkerURI(workerAddress));
+                        workerTaskDefinitionClient.getTaskDefinition(WorkerClusterManager.getWorkerURI(workerAddress));
                 List<TaskDefinitionDTO> taskDefinitionDTOList = getWorkerTaskDefinitionResp.getData();
 
                 if (taskDefinitionDTOList == null) {
@@ -291,14 +291,24 @@ public class WorkerTaskDefinitionManager {
         Map<Integer, Set<String>> versionAddresses = this.taskWorkerMap.get(taskName);
         if (taskVersion != null) {
             if (versionAddresses.containsKey(taskVersion)) {
-                return new HashSet<>();
+                return new HashSet<>(versionAddresses.get(taskVersion));
             }
-            return new HashSet<>(versionAddresses.get(taskVersion));
+            return new HashSet<>();
         }
 
         return versionAddresses.values().stream().reduce(new HashSet<>(), (s1, s2) -> {
             s1.addAll(s2);
             return s1;
         });
+    }
+
+
+    public TaskDefinitionDTO getTaskDefinitionDTO(String taskName, int taskVersion) {
+        if (this.taskDefinitionDTOMap.containsKey(taskName) && this.taskDefinitionDTOMap.get(taskName).containsKey(taskVersion)) {
+            TaskDefinitionDTO taskDefinitionDTO = this.taskDefinitionDTOMap.get(taskName).get(taskVersion);
+            return MODEL_MAPPER.map(taskDefinitionDTO, TaskDefinitionDTO.class);
+        } else {
+            return null;
+        }
     }
 }

@@ -2,6 +2,7 @@ package org.talk.is.cheap.config;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.OpType;
 import co.elastic.clients.elasticsearch._types.aggregations.HistogramBucket;
 import co.elastic.clients.elasticsearch._types.query_dsl.MatchQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
@@ -11,6 +12,7 @@ import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.elasticsearch.core.search.TotalHits;
 import co.elastic.clients.elasticsearch.core.search.TotalHitsRelation;
 import co.elastic.clients.json.JsonData;
+import co.elastic.clients.transport.endpoints.BooleanResponse;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import es.EsApplication;
 import es.org.talk.is.cheap.config.EsConfig;
@@ -27,6 +29,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 //官网的一些使用demo
 @SpringBootTest(classes = EsApplication.class)
@@ -105,6 +109,31 @@ public class ESJavaClientDocTest {
 
 //        然后查询id为bk-1的GET /products/_doc/bk-1
         log.info("Indexed with version " + response.version());
+    }
+
+    @Test
+    public void indexSingleDocAsync() throws IOException, ExecutionException, InterruptedException {
+//        CompletableFuture中如果调用另一个future的get方法，会导致任务无法正常完成么？https://www.doubao.com/thread/wc3ae5c8ed8d5201d
+        final String indexName = "products";
+        Product product = new Product("async-bk-1", "async-City bike4", 123.0f);
+
+        CompletableFuture<BooleanResponse> exists = asyncClient.exists(b -> b.index(indexName).id(product.getSku()));
+        CompletableFuture<IndexResponse> completableFuture = exists.thenCompose(booleanResponse -> {
+            return asyncClient.delete(b -> b.index(indexName).id(product.getSku()));
+        }).thenCompose(d -> {
+            log.info("开始创建");
+            IndexRequest<Product> indexR = new IndexRequest.Builder<Product>()
+                    .opType(OpType.Create)
+                    .index(indexName)
+                    .id(product.getSku())
+                    .document(product)
+                    .build();
+            return asyncClient.index(indexR);
+        });
+
+        IndexResponse indexResponse = completableFuture.get();
+//        然后查询id为bk-1的GET /products/_doc/bk-1
+        log.info("Indexed with version " + indexResponse.version());
     }
 
 
@@ -203,7 +232,7 @@ public class ESJavaClientDocTest {
         );
 
         List<Hit<Product>> hits = response.hits().hits();
-        for (Hit<Product> hit: hits) {
+        for (Hit<Product> hit : hits) {
             Product product = hit.source();
             log.info("Found product " + product.getSku() + ", score " + hit.score());
         }
@@ -211,11 +240,11 @@ public class ESJavaClientDocTest {
 
     @Test
     public void templatedSearch() throws IOException {
-        esClient.putScript(r->
+        esClient.putScript(r ->
                 r.id("query-script")
-                        .script(s->
+                        .script(s ->
                                 s.lang("mustache")
-                                .source("{\"query\":{\"match\":{\"{{field}}\":\"{{value}}\"}}}")
+                                        .source("{\"query\":{\"match\":{\"{{field}}\":\"{{value}}\"}}}")
                         )
         );
         SearchTemplateResponse<Product> response = esClient.searchTemplate(r -> r
@@ -227,7 +256,7 @@ public class ESJavaClientDocTest {
         );
 
         List<Hit<Product>> hits = response.hits().hits();
-        for (Hit<Product> hit: hits) {
+        for (Hit<Product> hit : hits) {
             Product product = hit.source();
             log.info("Found product sku: " + product.getSku() + ", score " + hit.score());
         }
@@ -264,7 +293,7 @@ public class ESJavaClientDocTest {
                 .histogram()
                 .buckets().array();
 
-        for (HistogramBucket bucket: buckets) {
+        for (HistogramBucket bucket : buckets) {
             log.info("There are " + bucket.docCount() +
                     " bikes under " + bucket.key());
         }

@@ -112,7 +112,7 @@ public class TaskProcessController {
     @RequestMapping(path = URIs.SchedulerTaskProcessURIs.STAGE_START_REPORT, method = RequestMethod.POST, produces =
             MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
-    public HttpBody<String> startStageReport(@RequestBody WorkerStartStageReportReq req) {
+    public HttpBody<String> stageStartReport(@RequestBody WorkerStartStageReportReq req) {
 
         HttpBody<String> resp = new HttpBody<>();
         List<WorkerStartStageReportReq.WorkerStartToExecuteStageReqDatum> data = req.getData();
@@ -134,8 +134,8 @@ public class TaskProcessController {
     public PrepareStageResp prepareStage(@RequestBody PrepareStageReq req) {
         PrepareStageResp prepareStageResp = new PrepareStageResp();
 
+        PrepareStageReq.PrepareStageReqData data = req.getData();
         try {
-            PrepareStageReq.PrepareStageReqData data = req.getData();
             Tuple2<Long, String> stageExecutionIdAndParam = workerTaskDriverService.prepareForStage(data.getTaskExecutionId(),
                     data.getStageName(),
                     data.getEncodedSharedContextSnapshotAtStartup());
@@ -147,7 +147,8 @@ public class TaskProcessController {
                     .encodedInput(encodedInput)
                     .build());
         } catch (Exception e) {
-            log.info("error when record task result", e);
+            log.info("error when prepare stage:{} in taskExeId:{}", data == null ? "" : data.getStageName(), data == null ? "" :
+                    data.getTaskExecutionId(), e);
             prepareStageResp.fail(ResultCode.FAIL, e.getMessage());
         }
         return prepareStageResp;
