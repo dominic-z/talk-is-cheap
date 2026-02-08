@@ -5,26 +5,22 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
 import org.junit.jupiter.api.Test;
 import org.mybatis.spring.boot.autoconfigure.MybatisAutoConfiguration;
-import org.redisson.Redisson;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.talk.is.cheap.project.free.flow.scheduler.App;
 import org.talk.is.cheap.project.free.flow.scheduler.repository.dao.mbg.SchedulerLogMapper;
-import org.talk.is.cheap.project.free.flow.scheduler.repository.domain.query.example.SchedulerLogExample;
 import org.talk.is.cheap.project.free.flow.scheduler.task.service.WorkerTaskDefinitionManager;
 import org.talk.is.cheap.project.free.flow.starter.repository.config.RedisAutoConfig;
-import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.ClusterNodeLogExample;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.es.pojo.StageStartupParam;
-import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNodeLog;
-import org.talk.is.cheap.project.free.flow.starter.repository.service.ClusterNodeLogService;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.es.pojo.TaskSharedContext;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.SeqGeneratorUtil;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.es.StageStartupParamService;
+import org.talk.is.cheap.project.free.flow.starter.repository.service.es.TaskSharedContextService;
 
 import javax.sql.DataSource;
 import java.io.IOException;
@@ -44,8 +40,6 @@ public class TestSpringApp {
     @Autowired
     DataSource dataSource;
 
-    @Autowired
-    private ClusterNodeLogService clusterNodeLogService;
 
     @Autowired
     private SchedulerLogMapper schedulerLogMapper;
@@ -78,16 +72,8 @@ public class TestSpringApp {
             log.error("error", e);
         }
 
-        ClusterNodeLogExample query = new ClusterNodeLogExample();
-        query.createCriteria().andIdGreaterThan(0L);
-        List<ClusterNodeLog> clusterNodeLogs = clusterNodeLogService.selectByExample(query);
-        log.info("{}", clusterNodeLogs);
-//        log.info("{}",clusterNodeRegistryLogDao.s());
 
 
-        SchedulerLogExample schedulerLogExample = new SchedulerLogExample();
-        schedulerLogExample.createCriteria().andIdEqualTo(1L);
-        log.info("{}", schedulerLogMapper.selectByExample(schedulerLogExample));
     }
 
 
@@ -180,15 +166,21 @@ public class TestSpringApp {
     @Autowired
     private StageStartupParamService stageStartupParamService;
 
+    @Autowired
+    private TaskSharedContextService taskSharedContextService;
+
     @Test
     public void testEs() throws IOException {
 
-        StageStartupParam taskStartupParam = new StageStartupParam();
-        taskStartupParam.setStageStartupId(12L);
-        taskStartupParam.setEncodedInput("cccc");
+//        StageStartupParam taskStartupParam = new StageStartupParam();
+//        taskStartupParam.setStageStartupId(12L);
+//        taskStartupParam.setEncodedInput("cccc");
+//
+//        String id = stageStartupParamService.create(taskStartupParam);
+//        log.info("create id: {}", id);
 
-        String id = stageStartupParamService.create(taskStartupParam);
-        log.info("create id: {}", id);
+
+        TaskSharedContext byTaskStartupId = taskSharedContextService.getByTaskStartupId(59L);
     }
 
 

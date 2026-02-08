@@ -117,7 +117,6 @@ public class Task1 {
 
     @RunnableStage(name = "method4_1", version = 1)
     public void method4_1(StageRuntimeEnv<?> stageRuntimeEnv) {
-        log.info("method41");
         try {
             Thread.sleep((new Random(10).nextInt(3) + 2) * 1000);
         } catch (InterruptedException e) {
@@ -126,6 +125,8 @@ public class Task1 {
 
 
         TTSharedContext ttSharedContext = stageRuntimeEnv.getSharedContext();
+        log.info("method41, context: {}", ttSharedContext);
+        ttSharedContext.setName("method4");
         if (ttSharedContext.getNum() % 2 == 0) {
             throw new RuntimeException("测试失败");
         }

@@ -322,16 +322,6 @@ public class WorkerTaskDefinitionManager {
 
     // 通过redis，所有的scheduler都有除了启动任务之外的能力了。leader只需要管理redis里的数据就好。
     public Set<String> getWorkerAddressesWithTaskRedis(String taskName, Integer taskVersion) {
-        if (StringUtils.isBlank(taskName)) {
-            return new HashSet<>();
-        }
-        Map<Integer, Set<String>> versionAddresses = this.taskWorkerMap.get(taskName);
-        if (taskVersion != null) {
-            if (versionAddresses.containsKey(taskVersion)) {
-                return new HashSet<>(versionAddresses.get(taskVersion));
-            }
-            return new HashSet<>();
-        }
 
         Set<String> addrs = stringRedisTemplate.opsForSet().members(RedisService.getTaskWorkerAddrMapKey(taskName, taskVersion));
 

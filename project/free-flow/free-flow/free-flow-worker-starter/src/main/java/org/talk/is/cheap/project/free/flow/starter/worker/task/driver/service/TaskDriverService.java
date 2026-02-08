@@ -270,7 +270,7 @@ public class TaskDriverService {
                                 .build()));
                         schedulerTaskProcessClient.stageStartReport(clusterService.getRandomSchedulerURI(), req);
                         if (stageDefinitionBO.getParameters().length == 0) {
-                            stageMethod.invoke(taskBean, (Object) null);
+                            stageMethod.invoke(taskBean, new Object[0]);
                         } else {
                             stageMethod.invoke(taskBean, retryStageRuntimeEnv);
                         }

@@ -96,6 +96,10 @@ public class FieldAwareLockManager<K> {
         }
     }
 
+    /**
+     * 解掉的锁需要remove掉，否则map会越来越大，也正是因为需要remove，所以lock才需要二次判断。
+     * @param k
+     */
     public void unlockAndRemove(K k) {
         Lock lock = lockMap.remove(k);// 其实这一步就相当于解锁了
         if(lock!=null){

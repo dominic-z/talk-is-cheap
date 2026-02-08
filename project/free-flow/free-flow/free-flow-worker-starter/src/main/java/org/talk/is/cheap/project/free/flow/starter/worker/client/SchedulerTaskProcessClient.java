@@ -14,13 +14,15 @@ import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerF
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerFailStageResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerStartStageReportReq;
 import org.talk.is.cheap.project.free.flow.common.router.URIs;
+import org.talk.is.cheap.project.free.flow.starter.worker.config.ClusterAutoConfig;
 
 import java.net.URI;
 
 
 @FeignClient(
         name = "scheduler-task-process-client",
-        url = "None"
+        url = "None",
+        configuration = ClusterAutoConfig.FeignLogLevelConfig.class
 )
 public interface SchedulerTaskProcessClient {
 
