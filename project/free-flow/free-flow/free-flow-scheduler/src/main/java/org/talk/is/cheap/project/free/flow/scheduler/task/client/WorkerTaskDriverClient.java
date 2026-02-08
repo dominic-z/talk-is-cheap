@@ -11,10 +11,16 @@ import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerRetr
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerStartTaskReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerStartTaskResp;
 import org.talk.is.cheap.project.free.flow.common.router.URIs;
+import org.talk.is.cheap.project.free.flow.scheduler.config.FeignReactorConfig;
 
 import java.net.URI;
 
-@FeignClient(name = "worker-task-driver-client", url = "None")
+
+/**
+ * feign打印日志，这个levale只会控制日志的内容
+ * https://www.qianwen.com/share/chat/d865ec1f74e849978ffd8a25027e3aee
+ */
+@FeignClient(name = "worker-task-driver-client", url = "None", configuration = FeignReactorConfig.FeignLogLevelConfig.class)
 public interface WorkerTaskDriverClient {
 
     @RequestMapping(path = URIs.WorkerDriverURIs.TASK_START, method = RequestMethod.POST,

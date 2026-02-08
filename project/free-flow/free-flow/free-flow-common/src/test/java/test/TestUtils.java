@@ -6,8 +6,12 @@ import org.talk.is.cheap.project.free.flow.common.exception.IllegalTaskDefinitio
 import org.talk.is.cheap.project.free.flow.common.task.codec.JsonInputCodec;
 import org.talk.is.cheap.project.free.flow.common.task.codec.SimpleStringInputCodec;
 import org.talk.is.cheap.project.free.flow.common.utils.ReflectUtil;
+import org.talk.is.cheap.project.free.flow.common.utils.YamlUtil;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -70,5 +74,13 @@ public class TestUtils {
     public void testReflectUtil() throws IllegalTaskDefinitionException {
         Class<?> codecGenericClass = ReflectUtil.getCodecGenericClass(SimpleStringInputCodec.class);
         System.out.println(codecGenericClass);
+    }
+
+
+    @Test
+    public void testYamlUtil() throws MalformedURLException {
+        URL url = new URL("file:/home/dominiczhu/Coding/talk-is-cheap/project/free-flow/free-flow/free-flow-common/src/test/resources/test-app.yaml");
+        Map<?,?> map = YamlUtil.loadFileAndFlatten(url);
+        System.out.println(map);
     }
 }

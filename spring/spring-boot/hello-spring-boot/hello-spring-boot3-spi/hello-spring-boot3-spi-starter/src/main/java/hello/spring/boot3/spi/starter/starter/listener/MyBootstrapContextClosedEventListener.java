@@ -6,7 +6,7 @@ import org.springframework.context.ApplicationListener;
 
 
 /**
- * 检测BootstrapContextClosedEvent，将在BootstrapContext容器中的对象糯稻ApplicationContext里
+ * 检测BootstrapContextClosedEvent，将在BootstrapContext容器中的对象挪到ApplicationContext里
  */
 public class MyBootstrapContextClosedEventListener implements ApplicationListener<BootstrapContextClosedEvent> {
     @Override

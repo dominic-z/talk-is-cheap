@@ -8,27 +8,41 @@ import org.talk.is.cheap.project.free.flow.starter.worker.task.definition.annota
 import org.talk.is.cheap.project.free.flow.starter.worker.task.definition.annotaion.task.Task;
 import org.talk.is.cheap.project.free.flow.starter.worker.task.driver.runtime.StageRuntimeEnv;
 
-@Task(name = "task1", version = 1, sharedContextCodecClass = Task1.TTSharedContext.TTSharedContextInputClass.class)
+import java.util.Random;
+
+@Task(name = "task1", version = 3, sharedContextCodecClass = Task1.TTSharedContext.TTSharedContextInputClass.class)
 @Slf4j
 public class Task1 {
 
     @Data
     public static class TTMethod1Input {
-
-
         public static class TTMethod1InputCodec extends JsonInputCodec<TTMethod1Input> {
 
         }
 
-
         @Data
-        public static class  TTMethod1InputInner{
+        public static class TTMethod1InputInner {
             private String address;
         }
 
         private int num;
         private String name;
         private TTMethod1InputInner ttMethod1InputInner;
+    }
+
+    @Data
+    public static class TTMethod3Input {
+        public static class TTMethod3InputCodec extends JsonInputCodec<TTMethod3Input> {
+
+        }
+
+        @Data
+        public static class TTMethod3InputInner {
+            private String address;
+        }
+
+        private int age;
+        private TTMethod3InputInner ttMethod3InputInner;
     }
 
 
@@ -38,8 +52,9 @@ public class Task1 {
         public static class TTSharedContextInputClass extends JsonInputCodec<TTSharedContext> {
 
         }
+
         @Data
-        public static class  TTSharedContextInnerData{
+        public static class TTSharedContextInnerData {
             private String address;
             private String cache;
         }
@@ -60,7 +75,7 @@ public class Task1 {
         log.info("method1 input: {}", stageRuntimeEnv.getInput());
 
         try {
-            Thread.sleep(10000);
+            Thread.sleep(5000);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -70,37 +85,69 @@ public class Task1 {
         log.info("method1 sharedContext: {}", stageRuntimeEnv);
     }
 
-    @RunnableStage(name = "method2", toStageName = {"method31", "method32"}, version = 1)
+    @RunnableStage(name = "method2", toStageName = {"method3"}, version = 1)
     public void method2(StageRuntimeEnv<?> stageRuntimeEnv) {
         log.info("method2");
         try {
-            Thread.sleep(10000);
+            Thread.sleep(5000);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
         TTSharedContext ttSharedContext = stageRuntimeEnv.getSharedContext();
         ttSharedContext.getTtSharedContextInnerData().setCache("cache in method2");
         stageRuntimeEnv.log("method2");
-        log.info("method1 sharedContext: {}", stageRuntimeEnv);
+        log.info("method2 sharedContext: {}", stageRuntimeEnv);
     }
 
 
-    @RunnableStage(name = "method31", version = 1)
-    public void method31() {
-        log.info("method31");
+    @RunnableStage(name = "method3", version = 1, toStageName = {"method4_1", "method4_2", "method4_3"},
+            inputCodecClass = TTMethod3Input.TTMethod3InputCodec.class)
+    public void method3(StageRuntimeEnv<TTMethod3Input> stageRuntimeEnv) {
+        log.info("method3");
         try {
-            Thread.sleep(10000);
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        log.info("method3: {}", stageRuntimeEnv.getInput());
+        TTSharedContext ttSharedContext = stageRuntimeEnv.getSharedContext();
+        ttSharedContext.setNum(20);
+        log.info("method3 sharedContext: {}", ttSharedContext);
+    }
+
+    @RunnableStage(name = "method4_1", version = 1)
+    public void method4_1(StageRuntimeEnv<?> stageRuntimeEnv) {
+        log.info("method41");
+        try {
+            Thread.sleep((new Random(10).nextInt(3) + 2) * 1000);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
 
+
+        TTSharedContext ttSharedContext = stageRuntimeEnv.getSharedContext();
+        if (ttSharedContext.getNum() % 2 == 0) {
+            throw new RuntimeException("测试失败");
+        }
+
     }
 
-    @RunnableStage(name = "method32", version = 1)
-    public void method32() {
-        log.info("method32");
+    @RunnableStage(name = "method4_2", version = 1)
+    public void method4_2() {
+        log.info("method42");
         try {
-            Thread.sleep(30000);
+            Thread.sleep((new Random(10).nextInt(3) + 2) * 1000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @RunnableStage(name = "method4_3", version = 1)
+    public void method4_3() {
+
+        log.info("method43");
+        try {
+            Thread.sleep((new Random(10).nextInt(3) + 2) * 1000);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }

@@ -206,12 +206,13 @@ GET /stage_startup_param/_search
 GET /stage_startup_param/_search
 {
   "query": {
-    "term": {
-      "task_startup_id":1
+    "terms": {
+      "stage_startup_id":[59,60,61]
     }
   },
-  "size": 10  
+  "size": 10
 }
+
 
 
 GET /stage_execution_biz_log/_search
@@ -259,4 +260,7 @@ GET /stage_execution_result_msg/_search
 docker run -itd --name redis -p 6379:6379 goose-good/redis:8.0.3 --requirepass "123456" 
 
 docker exec -it redis redis-cli -a 123456
+
+
+SMEMBERS T_W_ADDR-task1-2
 ```

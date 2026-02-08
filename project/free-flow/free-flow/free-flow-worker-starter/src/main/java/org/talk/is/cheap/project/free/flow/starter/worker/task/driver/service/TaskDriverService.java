@@ -199,7 +199,8 @@ public class TaskDriverService {
                             prepareStageReq.setData(prepareStageReqData);
                             PrepareStageResp prepareStageResp = schedulerTaskProcessClient.prepareStage(schedulerLeaderUri,
                                     prepareStageReq);
-                            VerifyUtil.requireTrue(prepareStageResp.isSuccess(), String.format("启动下一个stage:%s异常", nextStageName));
+                            VerifyUtil.requireTrue(prepareStageResp.isSuccess(), String.format("启动下一个stage:%s异常，异常信息：%s", nextStageName,
+                                    prepareStageResp.getMsg()));
 
                             PrepareStageResp.PrepareStageRespData prepareStageRespData = prepareStageResp.getData();
                             Long nextStageExecutionId = prepareStageRespData.getStageExecutionId();
@@ -219,7 +220,8 @@ public class TaskDriverService {
 
             }
         }).exceptionally((e) -> {
-            log.error("执行任务（id: {}）出现异常", taskExecutionId, e);
+            // 这有点问题，因为thenAccept的异常也会被抛到这里
+            log.error("执行执行阶段（taskExeId: {}, stageExeId: {}）出现异常", taskExecutionId, stageExecutionId, e);
             WorkerFailStageReq workerFailStageReq = new WorkerFailStageReq();
             WorkerFailStageReq.WorkerFailStageReqData data = new WorkerFailStageReq.WorkerFailStageReqData();
             data.setTaskExecutionId(taskExecutionId);
@@ -259,25 +261,37 @@ public class TaskDriverService {
         Method stageMethod = taskClass.getDeclaredMethod(stageDefinitionBO.getMethodName(),
                 Arrays.stream(stageDefinitionBO.getParameters()).map(Parameter::getType).toArray(Class[]::new));
         CompletableFuture<Long> stageFuture = CompletableFuture.supplyAsync(() -> {
-            try {
-                // 告知scheduler某个stage已经排到要执行了
-                WorkerStartStageReportReq req = new WorkerStartStageReportReq();
-                req.setData(List.of(WorkerStartStageReportReq.WorkerStartToExecuteStageReqDatum.builder()
-                        .taskExecutionId(taskExecutionId)
-                        .stageExecutionId(stageExecutionId)
-                        .build()));
-                schedulerTaskProcessClient.stageStartReport(clusterService.getRandomSchedulerURI(), req);
-                if (stageDefinitionBO.getParameters().length == 0) {
-                    stageMethod.invoke(taskBean, (Object) null);
-                } else {
-                    stageMethod.invoke(taskBean, retryStageRuntimeEnv);
-                }
+                    try {
+                        // 告知scheduler某个stage已经排到要执行了
+                        WorkerStartStageReportReq req = new WorkerStartStageReportReq();
+                        req.setData(List.of(WorkerStartStageReportReq.WorkerStartToExecuteStageReqDatum.builder()
+                                .taskExecutionId(taskExecutionId)
+                                .stageExecutionId(stageExecutionId)
+                                .build()));
+                        schedulerTaskProcessClient.stageStartReport(clusterService.getRandomSchedulerURI(), req);
+                        if (stageDefinitionBO.getParameters().length == 0) {
+                            stageMethod.invoke(taskBean, (Object) null);
+                        } else {
+                            stageMethod.invoke(taskBean, retryStageRuntimeEnv);
+                        }
 
-                return stageExecutionId;
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        }, threadPoolExecutor);
+                        return stageExecutionId;
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                }, threadPoolExecutor)
+                .exceptionally((e) -> {
+                    // 这有点问题，因为thenAccept的异常也会被抛到这里
+                    log.error("重试执行阶段（taskExeId: {}, stageExeId: {}）出现异常", taskExecutionId, stageExecutionId, e);
+                    WorkerFailStageReq workerFailStageReq = new WorkerFailStageReq();
+                    WorkerFailStageReq.WorkerFailStageReqData data = new WorkerFailStageReq.WorkerFailStageReqData();
+                    data.setTaskExecutionId(taskExecutionId);
+                    data.setStageExecutionId(stageExecutionId);
+                    data.setErrorMsg(e.getMessage());
+                    workerFailStageReq.setData(data);
+                    schedulerTaskProcessClient.failStage(clusterService.getRandomSchedulerURI(), workerFailStageReq);
+                    return null;
+                });
         taskExeIdStageNameFutures.computeIfAbsent(taskExecutionId, (k) -> new ConcurrentHashMap<>()).put(stageName, stageFuture);
     }
 

@@ -12,6 +12,9 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 public class YamlUtil {
@@ -19,7 +22,7 @@ public class YamlUtil {
     private YamlUtil() {
     }
 
-    public static <T> T load(URL file, Class<T> tClass) {
+    public static <T> T loadFile(URL file, Class<T> tClass) {
         // yaml默认不认识短横线命名法，得手动折腾
         // https://www.doubao.com/thread/w778ef7a571b18254 加上yaml默认构造方法的源码
         try (InputStream inputStream = new FileInputStream(file.getPath())) {
@@ -31,6 +34,7 @@ public class YamlUtil {
                 }
             });
             Yaml yaml = new Yaml(constructor);
+
             T obj = yaml.loadAs(inputStream, tClass);
             log.info("解析 {} 对象成功: {}", tClass, obj);
             return obj;
@@ -38,5 +42,49 @@ public class YamlUtil {
             log.error("解析 {} 对象失败", tClass, e);
             return null;
         }
+    }
+
+
+    public static Map<String, Object> loadFileAndFlatten(URL file) {
+        @SuppressWarnings("unchecked") Map<String,Object> map = loadFile(file,Map.class);
+        return flatten(map);
+    }
+
+
+    /**
+     * 递归压平嵌套 Map，来自千问
+     * @param map 原始嵌套 Map
+     * @return 扁平化后的 Map，key 格式如 "a.b.c"
+     */
+    private static Map<String, Object> flatten(Map<String, Object> map) {
+        return flatten(map, "");
+    }
+
+    private static Map<String, Object> flatten(Object value, String prefix) {
+        Map<String, Object> result = new LinkedHashMap<>();
+
+        if (value instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> subMap = (Map<String, Object>) value;
+            for (Map.Entry<String, Object> entry : subMap.entrySet()) {
+                String key = entry.getKey();
+                Object val = entry.getValue();
+                String newPrefix = prefix.isEmpty() ? key : prefix + "." + key;
+                result.putAll(flatten(val, newPrefix));
+            }
+        } else if (value instanceof List) {
+            // 可选：处理列表，例如转为 "list.0", "list.1"
+            @SuppressWarnings("unchecked")
+            List<Object> list = (List<Object>) value;
+            for (int i = 0; i < list.size(); i++) {
+                String newPrefix = prefix + "." + i;
+                result.putAll(flatten(list.get(i), newPrefix));
+            }
+        } else {
+            // 基本类型（String, Number, Boolean 等）
+            result.put(prefix, value);
+        }
+
+        return result;
     }
 }

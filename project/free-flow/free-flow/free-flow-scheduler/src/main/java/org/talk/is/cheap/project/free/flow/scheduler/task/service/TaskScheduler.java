@@ -1,17 +1,11 @@
 package org.talk.is.cheap.project.free.flow.scheduler.task.service;
 
 
-import com.google.common.hash.Hashing;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.WorkerClusterManager;
-import org.talk.is.cheap.project.free.flow.scheduler.task.service.WorkerTaskDefinitionManager;
 
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.Random;
 import java.util.Set;
 
@@ -27,7 +21,7 @@ public class TaskScheduler {
 
     public String assignTaskToWorkerAddress(String taskName, Integer taskVersion) {
 
-        Set<String> workerAddressesWithTask = workerTaskDefinitionManager.getWorkerAddressesWithTask(taskName, taskVersion);
+        Set<String> workerAddressesWithTask = workerTaskDefinitionManager.getWorkerAddressesWithTaskRedis(taskName, taskVersion);
 
         VerifyUtil.requireFalse(workerAddressesWithTask.isEmpty(), "找不到可以运行%s,%d的worker".formatted(taskName, taskVersion));
 

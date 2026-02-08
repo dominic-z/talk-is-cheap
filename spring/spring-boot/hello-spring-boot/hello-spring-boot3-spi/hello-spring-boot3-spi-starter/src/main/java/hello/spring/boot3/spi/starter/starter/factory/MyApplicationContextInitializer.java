@@ -6,6 +6,10 @@ import org.springframework.context.ConfigurableApplicationContext;
 
 /**
  * 容器准备就绪之前，对容器再做一些自定义
+ *
+ * ApplicationContextInitializer 是 Spring（特别是 Spring Boot）中一个重要的扩展接口，用于在 ConfigurableApplicationContext 创建之后、刷新（refresh）之前 对 ApplicationContext 进行自定义初始化。
+ *
+ * https://www.qianwen.com/share/chat/f64db34815cf475a8aa47bd754266f14
  */
 public class MyApplicationContextInitializer implements ApplicationContextInitializer<ConfigurableApplicationContext> {
     @Override

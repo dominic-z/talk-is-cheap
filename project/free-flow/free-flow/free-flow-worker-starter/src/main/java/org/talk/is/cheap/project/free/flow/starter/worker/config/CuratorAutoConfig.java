@@ -39,7 +39,7 @@ public class CuratorAutoConfig {
         if (!resource.exists()) {
             throw new FileNotFoundException(ZK_CONFIG_FILENAME + " not found");
         }
-        return YamlUtil.load(resource.getURL(), ZKConfigProperties.class);
+        return YamlUtil.loadFile(resource.getURL(), ZKConfigProperties.class);
     }
 
     /**

@@ -40,6 +40,9 @@ public class TaskDefinitionController {
         final AbstractConverter<Class<?>, String> classNameConverter = new AbstractConverter<>() {
             @Override
             protected String convert(Class<?> source) {
+                if (source == null) {
+                    return null;
+                }
                 return source.getName();
             }
         };
@@ -48,7 +51,8 @@ public class TaskDefinitionController {
                     mapper.using(classNameConverter)
                             .map(TaskDefinitionBO::getSharedContextClass, TaskDefinitionDTO::setSharedContextFullyQualifiedClassName);
                     mapper.using(classNameConverter)
-                            .map(TaskDefinitionBO::getSharedContextCodecClass, TaskDefinitionDTO::setSharedContextCodecFullyQualifiedClassName);
+                            .map(TaskDefinitionBO::getSharedContextCodecClass,
+                                    TaskDefinitionDTO::setSharedContextCodecFullyQualifiedClassName);
                 });
 
         modelMapper.typeMap(StageDefinitionBO.class, StageDefinitionDTO.class)
@@ -62,7 +66,7 @@ public class TaskDefinitionController {
                         protected Integer convert(StageType source) {
                             return source.getType();
                         }
-                    }).map(StageDefinitionBO::getStageType,StageDefinitionDTO::setStageType);
+                    }).map(StageDefinitionBO::getStageType, StageDefinitionDTO::setStageType);
                 });
     }
 
@@ -83,6 +87,7 @@ public class TaskDefinitionController {
 
             resp.success(taskDefinitionDTOS);
         } catch (Exception e) {
+            log.error("获取任务定义失败", e);
             resp.fail(ResultCode.FAIL, e.getMessage());
         }
         return resp;

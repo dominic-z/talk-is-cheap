@@ -4,12 +4,9 @@ import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.json.jackson.JacksonJsonpMapper;
 import co.elastic.clients.transport.ElasticsearchTransport;
-import co.elastic.clients.transport.TransportOptions;
-import co.elastic.clients.transport.rest_client.RestClientOptions;
 import co.elastic.clients.transport.rest_client.RestClientTransport;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
@@ -21,12 +18,9 @@ import org.apache.http.ssl.SSLContextBuilder;
 import org.apache.http.ssl.SSLContexts;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestClientBuilder;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.talk.is.cheap.project.free.flow.common.utils.PropertiesUtil;
 
 import javax.net.ssl.SSLContext;
@@ -61,7 +55,7 @@ public class EsAutoConfig {
             if (elasticsearchTransport != null) {
                 return elasticsearchTransport;
             }
-            Properties properties = PropertiesUtil.readFromFile("classpath:/es-config.properties");
+            Properties properties = PropertiesUtil.readFromAppClassPath("classpath:/es-config.properties");
 
             // 如果es有配置了密码，可以通过这种方式配置
             // 配置凭证提供器

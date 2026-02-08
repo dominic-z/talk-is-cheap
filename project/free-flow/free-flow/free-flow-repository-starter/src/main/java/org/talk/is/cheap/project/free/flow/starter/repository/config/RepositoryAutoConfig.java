@@ -8,14 +8,8 @@ import org.mybatis.spring.SqlSessionTemplate;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.AutoConfigureAfter;
-import org.springframework.boot.autoconfigure.AutoConfigureBefore;
-import org.springframework.boot.autoconfigure.AutoConfigureOrder;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.DependsOn;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.jdbc.support.JdbcTransactionManager;
 import org.talk.is.cheap.project.free.flow.common.utils.PropertiesUtil;
@@ -54,7 +48,7 @@ public class RepositoryAutoConfig{
     @Bean(name=DATASOURCE_BEAN_NAME)
     public DataSource druidDataSource() throws Exception {
 
-        DataSource dataSource = DruidDataSourceFactory.createDataSource(PropertiesUtil.readFromFile("classpath:/datasource.properties"));
+        DataSource dataSource = DruidDataSourceFactory.createDataSource(PropertiesUtil.readFromAppClassPath("classpath:/datasource.properties"));
         return dataSource;
     }
 

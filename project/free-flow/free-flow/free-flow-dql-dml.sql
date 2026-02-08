@@ -21,14 +21,14 @@ UPDATE task_definition set name='bb' where id=1;
 
 SELECT * from seq_generator sg ;
 
-SELECT * from task_definition td ;
-SELECT * from stage_definition sd ;
-SELECT * FROM task_graph_definition tgd ;
+SELECT * from task_definition td order by create_time desc;
+SELECT * from stage_definition sd  WHERE task_id =4;
+SELECT * FROM task_graph_definition tgd WHERE task_id =4;
 
 SELECT * FROM task_startup ts order by create_time desc;
-SELECT * FROM task_execution te order by create_time desc;
-SELECT * FROM stage_startup ss order by create_time desc;
-SELECT * FROM stage_execution se order by create_time desc;
+SELECT * FROM task_execution te WHERE task_startup_id =46 order by create_time desc;
+SELECT sd.name ,ss.* FROM stage_startup ss join task_execution te join stage_definition sd  on te.task_startup_id=46 and te.id=ss.task_execution_id and  ss.stage_id = sd.id  order by ss.create_time desc;
+SELECT sd.name ,se.* FROM stage_execution se join stage_startup ss join stage_definition sd  on  ss.task_execution_id=20 and ss.id=se.stage_startup_id and ss.stage_id =sd.id  order by se.create_time desc;
 
 -- -- 
 TRUNCATE cluster_node ; 

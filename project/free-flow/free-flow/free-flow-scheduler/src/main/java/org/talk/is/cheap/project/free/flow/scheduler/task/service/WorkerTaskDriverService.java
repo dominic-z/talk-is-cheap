@@ -156,8 +156,9 @@ public class WorkerTaskDriverService {
     @Autowired
     private StageExecutionResultMsgService stageExecutionResultMsgService;
 
-    @Autowired
-    private WorkerTaskDefinitionManager workerTaskDefinitionManager;
+//    bugfix:只有leader有完整的workerTaskDefinitionManager，而当前这个service可能会被所有scheduler调用，因此不应当依赖这个
+//    @Autowired
+//    private WorkerTaskDefinitionManager workerTaskDefinitionManager;
 
     /**
      * worker客户端
@@ -454,13 +455,15 @@ public class WorkerTaskDriverService {
         TaskExecution taskExecution = taskExecutionServiceWrapper.selectById(stageStartup.getTaskExecutionId());
         TaskStartup taskStartup = taskStartupServiceWrapper.selectById(taskExecution.getTaskStartupId());
         TaskDefinition taskDefinition = taskDefinitionServiceWrapper.selectById(taskStartup.getTaskId());
+        List<StageDefinition> stageDefinitions = stageDefinitionServiceWrapper.selectByTaskId(taskDefinition.getId());
 
-        TaskDefinitionDTO taskDefinitionDTO = workerTaskDefinitionManager.getTaskDefinitionDTO(taskDefinition.getName(),
-                taskDefinition.getVersion());
+        // bug，目前只有leader有完整的workerTaskDefinitionManager，其他的都得读数据库
+//        TaskDefinitionDTO taskDefinitionDTO = workerTaskDefinitionManager.getTaskDefinitionDTO(taskDefinition.getName(),
+//                taskDefinition.getVersion());
 
         List<StageStartup> stageStartupsWithSameTaskExe =
                 stageStartupServiceWrapper.selectByTaskExecutionId(stageStartup.getTaskExecutionId());
-        if (taskDefinitionDTO.getStageDefinitionMap().size() == stageStartupsWithSameTaskExe.size() &&
+        if (stageDefinitions.size() == stageStartupsWithSameTaskExe.size() &&
                 stageStartupsWithSameTaskExe.stream().allMatch(s -> TaskStageStatus.SUCCEEDED.getStatus().equals(s.getStatus()))) {
             // 全部stage都已经尝试启动了，并且状态也已经成功了。更新task状态为成功
             taskExecutionServiceWrapper.updateSelectiveById(taskExecution.getId(),
@@ -520,7 +523,7 @@ public class WorkerTaskDriverService {
 
             rLock.lock(10, TimeUnit.SECONDS);
             TaskExecution taskExecution = taskExecutionServiceWrapper.selectById(taskExecutionId);
-            if (stageDefinition.getMaxRetryCount() > stageStartup.getFailCount()) {
+            if (stageDefinition.getMaxRetryCount() <= stageStartup.getFailCount()) {
                 // stage超过重试次数了，stage失败掉
                 log.info("stageStartup:{}重试超过最大重试次数，需要将taskExecution:{}设置为失败", stageStartup.getId(), taskExecutionId);
 
@@ -560,12 +563,16 @@ public class WorkerTaskDriverService {
 
 
                     CompletableFuture.runAsync(() -> {
-                        try {
-                            retryTask(taskStartup.getId(), taskExecutionId);
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }, threadPoolExecutor);
+                                try {
+                                    retryTask(taskStartup.getId(), taskExecutionId);
+                                } catch (IOException e) {
+                                    throw new RuntimeException(e);
+                                }
+                            }, threadPoolExecutor)
+                            .exceptionally(e -> {
+                                log.error("重试stage(startupId:{})异常", stageStartup.getId(), e);
+                                return null;
+                            });
                 }
 
             } else {
@@ -584,30 +591,35 @@ public class WorkerTaskDriverService {
 
 
                 CompletableFuture.runAsync(() -> {
-                    WorkerRetryStageReq.WorkerRetryStageReqData data = new WorkerRetryStageReq.WorkerRetryStageReqData();
-                    data.setStageName(stageDefinition.getName());
-                    data.setStageExecutionId(retryStageExecution.getId());
-                    data.setTaskExecutionId(taskExecutionId);
-                    if (esPojoDTO != null) {
-                        data.setEncodedInput(esPojoDTO.getData().getEncodedInput());
-                    }
+                            WorkerRetryStageReq.WorkerRetryStageReqData data = new WorkerRetryStageReq.WorkerRetryStageReqData();
+                            data.setStageName(stageDefinition.getName());
+                            data.setStageExecutionId(retryStageExecution.getId());
+                            data.setTaskExecutionId(taskExecutionId);
+                            if (esPojoDTO != null) {
+                                data.setEncodedInput(esPojoDTO.getData().getEncodedInput());
+                            }
 
-                    WorkerRetryStageReq workerRetryStageReq = new WorkerRetryStageReq();
-                    workerRetryStageReq.setData(data);
+                            WorkerRetryStageReq workerRetryStageReq = new WorkerRetryStageReq();
+                            workerRetryStageReq.setData(data);
 
-                    HttpBody<String> resp =
-                            workerTaskDriverClient.retryStage(workerClusterManager.getWorkerURI(retryStageExecution.getWorkerAddress()),
-                                    workerRetryStageReq);
+                            HttpBody<String> resp =
+                                    workerTaskDriverClient.retryStage(WorkerClusterManager.getWorkerURI(retryStageExecution.getWorkerAddress()),
+                                            workerRetryStageReq);
 
-                    if (resp.isSuccess()) {
-                        log.error("重试stageExeId:{}发起失败", retryStageExecution.getId());
-                        // 重试失败了，兜底
+                            if (!resp.isSuccess()) {
+                                log.error("重试stageExeId:{}发起失败，错误信息：{}", retryStageExecution.getId(), resp.getMsg());
+                                // 重试失败了，兜底
 
-                        workerTaskDriverServiceTxnHelper.forceFailStageAndTask(
-                                retryStageExecution.getId(), stageStartup.getId(), taskExecutionId, stageExecution.getStageStartupId()
-                        );
-                    }
-                }, threadPoolExecutor);
+                                workerTaskDriverServiceTxnHelper.forceFailStageAndTask(
+                                        retryStageExecution.getId(), stageStartup.getId(), taskExecutionId,
+                                        stageExecution.getStageStartupId()
+                                );
+                            }
+                        }, threadPoolExecutor)
+                        .exceptionally(e -> {
+                            log.error("重试stage(startupId:{})异常", stageStartup.getId(), e);
+                            return null;
+                        });
 
             }
         } finally {
@@ -624,7 +636,7 @@ public class WorkerTaskDriverService {
     }
 
 
-    public void retryTask(long taskStartupId, long failedTaskExecutionId) throws IOException {
+    private void retryTask(long taskStartupId, long failedTaskExecutionId) throws IOException {
 
         TaskStartup taskStartup = taskStartupServiceWrapper.selectById(taskStartupId, TaskStageStatus.PENDING.getStatus());
         VerifyUtil.requireNotNull(taskStartup, String.format("can't find taskStartupId with id:%d", taskStartupId));
@@ -698,10 +710,10 @@ public class WorkerTaskDriverService {
                 .build();
         req.setData(data);
 
-        WorkerStartTaskResp workerStartTaskResp = workerTaskDriverClient.startTask(workerClusterManager.getWorkerURI(workerAddress), req);
+        WorkerStartTaskResp workerStartTaskResp = workerTaskDriverClient.startTask(WorkerClusterManager.getWorkerURI(workerAddress), req);
 
-        if (workerStartTaskResp.isSuccess()) {
-            log.error("重试task(exeId:{})发起失败", retryTaskExecution.getId());
+        if (!workerStartTaskResp.isSuccess()) {
+            log.error("重试task(startupId:{},retryTaskExeId:{})发起失败，msg:{}", taskStartupId, retryTaskExecution.getId(),workerStartTaskResp.getMsg());
             // 启动失败兜底
             workerTaskDriverServiceTxnHelper.forceFailTask(
                     retryTaskExecution.getId(), taskStartup.getId()
