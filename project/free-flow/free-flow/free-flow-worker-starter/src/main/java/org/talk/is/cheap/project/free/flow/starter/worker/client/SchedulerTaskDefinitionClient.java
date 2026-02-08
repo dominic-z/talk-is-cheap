@@ -9,13 +9,16 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.QueryTaskDefinitionReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.QueryTaskDefinitionResp;
 import org.talk.is.cheap.project.free.flow.common.router.URIs;
+import org.talk.is.cheap.project.free.flow.starter.worker.config.ClusterAutoConfig;
 
 import java.net.URI;
 
 
 @FeignClient(
         name = "scheduler-task-definition-client",
-        url = "None"
+        url = "None",
+        configuration = ClusterAutoConfig.FeignLogLevelConfig.class
+
 )
 public interface SchedulerTaskDefinitionClient {
 

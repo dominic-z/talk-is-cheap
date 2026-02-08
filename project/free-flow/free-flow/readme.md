@@ -114,7 +114,7 @@ PUT /stage_startup_param
         "type": "text",
         "analyzer": "ik_max_word"  // 使用IK分词器
       },
-      "encoded_shared_context_snapshot_at_startup": { // 启动时shared_context快照
+      "encoded_shared_context_snapshot_at_startup": { // 启动时shared_context快照，最后发现没卵用。
         "type": "text",  
         "analyzer": "ik_max_word"  // 使用IK分词器
       },

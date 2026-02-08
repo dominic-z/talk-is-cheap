@@ -1,6 +1,7 @@
 package org.talk.is.cheap.project.free.flow.starter.worker.config;
 
 
+import feign.Logger;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.http.HttpMessageConverters;
@@ -32,5 +33,12 @@ public class ClusterAutoConfig {
     @ConditionalOnMissingBean
     public HttpMessageConverters messageConverters(ObjectProvider<HttpMessageConverter<?>> converters) {
         return new HttpMessageConverters(converters.orderedStream().collect(Collectors.toList()));
+    }
+
+    public static class FeignLogLevelConfig{
+        @Bean
+        public Logger.Level feignLoggerLevel() {
+            return Logger.Level.FULL;
+        }
     }
 }

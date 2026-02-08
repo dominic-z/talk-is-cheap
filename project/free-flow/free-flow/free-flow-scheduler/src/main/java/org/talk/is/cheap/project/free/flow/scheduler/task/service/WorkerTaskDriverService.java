@@ -14,12 +14,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.talk.is.cheap.project.free.flow.common.enums.StartupSourceType;
 import org.talk.is.cheap.project.free.flow.common.enums.TaskStageStatus;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
-import org.talk.is.cheap.project.free.flow.common.message.impl.dto.TaskDefinitionDTO;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerCompleteStageResultReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerStartStageReportReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerRetryStageReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerStartTaskReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerStartTaskResp;
+import org.talk.is.cheap.project.free.flow.common.utils.FieldAwareLockManager;
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.WorkerClusterManager;
 import org.talk.is.cheap.project.free.flow.scheduler.task.client.WorkerTaskDriverClient;
@@ -87,15 +87,22 @@ public class WorkerTaskDriverService {
         @Autowired
         private TaskExecutionServiceWrapper taskExecutionServiceWrapper;
 
+
+        /**
+         * 确保先更新taskExecution，再更新taskStartup，避免多线程并发的时候，db死锁
+         *
+         * @param taskExecutionId
+         * @param taskStartupId
+         */
         @Transactional(rollbackFor = Exception.class, transactionManager = RepositoryAutoConfig.TRANSACTION_MANAGER_BEAN_NAME)
         public void forceFailTask(Long taskExecutionId, Long taskStartupId) {
-            if (taskStartupId != null) {
-                taskStartupServiceWrapper.updateByIdSelective(taskStartupId,
-                        new TaskStartup().withStatus(TaskStageStatus.FAILED.getStatus()), null);
-            }
             if (taskExecutionId != null) {
                 taskExecutionServiceWrapper.updateSelectiveById(taskExecutionId,
                         new TaskExecution().withStatus(TaskStageStatus.FAILED.getStatus()), null);
+            }
+            if (taskStartupId != null) {
+                taskStartupServiceWrapper.updateByIdSelective(taskStartupId,
+                        new TaskStartup().withStatus(TaskStageStatus.FAILED.getStatus()), null);
             }
         }
 
@@ -371,9 +378,10 @@ public class WorkerTaskDriverService {
         VerifyUtil.requireTrue(!Objects.equals(stageStartup.getStatus(), TaskStageStatus.FAILED.getStatus()),
                 String.format("任务%d已经失败", taskExecutionId));
 
-        ESPojoDTO<StageStartupParam> stageStartupParamESPojoDTO = stageStartupParamService.getByStageStartupId(stageStartup.getId());
+        ESPojoDTO<StageStartupParam> stageStartupParamESPojoDTO = stageStartupParamService.getByStageStartupIds(stageStartup.getId());
         StageStartupParam stageStartupParam = null;
         if (stageStartupParamESPojoDTO == null) {
+            // 只有starting stage才会在startTask的时候创建stageStartupParam对象，其他的stage都得手动创建。
             stageStartupParam = StageStartupParam.builder()
                     .stageStartupId(stageStartup.getId())
                     .encodedInput("")
@@ -445,7 +453,7 @@ public class WorkerTaskDriverService {
         }
 
         // 记录sharedContext
-        ESPojoDTO<StageStartupParam> esPojoDTO = stageStartupParamService.getByStageStartupId(stageStartup.getId());
+        ESPojoDTO<StageStartupParam> esPojoDTO = stageStartupParamService.getByStageStartupIds(stageStartup.getId());
         StageStartupParam stageStartupParam = esPojoDTO.getData();
         stageStartupParam.setEncodedSharedContextSnapshotAtCompletion(stageResult.getEncodedSharedContextAtCompletion());
         stageStartupParam.setUpdateTime(new Date());
@@ -489,141 +497,30 @@ public class WorkerTaskDriverService {
      * @param taskExecutionId
      * @param stageExecutionId
      */
-    @Transactional(rollbackFor = Exception.class, transactionManager = RepositoryAutoConfig.TRANSACTION_MANAGER_BEAN_NAME)
-    public void failStage(long taskExecutionId, long stageExecutionId, String errorMsg) throws IOException {
+    public void failStageAndRetry(long taskExecutionId, long stageExecutionId, String errorMsg) throws IOException {
+
         log.info("任务失败：taskExeId:{},stageExeId:{}", taskExecutionId, stageExecutionId);
         RLock rLock = redissonClient.getLock(RedissonService.getTaskExecutionLockKey(taskExecutionId));
         try {
-
-            StageExecution stageExecution = stageExecutionServiceWrapper.selectById(stageExecutionId, TaskStageStatus.RUNNING.getStatus());
-            if (stageExecution == null) {
-                log.info("未发现运行中的id={}的StageExecution对象，可能任务并未启动", stageExecutionId);
-                return;
-            }
-            stageExecution.setStatus(TaskStageStatus.FAILED.getStatus());
-            stageExecution.setRevision(stageExecution.getRevision() + 1);
-            stageExecutionServiceWrapper.updateSelectiveById(stageExecutionId,
-                    new StageExecution().withStatus(stageExecution.getStatus()).withRevision(stageExecution.getRevision()),
-                    null);
-
-            StageStartup stageStartup = stageStartupServiceWrapper.selectById(stageExecution.getStageStartupId());
-            stageStartup.setFailCount(stageStartup.getFailCount() + 1);
-            stageStartup.setRevision(stageStartup.getRevision() + 1);
-            stageStartupServiceWrapper.updateSelectiveById(stageStartup.getId(),
-                    new StageStartup().withFailCount(stageStartup.getFailCount()).withRevision(stageStartup.getRevision()), null);
-            // 记录结果信息
-            if (StringUtils.isNotBlank(errorMsg)) {
-                stageExecutionResultMsgService.create(StageExecutionResultMsg.builder()
-                        .stageExecutionId(stageExecutionId)
-                        .msg(errorMsg)
-                        .createTime(new Date()).build());
-            }
-
-            StageDefinition stageDefinition = stageDefinitionServiceWrapper.selectById(stageStartup.getStageId());
-
+            // 判断重试，这块需要考虑发起任务和更新db的并发问题，
+            // 一个是同一台机器之间不同线程的并发，db更新没完成，就在另一个线程里尝试读取并操作，那可能是读取不到的db里的信息的。这个需要本地锁解决
+            // 另一个是不同机器操作同一个taskStartup或者重复创建taskExecution的并发，这个需要通过revision锁或者redis锁
+            // 另一个是不同机器之间的并发，比如一个阶段失败了，另一个阶段也失败了，他们如果请求到不同的scheduler，
+            // 一个可能希望重试，另一个可能希望直接失败掉任务，这可能会创建重复的taskExe，这种情况下revision控制不住，比如通过锁控制
             rLock.lock(10, TimeUnit.SECONDS);
-            TaskExecution taskExecution = taskExecutionServiceWrapper.selectById(taskExecutionId);
-            if (stageDefinition.getMaxRetryCount() <= stageStartup.getFailCount()) {
-                // stage超过重试次数了，stage失败掉
-                log.info("stageStartup:{}重试超过最大重试次数，需要将taskExecution:{}设置为失败", stageStartup.getId(), taskExecutionId);
 
-                if (taskExecutionServiceWrapper.updateSelectiveById(taskExecutionId, new TaskExecution()
-                                .withStatus(TaskStageStatus.FAILED.getStatus())
-                                .withRevision(taskExecution.getRevision() + 1),
-                        taskExecution.getRevision()) != 1) {
-                    log.warn("更新taskExecution:{}为失败状态失败，可能是已经被其他任务并发失败", taskExecutionId);
-                }
+            // 拆分为两个方法，确保db操作完成提交之后，再提交runAsync方法去跑真正的retry任务。
+            Runnable retryRunnable = failStageAndPrepareRetryRunnable(taskExecutionId, stageExecutionId, errorMsg);
 
-                TaskStartup taskStartup = taskStartupServiceWrapper.selectById(taskExecution.getTaskStartupId(),
-                        TaskStageStatus.RUNNING.getStatus());
-                TaskDefinition taskDefinition = taskDefinitionServiceWrapper.selectById(taskStartup.getTaskId());
-
-
-                if (taskDefinition.getMaxRetryCount() > taskStartup.getFailCount() + 1) {
-                    // task任务整体重试超过限制了，task任务整体失败
-                    log.info("taskStartup:{}重试超过最大重试次数，需要将taskStartup设置为失败", taskStartup.getId());
-
-                    if (taskStartupServiceWrapper.updateByIdSelective(taskStartup.getId(),
-                            new TaskStartup().withFailCount(taskStartup.getFailCount() + 1)
-                                    .withStatus(TaskStageStatus.FAILED.getStatus())
-                                    .withRevision(taskStartup.getRevision() + 1),
-                            taskStartup.getRevision()) == 1) {
-                        log.warn("更新taskStartup:{}为失败状态失败，可能是已经被其他任务并发失败", taskStartup.getId());
-                    }
-
-                } else {
-                    // task还可以重试
-                    log.info("taskStartup:{}重试了{}次，还可以重试", taskStartup.getId(), taskStartup.getFailCount());
-                    VerifyUtil.requireTrue(
-                            taskStartupServiceWrapper.updateByIdSelective(taskStartup.getId(),
-                                    new TaskStartup()
-                                            .withStatus(TaskStageStatus.PENDING.getStatus())
-                                            .withRevision(taskStartup.getRevision() + 1), taskStartup.getRevision()) == 1,
-                            String.format("恢复taskStartup:%d为PENDING状态失败，可能已经被恢复", taskStartup.getId()));
-
-
-                    CompletableFuture.runAsync(() -> {
-                                try {
-                                    retryTask(taskStartup.getId(), taskExecutionId);
-                                } catch (IOException e) {
-                                    throw new RuntimeException(e);
-                                }
-                            }, threadPoolExecutor)
-                            .exceptionally(e -> {
-                                log.error("重试stage(startupId:{})异常", stageStartup.getId(), e);
-                                return null;
-                            });
-                }
-
-            } else {
-
-                // stage还可以重试
-                log.info("stage:{}重试了{}次，还可以重试", stageExecutionId, stageStartup.getFailCount());
-
-                StageExecution retryStageExecution = new StageExecution()
-                        .withStageStartupId(stageStartup.getId())
-                        .withStatus(TaskStageStatus.PENDING.getStatus())
-                        .withWorkerAddress(stageExecution.getWorkerAddress());
-
-                VerifyUtil.requireTrue(stageExecutionService.create(retryStageExecution) == 1, "创建重试任务执行记录失败");
-
-                ESPojoDTO<StageStartupParam> esPojoDTO = stageStartupParamService.getByStageStartupId(stageStartup.getId());
-
-
-                CompletableFuture.runAsync(() -> {
-                            WorkerRetryStageReq.WorkerRetryStageReqData data = new WorkerRetryStageReq.WorkerRetryStageReqData();
-                            data.setStageName(stageDefinition.getName());
-                            data.setStageExecutionId(retryStageExecution.getId());
-                            data.setTaskExecutionId(taskExecutionId);
-                            if (esPojoDTO != null) {
-                                data.setEncodedInput(esPojoDTO.getData().getEncodedInput());
-                            }
-
-                            WorkerRetryStageReq workerRetryStageReq = new WorkerRetryStageReq();
-                            workerRetryStageReq.setData(data);
-
-                            HttpBody<String> resp =
-                                    workerTaskDriverClient.retryStage(WorkerClusterManager.getWorkerURI(retryStageExecution.getWorkerAddress()),
-                                            workerRetryStageReq);
-
-                            if (!resp.isSuccess()) {
-                                log.error("重试stageExeId:{}发起失败，错误信息：{}", retryStageExecution.getId(), resp.getMsg());
-                                // 重试失败了，兜底
-
-                                workerTaskDriverServiceTxnHelper.forceFailStageAndTask(
-                                        retryStageExecution.getId(), stageStartup.getId(), taskExecutionId,
-                                        stageExecution.getStageStartupId()
-                                );
-                            }
-                        }, threadPoolExecutor)
+            if (retryRunnable != null) {
+                CompletableFuture.runAsync(retryRunnable, threadPoolExecutor)
                         .exceptionally(e -> {
-                            log.error("重试stage(startupId:{})异常", stageStartup.getId(), e);
+                            log.error("重试task异常", e);
                             return null;
                         });
-
             }
         } finally {
-//            坑：如果这个锁没有被占用，执行unlock会报错的，所以包装一下，如果这里执行报错了，异常会变成finally的异常
+//            坑：如果这个锁没有被占用，执行unlock会报错的，所以需要判断一下。否则如果这里执行报错了，上面业务执行的异常会变成finally的异常
             try {
                 if (rLock.isLocked()) {
                     rLock.unlock();
@@ -632,94 +529,254 @@ public class WorkerTaskDriverService {
                 log.error("解锁异常", e);
             }
         }
-        ;
     }
 
 
-    private void retryTask(long taskStartupId, long failedTaskExecutionId) throws IOException {
+    /**
+     * 完成所有失败与准备重试的db准备，返回一个runnable对象，作为一个callback，执行会发起重试任务的请求。
+     *
+     * @param taskExecutionId
+     * @param stageExecutionId
+     * @param errorMsg
+     * @return
+     * @throws IOException
+     */
+    @Transactional(rollbackFor = Exception.class, transactionManager = RepositoryAutoConfig.TRANSACTION_MANAGER_BEAN_NAME)
+    private Runnable failStageAndPrepareRetryRunnable(long taskExecutionId, long stageExecutionId, String errorMsg) throws IOException {
+        StageExecution stageExecution = stageExecutionServiceWrapper.selectById(stageExecutionId, TaskStageStatus.RUNNING.getStatus());
+        if (stageExecution == null) {
+            log.info("未发现运行中的id={}的StageExecution对象，可能任务并未启动", stageExecutionId);
+            return null;
+        }
+        stageExecution.setStatus(TaskStageStatus.FAILED.getStatus());
+        stageExecution.setRevision(stageExecution.getRevision() + 1);
+        stageExecutionServiceWrapper.updateSelectiveById(stageExecutionId,
+                new StageExecution().withStatus(stageExecution.getStatus()).withRevision(stageExecution.getRevision()),
+                null);
 
-        TaskStartup taskStartup = taskStartupServiceWrapper.selectById(taskStartupId, TaskStageStatus.PENDING.getStatus());
-        VerifyUtil.requireNotNull(taskStartup, String.format("can't find taskStartupId with id:%d", taskStartupId));
-        TaskSharedContext taskSharedContext = taskSharedContextService.getByTaskStartupId(taskStartupId);
-        VerifyUtil.requireNotNull(taskSharedContext, String.format("can't find taskSharedContext with taskStartupId:%d", taskStartupId));
+        StageStartup stageStartup = stageStartupServiceWrapper.selectById(stageExecution.getStageStartupId());
+        stageStartup.setFailCount(stageStartup.getFailCount() + 1);
+        stageStartup.setRevision(stageStartup.getRevision() + 1);
+        stageStartupServiceWrapper.updateSelectiveById(stageStartup.getId(),
+                new StageStartup().withFailCount(stageStartup.getFailCount()).withRevision(stageStartup.getRevision()), null);
+        // 记录结果信息
+        if (StringUtils.isNotBlank(errorMsg)) {
+            stageExecutionResultMsgService.create(StageExecutionResultMsg.builder()
+                    .stageExecutionId(stageExecutionId)
+                    .msg(errorMsg)
+                    .createTime(new Date()).build());
+        }
 
-        List<StageStartup> stageStartups = stageStartupServiceWrapper.selectByTaskExecutionId(failedTaskExecutionId);
-        Map<Long, StageStartup> stageStartupIdMap = stageStartups.stream().collect(Collectors.toMap(StageStartup::getId, s -> s));
-
-        List<ESPojoDTO<StageStartupParam>> stageStartupParams =
-                stageStartupParamService.getByStageStartupId(stageStartups.stream().map(StageStartup::getId).collect(Collectors.toList()));
-
-        TaskDefinition taskDefinition = taskDefinitionServiceWrapper.selectById(taskStartup.getTaskId());
-        VerifyUtil.requireNotNull(taskDefinition, String.format("can'f find taskdefinition with id:%d for startupid:%d",
-                taskStartup.getTaskId(), taskStartup.getId()));
-        List<StageDefinition> stageDefinitions = stageDefinitionServiceWrapper.selectByTaskId(taskDefinition.getId());
-        VerifyUtil.requireFalse(stageDefinitions.isEmpty(), String.format("无法找到taskId为%s的阶段定义", taskStartup.getId()));
-
-        Map<Long, StageDefinition> stageDefIdMap = stageDefinitions.stream().collect(Collectors.toMap(StageDefinition::getId, d -> d));
-        Map<String, String> stageEncodedInputs = stageStartupParams.stream().collect(Collectors.toMap(dto -> {
-                    Long stageStartupId = dto.getData().getStageStartupId();
-                    StageDefinition stageDefinition = stageDefIdMap.get(stageStartupIdMap.get(stageStartupId).getStageId());
-                    return stageDefinition.getName();
-                },
-                dto -> dto.getData().getEncodedInput()));
+        StageDefinition stageDefinition = stageDefinitionServiceWrapper.selectById(stageStartup.getStageId());
 
 
-        String workerAddress = taskScheduler.assignTaskToWorkerAddress(taskDefinition.getName(), taskDefinition.getVersion());
+        TaskExecution taskExecution = taskExecutionServiceWrapper.selectById(taskExecutionId);
+        if ( stageStartup.getFailCount()>=stageDefinition.getMaxRetryCount()) {
+            // stage超过重试次数了，stage失败掉
+            log.info("stageStartup:{}重试超过最大重试次数，需要将taskExecution:{}设置为失败", stageStartup.getId(), taskExecutionId);
 
-        TaskExecution retryTaskExecution = new TaskExecution().withTaskStartupId(taskStartup.getId())
-                .withStatus(TaskStageStatus.PENDING.getStatus())
-                .withAssignedWorkerAddr(workerAddress);
-
-        VerifyUtil.requireTrue(taskExecutionService.create(retryTaskExecution) > 0, "无法创建任务执行对象");
-
-
-        Map<String, Long> startingStageName2ExecutionId = new HashMap<>();
-        for (StageDefinition stageDefinition : stageDefinitions) {
-            String stageName = stageDefinition.getName();
-            StageStartup stageStartup = new StageStartup()
-                    .withTaskExecutionId(retryTaskExecution.getId())
-                    .withStatus(TaskStageStatus.PENDING.getStatus())
-                    .withStageId(stageDefinition.getId());
-
-            VerifyUtil.requireTrue(stageStartupService.create(stageStartup) > 0,
-                    String.format("Failed to create stage startup: %s", stageName));
-            if (stageDefinition.getIsStartingStage()) {
-                // 正常情况下是在stage启动之前，由scheduler创建execution对象，但是在start task的时候，顺手创建一部分stage的execution
-                // 仅仅针对starting 的stage创建execution对象，这样可以在启动任务与worker交互的时候节省一次请求。
-                StageExecution stageExecution = new StageExecution()
-                        .withStageStartupId(stageStartup.getId())
-                        .withStatus(TaskStageStatus.PENDING.getStatus())
-                        .withWorkerAddress(workerAddress);
-                VerifyUtil.requireTrue(stageExecutionService.create(stageExecution) > 0, String.format("Failed to create stage " +
-                        "execution:" +
-                        " %s", stageName));
-                startingStageName2ExecutionId.put(stageName, stageExecution.getId());
-
+            if (taskExecutionServiceWrapper.updateSelectiveById(taskExecutionId, new TaskExecution()
+                            .withStatus(TaskStageStatus.FAILED.getStatus())
+                            .withRevision(taskExecution.getRevision() + 1),
+                    taskExecution.getRevision()) != 1) {
+                log.warn("更新taskExecution:{}为失败状态失败，可能是已经被其他任务并发失败", taskExecutionId);
             }
+
+            TaskStartup taskStartup = taskStartupServiceWrapper.selectById(taskExecution.getTaskStartupId(),
+                    TaskStageStatus.RUNNING.getStatus());
+            TaskDefinition taskDefinition = taskDefinitionServiceWrapper.selectById(taskStartup.getTaskId());
+
+
+            String stageRetryLockKey = String.format("stage-startup-%d", stageStartup.getId());
+
+            if (taskStartup.getFailCount() + 1>=taskDefinition.getMaxRetryCount()) {
+                log.info("taskStartup:{}重试超过最大重试次数，需要将taskStartup设置为失败", taskStartup.getId());
+                // task任务整体重试超过限制了，task任务整体失败
+
+                if (taskStartupServiceWrapper.updateByIdSelective(taskStartup.getId(),
+                        new TaskStartup().withFailCount(taskStartup.getFailCount() + 1)
+                                .withStatus(TaskStageStatus.FAILED.getStatus())
+                                .withRevision(taskStartup.getRevision() + 1),
+                        taskStartup.getRevision()) != 1) {
+                    log.warn("更新taskStartup:{}为失败状态失败，可能是已经被其他任务并发失败", taskStartup.getId());
+                }
+                return null;
+
+            } else {
+                // task还可以重试
+                log.info("taskStartup:{}重试了{}次，还可以重试", taskStartup.getId(), taskStartup.getFailCount());
+                VerifyUtil.requireTrue(
+                        taskStartupServiceWrapper.updateByIdSelective(taskStartup.getId(),
+                                new TaskStartup()
+                                        .withFailCount(taskStartup.getFailCount() + 1)
+                                        .withStatus(TaskStageStatus.PENDING.getStatus())
+                                        .withRevision(taskStartup.getRevision() + 1), taskStartup.getRevision()) == 1,
+                        String.format("恢复taskStartup:%d为PENDING状态失败，可能已经被恢复", taskStartup.getId()));
+                return () -> {
+                    retryTask(taskStartup.getId(), taskExecutionId);
+                };
+            }
+
+        } else {
+            // stage还可以重试
+            log.info("stage:{}重试了{}次，还可以重试", stageExecutionId, stageStartup.getFailCount());
+
+
+            StageExecution retryStageExecution = new StageExecution()
+                    .withStageStartupId(stageStartup.getId())
+                    .withStatus(TaskStageStatus.PENDING.getStatus())
+                    .withWorkerAddress(stageExecution.getWorkerAddress());
+
+            VerifyUtil.requireTrue(stageExecutionService.create(retryStageExecution) == 1, "创建重试任务执行记录失败");
+
+            ESPojoDTO<StageStartupParam> esPojoDTO = stageStartupParamService.getByStageStartupIds(stageStartup.getId());
+            StageStartupParam stageStartupParam;
+            if (esPojoDTO == null) {
+                // 如果为空说明这个stage在prepare阶段就失败了，因此encodedSharedContextSnapshotAtStartup没有被记录下来只能记为lost
+                stageStartupParam = StageStartupParam.builder()
+                        .stageStartupId(stageStartup.getId())
+                        .encodedInput("")
+                        .encodedSharedContextSnapshotAtStartup("lost")
+                        .updateTime(new Date())
+                        .build();
+                stageStartupParamService.create(stageStartupParam);
+            } else {
+                stageStartupParam = esPojoDTO.getData();
+            }
+
+            return () -> {
+                try {
+
+                    WorkerRetryStageReq.WorkerRetryStageReqData data = new WorkerRetryStageReq.WorkerRetryStageReqData();
+                    data.setStageName(stageDefinition.getName());
+                    data.setStageExecutionId(retryStageExecution.getId());
+                    data.setTaskExecutionId(taskExecutionId);
+                    data.setEncodedInput(stageStartupParam.getEncodedInput());
+
+                    WorkerRetryStageReq workerRetryStageReq = new WorkerRetryStageReq();
+                    workerRetryStageReq.setData(data);
+
+                    HttpBody<String> resp =
+                            workerTaskDriverClient.retryStage(WorkerClusterManager.getWorkerURI(retryStageExecution.getWorkerAddress()),
+                                    workerRetryStageReq);
+                    VerifyUtil.requireTrue(resp.isSuccess(), String.format("重试stageExeId:%d发起失败，错误信息：%s", retryStageExecution.getId(),
+                            resp.getMsg()));
+                } catch (Exception e) {
+                    log.error("stage重试失败", e);
+                    workerTaskDriverServiceTxnHelper.forceFailStageAndTask(
+                            retryStageExecution.getId(), stageStartup.getId(), taskExecutionId,
+                            stageExecution.getStageStartupId()
+                    );
+                }
+            };
         }
 
+    }
 
-        WorkerStartTaskReq req = new WorkerStartTaskReq();
-        WorkerStartTaskReq.Data data = WorkerStartTaskReq.Data.builder()
-                .taskName(taskDefinition.getName())
-                .taskVersion(taskDefinition.getVersion())
-                .stageEncodedInputs(stageEncodedInputs)
-                .taskExecutionId(retryTaskExecution.getId())
-                .initialEncodedSharedContext(taskSharedContext.getEncodedTaskSharedContext())
-                .startingStageExecutionId(startingStageName2ExecutionId)
-                .build();
-        req.setData(data);
 
-        WorkerStartTaskResp workerStartTaskResp = workerTaskDriverClient.startTask(WorkerClusterManager.getWorkerURI(workerAddress), req);
+    private void retryTask(long taskStartupId, long failedTaskExecutionId) {
 
-        if (!workerStartTaskResp.isSuccess()) {
-            log.error("重试task(startupId:{},retryTaskExeId:{})发起失败，msg:{}", taskStartupId, retryTaskExecution.getId(),workerStartTaskResp.getMsg());
+        Long retryTaskExecutionId = null;
+        try {
+
+            TaskStartup taskStartup = taskStartupServiceWrapper.selectById(taskStartupId, TaskStageStatus.PENDING.getStatus());
+            VerifyUtil.requireNotNull(taskStartup, String.format("can't find pending taskStartup id:%d", taskStartupId));
+            TaskSharedContext taskSharedContext = taskSharedContextService.getByTaskStartupId(taskStartupId);
+            VerifyUtil.requireNotNull(taskSharedContext, String.format("can't find taskSharedContext with taskStartupId:%d",
+                    taskStartupId));
+
+
+            TaskDefinition taskDefinition = taskDefinitionServiceWrapper.selectById(taskStartup.getTaskId());
+            VerifyUtil.requireNotNull(taskDefinition, String.format("can'f find taskdefinition with id:%d for startupid:%d",
+                    taskStartup.getTaskId(), taskStartup.getId()));
+            List<StageDefinition> stageDefinitions = stageDefinitionServiceWrapper.selectByTaskId(taskDefinition.getId());
+            VerifyUtil.requireFalse(stageDefinitions.isEmpty(), String.format("无法找到taskId为%s的阶段定义", taskStartup.getId()));
+            Map<Long, StageDefinition> stageDefIdMap = stageDefinitions.stream().collect(Collectors.toMap(StageDefinition::getId, d -> d));
+
+            // 从执行失败的taskExecution获取启动任务所需的相关入参
+            List<StageStartup> failedTaskStageStartups = stageStartupServiceWrapper.selectByTaskExecutionId(failedTaskExecutionId);
+            Map<Long, StageStartup> failedTaskStageStartupIdMap =
+                    failedTaskStageStartups.stream().collect(Collectors.toMap(StageStartup::getId, s -> s));
+            List<ESPojoDTO<StageStartupParam>> failedTaskStageStartupParamDTOs =
+                    stageStartupParamService.getByStageStartupIds(failedTaskStageStartups.stream().map(StageStartup::getId).collect(Collectors.toList()));
+            Map<String, StageStartupParam> failedTaskStageNameParamMap =
+                    failedTaskStageStartupParamDTOs.stream().collect(Collectors.toMap(dto -> {
+                                Long stageStartupId = dto.getData().getStageStartupId();
+                                StageDefinition stageDefinition =
+                                        stageDefIdMap.get(failedTaskStageStartupIdMap.get(stageStartupId).getStageId());
+                                return stageDefinition.getName();
+                            },
+                            ESPojoDTO::getData));
+
+
+            String workerAddress = taskScheduler.assignTaskToWorkerAddress(taskDefinition.getName(), taskDefinition.getVersion());
+
+            TaskExecution retryTaskExecution = new TaskExecution().withTaskStartupId(taskStartup.getId())
+                    .withStatus(TaskStageStatus.PENDING.getStatus())
+                    .withAssignedWorkerAddr(workerAddress);
+
+            VerifyUtil.requireTrue(taskExecutionService.create(retryTaskExecution) > 0, "无法创建任务执行对象");
+            retryTaskExecutionId = retryTaskExecution.getTaskStartupId();
+
+            Map<String, Long> startingStageName2ExecutionId = new HashMap<>();
+            Map<String, String> retryTaskStageEncodedInputs = new HashMap<>();
+            for (StageDefinition stageDefinition : stageDefinitions) {
+                String stageName = stageDefinition.getName();
+                StageStartup retryTaskStageStartup = new StageStartup()
+                        .withTaskExecutionId(retryTaskExecution.getId())
+                        .withStatus(TaskStageStatus.PENDING.getStatus())
+                        .withStageId(stageDefinition.getId());
+
+                VerifyUtil.requireTrue(stageStartupService.create(retryTaskStageStartup) > 0,
+                        String.format("Failed to create stage startup: %s", stageName));
+
+                if (failedTaskStageNameParamMap.containsKey(stageName) && StringUtils.isNotBlank(failedTaskStageNameParamMap.get(stageName).getEncodedInput())) {
+                    // 从历史执行记录的es中读取上一次任务启动时的入参，包括各个stage的启动参数，以及sharedContext，并es中重建新的taskExecution的stageStartup对象的es对象
+                    StageStartupParam failedTaskStageStartupParam = failedTaskStageNameParamMap.get(stageName);
+                    stageStartupParamService.create(
+                            StageStartupParam.builder().stageStartupId(retryTaskStageStartup.getId())
+                                    .encodedInput(failedTaskStageStartupParam.getEncodedInput())
+                                    .encodedSharedContextSnapshotAtStartup(failedTaskStageStartupParam.getEncodedSharedContextSnapshotAtStartup())
+                                    .updateTime(new Date())
+                                    .build()
+                    );
+                    retryTaskStageEncodedInputs.put(stageName, failedTaskStageStartupParam.getEncodedInput());
+                }
+
+                if (stageDefinition.getIsStartingStage()) {
+                    // 正常情况下是在stage启动之前，由scheduler创建execution对象，但是在start task的时候，顺手创建一部分stage的execution
+                    // 仅仅针对starting 的stage创建execution对象，这样可以在启动任务与worker交互的时候节省一次请求。
+                    StageExecution stageExecution = new StageExecution()
+                            .withStageStartupId(retryTaskStageStartup.getId())
+                            .withStatus(TaskStageStatus.PENDING.getStatus())
+                            .withWorkerAddress(workerAddress);
+                    VerifyUtil.requireTrue(stageExecutionService.create(stageExecution) > 0,
+                            String.format("Failed to create stage execution: %s", stageName));
+                    startingStageName2ExecutionId.put(stageName, stageExecution.getId());
+
+                }
+            }
+            WorkerStartTaskReq req = new WorkerStartTaskReq();
+            WorkerStartTaskReq.Data data = WorkerStartTaskReq.Data.builder()
+                    .taskName(taskDefinition.getName())
+                    .taskVersion(taskDefinition.getVersion())
+                    .stageEncodedInputs(retryTaskStageEncodedInputs)
+                    .taskExecutionId(retryTaskExecution.getId())
+                    .initialEncodedSharedContext(taskSharedContext.getEncodedTaskSharedContext())
+                    .startingStageExecutionId(startingStageName2ExecutionId)
+                    .build();
+            req.setData(data);
+
+            WorkerStartTaskResp workerStartTaskResp = workerTaskDriverClient.startTask(WorkerClusterManager.getWorkerURI(workerAddress),
+                    req);
+            VerifyUtil.requireTrue(workerStartTaskResp.isSuccess(),
+                    String.format("重试task(startupId:%d,retryTaskExeId:%d)发起失败，msg:%s", taskStartupId, retryTaskExecution.getId(),
+                            workerStartTaskResp.getMsg()));
+        } catch (Exception e) {
+            log.error("重试task失败", e);
             // 启动失败兜底
-            workerTaskDriverServiceTxnHelper.forceFailTask(
-                    retryTaskExecution.getId(), taskStartup.getId()
-            );
+            workerTaskDriverServiceTxnHelper.forceFailTask(retryTaskExecutionId, taskStartupId);
         }
-
 
     }
 }

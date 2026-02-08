@@ -8,13 +8,15 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.RegistryWorkerReq;
 import org.talk.is.cheap.project.free.flow.common.router.URIs;
+import org.talk.is.cheap.project.free.flow.starter.worker.config.ClusterAutoConfig;
 
 import java.net.URI;
 
 
 @FeignClient(
         name = "scheduler-cluster-client",
-        url = "None"
+        url = "None",
+        configuration = ClusterAutoConfig.FeignLogLevelConfig.class
 )
 public interface SchedulerClusterInternalClient {
 

@@ -26,9 +26,14 @@ SELECT * from stage_definition sd  WHERE task_id =4;
 SELECT * FROM task_graph_definition tgd WHERE task_id =4;
 
 SELECT * FROM task_startup ts order by create_time desc;
-SELECT * FROM task_execution te WHERE task_startup_id =46 order by create_time desc;
-SELECT sd.name ,ss.* FROM stage_startup ss join task_execution te join stage_definition sd  on te.task_startup_id=46 and te.id=ss.task_execution_id and  ss.stage_id = sd.id  order by ss.create_time desc;
-SELECT sd.name ,se.* FROM stage_execution se join stage_startup ss join stage_definition sd  on  ss.task_execution_id=20 and ss.id=se.stage_startup_id and ss.stage_id =sd.id  order by se.create_time desc;
+SELECT * FROM task_execution te WHERE task_startup_id =66 order by create_time desc;
+SELECT sd.name ,ss.* FROM stage_startup ss join task_execution te join stage_definition sd  on te.task_startup_id=63 and te.id=ss.task_execution_id and  ss.stage_id = sd.id  order by ss.create_time desc;
+SELECT sd.name ,se.* FROM stage_execution se join stage_startup ss join stage_definition sd  on  ss.task_execution_id=45 and ss.id=se.stage_startup_id and ss.stage_id =sd.id  order by se.create_time desc;
+
+
+SELECT  * from task_execution te where id=39;
+SELECT * from stage_startup ss where id=191;
+SELECT * from stage_execution se where id=172;
 
 -- -- 
 TRUNCATE cluster_node ; 

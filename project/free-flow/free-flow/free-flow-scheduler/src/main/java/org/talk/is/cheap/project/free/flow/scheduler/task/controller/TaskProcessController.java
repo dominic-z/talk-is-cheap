@@ -74,8 +74,9 @@ public class TaskProcessController {
     public HttpBody<String> startTask(@RequestBody StartTaskReq req) {
         HttpBody<String> resp = HttpBody.<String>builder().build();
         try {
-            VerifyUtil.requireTrue(schedulerClusterManager.isLeader(),"当前节点不是leader，无法执行");
+            VerifyUtil.requireTrue(schedulerClusterManager.isLeader(), "当前节点不是leader，无法执行");
             StartTaskReq.Data data = req.getData();
+            VerifyUtil.requireNotNull(data, "要执行的任务信息缺失，无法执行任务");
             Tuple3<String, Long, Map<String, Long>> prepareForTaskStartDTO = workerTaskDriverService.prepareForTask(data.getTaskName(),
                     data.getTaskVersion(),
                     data.getInitialEncodedSharedContext(),
@@ -90,7 +91,7 @@ public class TaskProcessController {
                             .taskExecutionId(taskExecutionId)
                             .taskName(data.getTaskName())
                             .taskVersion(data.getTaskVersion())
-                            .initialEncodedSharedContext(data.getInitialEncodedSharedContext())
+                            .initialEncodedSharedContext(null)
                             .stageEncodedInputs(data.getStageEncodedInputs())
                             .startingStageExecutionId(rootStageName2ExecutionId)
                             .build()
@@ -99,13 +100,15 @@ public class TaskProcessController {
 
             WorkerStartTaskResp workerStartTaskResp = workerTaskDriverClient.startTask(WorkerClusterManager.getWorkerURI(workerAddress),
                     workerStartTaskReq);
+            VerifyUtil.requireTrue(workerStartTaskResp.isSuccess(), String.format("启动task(name:{},version:{})错误，原因:%s",
+                    data.getTaskName(), data.getTaskVersion(), workerStartTaskResp.getMsg()));
 
             resp.success("");
         } catch (VerifyException e) {
-            log.error("启动任务失败",e);
+            log.error("启动任务失败", e);
             resp.fail(ResultCode.VERIFY_FAIL, e.getMessage());
         } catch (Exception e) {
-            log.error("启动任务失败",e);
+            log.error("启动任务失败", e);
             resp.fail(ResultCode.FAIL, e.getMessage());
         }
         return resp;
@@ -123,15 +126,20 @@ public class TaskProcessController {
     public HttpBody<String> stageStartReport(@RequestBody WorkerStartStageReportReq req) {
 
         HttpBody<String> resp = new HttpBody<>();
-        List<WorkerStartStageReportReq.WorkerStartToExecuteStageReqDatum> data = req.getData();
-        workerTaskDriverService.startStageReport(data);
-        resp.success("");
+        try {
+            List<WorkerStartStageReportReq.WorkerStartToExecuteStageReqDatum> data = req.getData();
+            workerTaskDriverService.startStageReport(data);
+            resp.success("");
+        } catch (Exception e) {
+            log.error("记录任务执行情况失败，data:{}", req.getData(), e);
+            resp.fail(ResultCode.FAIL, e.getMessage());
+        }
         return resp;
 
     }
 
     /**
-     * worker告知scheduler将某个stage的数据准备就绪
+     * worker告知scheduler将某个stage的数据准备就绪，包括创建db业务对象，以及拍摄上下文快照
      *
      * @param req
      * @return
@@ -195,7 +203,7 @@ public class TaskProcessController {
 
         WorkerFailStageReq.WorkerFailStageReqData data = req.getData();
         try {
-            workerTaskDriverService.failStage(data.getTaskExecutionId(), data.getStageExecutionId(), data.getErrorMsg());
+            workerTaskDriverService.failStageAndRetry(data.getTaskExecutionId(), data.getStageExecutionId(), data.getErrorMsg());
             WorkerFailStageResp.WorkerFailStageReqData respData = new WorkerFailStageResp.WorkerFailStageReqData();
             resp.success(respData);
         } catch (Exception e) {

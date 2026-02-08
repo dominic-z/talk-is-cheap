@@ -80,7 +80,7 @@ public class WorkerTaskResultService {
         }
 
         // 记录sharedContext
-        ESPojoDTO<StageStartupParam> esPojoDTO = stageStartupParamService.getByStageStartupId(stageStartup.getId());
+        ESPojoDTO<StageStartupParam> esPojoDTO = stageStartupParamService.getByStageStartupIds(stageStartup.getId());
         StageStartupParam stageStartupParam = esPojoDTO.getData();
         stageStartupParam.setEncodedSharedContextSnapshotAtCompletion(stageResult.getEncodedSharedContextAtCompletion());
         stageStartupParam.setUpdateTime(new Date());
