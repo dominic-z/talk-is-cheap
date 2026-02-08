@@ -35,6 +35,17 @@ public class MyEnvironmentPostProcessor implements EnvironmentPostProcessor {
         MapPropertySource customSource = new MapPropertySource("myCustomSource", customProperties);
         environment.getPropertySources().addFirst(customSource);
 
+//        测试能不能
+        // 设置spring的日志级别为 DEBUG
+//        可以https://www.qianwen.com/share/chat/507898bdfa9d45dfaadfd60cefa24f14
+        Map<String, Object> loggingProps = new HashMap<>();
+        loggingProps.put("logging.level.root", "INFO");
+
+        // 添加到 Environment（低优先级，允许主应用覆盖）
+        environment.getPropertySources().addLast(
+                new MapPropertySource("customLoggingLevels", loggingProps)
+        );
+
         // 也可以获取已有的配置
         String activeProfile = environment.getProperty("spring.profiles.active", "default");
         System.out.println("----------------通过EnvironmentPostProcessor读取当前激活的环境: " + activeProfile);

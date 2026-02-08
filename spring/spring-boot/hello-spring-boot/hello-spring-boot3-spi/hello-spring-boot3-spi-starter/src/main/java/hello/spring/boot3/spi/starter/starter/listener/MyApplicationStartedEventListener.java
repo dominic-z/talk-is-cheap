@@ -8,7 +8,7 @@ import org.springframework.context.ApplicationListener;
 
 
 /**
- * 应用已经启动了，可以使用log对象了
+ * ApplicationStartedEvent这个事件代表应用已经启动了，可以使用log对象了
  */
 @Slf4j
 public class MyApplicationStartedEventListener implements ApplicationListener<ApplicationStartedEvent> {

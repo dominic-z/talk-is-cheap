@@ -98,6 +98,7 @@ public class Testing {
         ModelMapper modelMapper = new ModelMapper();
         modelMapper.getConfiguration()
                 .setMatchingStrategy(MatchingStrategies.STRICT);// 严格匹配
+        // 将源对象的Date类型转换为目标对象的String类型变量
         Converter<Date, String> dateToStringConverter = new AbstractConverter<Date, String>() {
             @Override
             protected String convert(Date date) {

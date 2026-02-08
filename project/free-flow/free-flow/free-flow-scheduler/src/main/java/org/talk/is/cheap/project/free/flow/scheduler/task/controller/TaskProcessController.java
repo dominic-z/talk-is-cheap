@@ -24,6 +24,8 @@ import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerS
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerStartTaskReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerStartTaskResp;
 import org.talk.is.cheap.project.free.flow.common.router.URIs;
+import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
+import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.SchedulerClusterManager;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.WorkerClusterManager;
 import org.talk.is.cheap.project.free.flow.scheduler.task.client.WorkerTaskDriverClient;
 import org.talk.is.cheap.project.free.flow.scheduler.task.service.WorkerTaskDriverService;
@@ -52,6 +54,9 @@ public class TaskProcessController {
     @Autowired
     private WorkerClusterManager workerClusterManager;
 
+    @Autowired
+    private SchedulerClusterManager schedulerClusterManager;
+
 
     // todo: 启动一个任务 待继续往下写的代码
 
@@ -69,6 +74,7 @@ public class TaskProcessController {
     public HttpBody<String> startTask(@RequestBody StartTaskReq req) {
         HttpBody<String> resp = HttpBody.<String>builder().build();
         try {
+            VerifyUtil.requireTrue(schedulerClusterManager.isLeader(),"当前节点不是leader，无法执行");
             StartTaskReq.Data data = req.getData();
             Tuple3<String, Long, Map<String, Long>> prepareForTaskStartDTO = workerTaskDriverService.prepareForTask(data.getTaskName(),
                     data.getTaskVersion(),
@@ -91,13 +97,15 @@ public class TaskProcessController {
             );
 
 
-            WorkerStartTaskResp workerStartTaskResp = workerTaskDriverClient.startTask(workerClusterManager.getWorkerURI(workerAddress),
+            WorkerStartTaskResp workerStartTaskResp = workerTaskDriverClient.startTask(WorkerClusterManager.getWorkerURI(workerAddress),
                     workerStartTaskReq);
 
             resp.success("");
         } catch (VerifyException e) {
+            log.error("启动任务失败",e);
             resp.fail(ResultCode.VERIFY_FAIL, e.getMessage());
         } catch (Exception e) {
+            log.error("启动任务失败",e);
             resp.fail(ResultCode.FAIL, e.getMessage());
         }
         return resp;

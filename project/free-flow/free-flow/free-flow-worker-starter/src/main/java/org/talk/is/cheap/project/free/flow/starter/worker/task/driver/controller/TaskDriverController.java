@@ -44,7 +44,7 @@ public class TaskDriverController {
             taskDriverService.startTask(data);
 
         } catch (Exception e) {
-            log.error("启动任务失败", e);
+            log.error("启动任务（stageExeId:{}）失败", req.getData() != null ? req.getData().getTaskExecutionId() : null, e);
             resp.fail(ResultCode.FAIL, e.getMessage());
         }
         return resp;

@@ -9,14 +9,9 @@ import org.redisson.codec.JsonJacksonCodec;
 import org.redisson.config.Config;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.AutoConfigureAfter;
-import org.springframework.boot.autoconfigure.AutoConfigureBefore;
-import org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.DependsOn;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisPassword;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
@@ -61,7 +56,7 @@ public class RedisAutoConfig {
         if (!resource.exists()) {
             throw new FileNotFoundException(REDIS_CONFIG_FILENAME + " not found");
         }
-        RedisProperties redisProperties = YamlUtil.load(resource.getURL(), RedisProperties.class);
+        RedisProperties redisProperties = YamlUtil.loadFile(resource.getURL(), RedisProperties.class);
         return redisProperties;
     }
 

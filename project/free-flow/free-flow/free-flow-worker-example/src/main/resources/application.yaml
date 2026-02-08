@@ -5,3 +5,7 @@ spring:
   application:
     name: worker
     env-type: host
+
+logging:
+  level:
+    root: INFO

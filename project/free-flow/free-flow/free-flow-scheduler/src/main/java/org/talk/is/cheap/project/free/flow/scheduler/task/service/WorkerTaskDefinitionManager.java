@@ -2,7 +2,6 @@ package org.talk.is.cheap.project.free.flow.scheduler.task.service;
 
 
 import io.vavr.Tuple2;
-import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -14,10 +13,13 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.GetWorkerTaskDefinitionResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.dto.TaskDefinitionDTO;
+import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.WorkerClusterManager;
 import org.talk.is.cheap.project.free.flow.scheduler.config.property.ZKPathProperty;
 import org.talk.is.cheap.project.free.flow.scheduler.task.client.WorkerTaskDefinitionClient;
@@ -31,6 +33,7 @@ import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskGr
 import org.talk.is.cheap.project.free.flow.starter.repository.service.StageDefinitionService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.TaskDefinitionService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.TaskGraphDefinitionService;
+import org.talk.is.cheap.project.free.flow.starter.repository.service.redis.RedisService;
 
 import java.util.HashSet;
 import java.util.List;
@@ -44,8 +47,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import static org.talk.is.cheap.project.free.flow.starter.repository.config.RedisAutoConfig.REDIS_TEMPLATE;
+import static org.talk.is.cheap.project.free.flow.starter.repository.config.RedisAutoConfig.STRING_REDIS_TEMPLATE;
+
 /**
  * 通过zk监听已经建立链接的worker，读取其中的任务定义
+ * 目前只有leader才能有完整的WorkerTaskDefinitionManager，有点问题。
  */
 @Service
 @Slf4j
@@ -68,7 +75,7 @@ public class WorkerTaskDefinitionManager {
         @Transactional(rollbackFor = Exception.class, transactionManager = RepositoryAutoConfig.TRANSACTION_MANAGER_BEAN_NAME)
         public void createTask(TaskDefinitionDTO taskDefinitionDTO) throws Exception {
             TaskDefinition taskDefinition = MODEL_MAPPER.map(taskDefinitionDTO, TaskDefinition.class);
-            taskDefinitionService.create(taskDefinition);
+            taskDefinitionService.create(taskDefinition); // 不必担心重复创建，数据表里有唯一索引控制
             // 创建stageDefinition
             List<StageDefinition> stageDefinitions = taskDefinitionDTO.getStageDefinitionMap().values().stream().
                     map(dto -> {
@@ -122,6 +129,11 @@ public class WorkerTaskDefinitionManager {
     @Autowired
     private ZKPathProperty zkPathProperty;
 
+
+    @Autowired
+    @Qualifier(STRING_REDIS_TEMPLATE)
+    private StringRedisTemplate stringRedisTemplate;
+
     @Getter
     private static final ModelMapper MODEL_MAPPER = new ModelMapper();
 
@@ -138,7 +150,7 @@ public class WorkerTaskDefinitionManager {
 
     private CuratorCache curatorCache;
 
-    public void start(){
+    public void start() {
         watchRunnableWorker();
     }
 
@@ -185,6 +197,7 @@ public class WorkerTaskDefinitionManager {
         // worker启动时候已经充分校验任务，任务定义本身不需要校验，但是需要考虑并发问题。
         Supplier<Integer> readTaskDefinitionJob = () -> {
             try {
+                // 加锁，避免节点反复上下导致并发问题
                 lockManagerByWorkerAddress.lock(workerAddress);
 
                 if (taskWorkerMap.containsKey(workerAddress)) {
@@ -195,6 +208,8 @@ public class WorkerTaskDefinitionManager {
 
                 GetWorkerTaskDefinitionResp getWorkerTaskDefinitionResp =
                         workerTaskDefinitionClient.getTaskDefinition(WorkerClusterManager.getWorkerURI(workerAddress));
+                VerifyUtil.requireTrue(getWorkerTaskDefinitionResp.isSuccess(), String.format("向worker请求%s获取任务定义失败，失败原因:%s",
+                        workerAddress, getWorkerTaskDefinitionResp.getMsg()));
                 List<TaskDefinitionDTO> taskDefinitionDTOList = getWorkerTaskDefinitionResp.getData();
 
                 if (taskDefinitionDTOList == null) {
@@ -227,6 +242,7 @@ public class WorkerTaskDefinitionManager {
                                     " the worker's execution of this task.", e);
                         }
                     }
+                    stringRedisTemplate.opsForSet().add(RedisService.getTaskWorkerAddrMapKey(taskName, taskVersion), workerAddress);
                     log.info("finish parsing task: {}, version: {} from {}", taskName, taskVersion, workerAddress);
 
                 }
@@ -239,7 +255,7 @@ public class WorkerTaskDefinitionManager {
         };
 
         CompletableFuture.supplyAsync(readTaskDefinitionJob, taskDefinitionThreadPool)
-                .thenAccept(n -> log.info("Successfully read the {} task definition from the worker node {}.", n, workerAddress))
+                .thenAccept(n -> log.info("Successfully read  {} task definition from the worker node {}.", n, workerAddress))
                 .exceptionally(e -> {
                     log.error("Fail to read the task definition from the worker node {}.", workerAddress, e);
                     return null;
@@ -259,6 +275,7 @@ public class WorkerTaskDefinitionManager {
                     if (this.taskWorkerMap.containsKey(taskName) && this.taskWorkerMap.get(taskName).containsKey(taskVersion)) {
                         this.taskWorkerMap.get(taskName).get(taskVersion).remove(nodeAddress);
                     }
+                    stringRedisTemplate.opsForSet().remove(RedisService.getTaskWorkerAddrMapKey(taskName, taskVersion), nodeAddress);
                 }
             } finally {
                 lockManagerByWorkerAddress.unlockAndRemove(nodeAddress);
@@ -278,13 +295,13 @@ public class WorkerTaskDefinitionManager {
 
 
     /**
-     * 获取具备某个任务的worker列表
+     * 获取具备某个任务的worker列表，只有leader能调用
      *
      * @param taskName
      * @param taskVersion
      * @return
      */
-    public Set<String> getWorkerAddressesWithTask(String taskName, Integer taskVersion) {
+    public Set<String> getWorkerAddressesWithTaskLocal(String taskName, Integer taskVersion) {
         if (StringUtils.isBlank(taskName)) {
             return new HashSet<>();
         }
@@ -303,6 +320,26 @@ public class WorkerTaskDefinitionManager {
     }
 
 
+    // 通过redis，所有的scheduler都有除了启动任务之外的能力了。leader只需要管理redis里的数据就好。
+    public Set<String> getWorkerAddressesWithTaskRedis(String taskName, Integer taskVersion) {
+        if (StringUtils.isBlank(taskName)) {
+            return new HashSet<>();
+        }
+        Map<Integer, Set<String>> versionAddresses = this.taskWorkerMap.get(taskName);
+        if (taskVersion != null) {
+            if (versionAddresses.containsKey(taskVersion)) {
+                return new HashSet<>(versionAddresses.get(taskVersion));
+            }
+            return new HashSet<>();
+        }
+
+        Set<String> addrs = stringRedisTemplate.opsForSet().members(RedisService.getTaskWorkerAddrMapKey(taskName, taskVersion));
+
+
+        return addrs;
+    }
+
+
     public TaskDefinitionDTO getTaskDefinitionDTO(String taskName, int taskVersion) {
         if (this.taskDefinitionDTOMap.containsKey(taskName) && this.taskDefinitionDTOMap.get(taskName).containsKey(taskVersion)) {
             TaskDefinitionDTO taskDefinitionDTO = this.taskDefinitionDTOMap.get(taskName).get(taskVersion);
@@ -311,4 +348,6 @@ public class WorkerTaskDefinitionManager {
             return null;
         }
     }
+
+
 }

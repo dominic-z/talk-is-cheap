@@ -38,6 +38,9 @@ import java.util.concurrent.Executors;
 /**
  * 负责管理Scheduler集群，通过zk实现：scheduler的选举
  * SchedulerClusterManager会触发WorkerClusterManager的相关动作
+ *
+ * leader负责一切worker节点的管理，例如上下线
+ * leader负责一切worker节点相关数据相关的操作。例如写入任务db，写入redis
  */
 @Component
 @Slf4j

@@ -1,13 +1,10 @@
-package org.talk.is.cheap.project.free.flow.scheduler.config.filters;
+package org.talk.is.cheap.project.free.flow.starter.worker.config.filters;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.reactivestreams.Publisher;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DataBufferFactory;
-import org.springframework.core.io.buffer.DataBufferUtils;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.server.RequestPath;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpRequestDecorator;
 import org.springframework.http.server.reactive.ServerHttpResponse;
@@ -15,15 +12,15 @@ import org.springframework.http.server.reactive.ServerHttpResponseDecorator;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
+import org.talk.is.cheap.project.free.flow.common.router.URIs;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicReference;
 
-@Configuration
 @Slf4j
+@Configuration
 public class HttpLoggingFilter implements WebFilter {
 
     private static final int MAX_LOG_LENGTH = 10_000; // 防止大 body 拖垮日志
@@ -100,9 +97,17 @@ public class HttpLoggingFilter implements WebFilter {
                     String requestBody = truncate(requestBodyRef.get(), MAX_LOG_LENGTH);
                     String responseBody = truncate(responseBodyRef.get(), MAX_LOG_LENGTH);
 
-                    log.info("Method: {}, Path: {}, Request Body: {}, Response Status: {}, Response Body: {}",
-                            request.getMethod(),request.getPath(),requestBody,originalResponse.getStatusCode(),responseBody
-                    );
+                    if(StringUtils.equals(URIs.WorkerClusterURIs.PING,request.getPath().toString())){
+                        // ping这个路径不要打印了
+                        log.debug("Method: {}, Path: {}, Request Body: {}, Response Status: {}, Response Body: {}",
+                                request.getMethod(),request.getPath(),requestBody,originalResponse.getStatusCode(),responseBody
+                        );
+                    }else{
+
+                        log.info("Method: {}, Path: {}, Request Body: {}, Response Status: {}, Response Body: {}",
+                                request.getMethod(),request.getPath(),requestBody,originalResponse.getStatusCode(),responseBody
+                        );
+                    }
                 });
     }
 

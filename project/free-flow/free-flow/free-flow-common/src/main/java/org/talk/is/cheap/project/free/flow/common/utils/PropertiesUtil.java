@@ -10,7 +10,7 @@ import java.util.Properties;
 
 public class PropertiesUtil {
 
-    public static Properties readFromFile(String filepath) throws IOException {
+    public static Properties readFromAppClassPath(String filepath) throws IOException {
         Properties properties = new Properties();
         PathMatchingResourcePatternResolver patternResolver = new PathMatchingResourcePatternResolver();
         Resource resource = patternResolver.getResource(filepath);
