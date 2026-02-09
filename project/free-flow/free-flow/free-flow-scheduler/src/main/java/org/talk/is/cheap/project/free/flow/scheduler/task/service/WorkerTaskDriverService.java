@@ -68,8 +68,23 @@ import java.util.stream.Collectors;
 
 /**
  * 提示：
- * 1. 注意并发，如果可能操作task级别的对象，需要并发加锁避免一些stage并行执行某些stage失败后更新task对象导致数据不一致，但如果只是更新某个stage，不用更关心并发问题，
+ * 注意并发，如果可能操作task级别的对象，需要并发加锁避免一些stage并行执行某些stage失败后更新task对象导致数据不一致，但如果只是更新某个stage，不用更关心并发问题，
  * 因为一个stage一般只会有一个scheduler处理，更新时，为避免死锁，先更新execution，再更新startup
+ * <p>
+ * <p>
+ * 更新，并发问题没那么复杂，因为即使不加锁，多数情况下也不会有并发问题。
+ * 任务的执行包括：
+ * 1. prepareForTask
+ * 2. 然后启动执行
+ * 3. 针对某个stage，先做prepareForStage，
+ * 4. 任务执行之前，worker做startStageReport
+ * 5. 然后completeStage或者failAndRetryStage
+ * <p>
+ * 其中4和5一定在3完成获得响应之后再触发，因为worker代码中只有3完成之后才会开始执行任务，于是，只有后两个操作需要考虑并发问题，然而startStageReport在操作的时候只会更新pending状态的对象，如果某个stage
+ * 已经失败了，那么执行stageReport也没影响
+ * 而同一个stage肯定不可能即complete又fail，因此也没有并发问题。
+ * <p>
+ * 但是要注意数据库死锁，无论是操作task还是startup，都需要按照同一个顺序执行更新，先更新execution，再更新startup
  */
 @Service
 @Slf4j
@@ -294,49 +309,53 @@ public class WorkerTaskDriverService {
      * <p>
      * <p>
      * 更新，还是要加锁，因为failStage中修改task的操作必须成功，如果这边不加锁，failStage就必须得循环cas，如果任务一多，这对数据库压力过大
+     * <p>
+     * 不用加锁，如果stageStageReport和failStage对同一个stage并发了，startStageReport在failStage前还是后执行，对failStage不造成影响
      *
      * @param startToExecuteStageReqData
      */
     @Transactional(rollbackFor = Exception.class, transactionManager = RepositoryAutoConfig.TRANSACTION_MANAGER_BEAN_NAME)
     public void startStageReport(List<WorkerStartStageReportReq.WorkerStartToExecuteStageReqDatum> startToExecuteStageReqData) {
         for (WorkerStartStageReportReq.WorkerStartToExecuteStageReqDatum datum : startToExecuteStageReqData) {
-            Long taskExecutionId = datum.getTaskExecutionId();
+            
+            Long stageExecutionId = datum.getStageExecutionId();
+            Date startTime = datum.getStartTime();
+            StageExecution stageExecution = stageExecutionServiceWrapper.selectById(stageExecutionId, TaskStageStatus.PENDING.getStatus());
+            if (stageExecution != null) {
+                stageExecutionServiceWrapper.updateSelectiveById(stageExecutionId,
+                        new StageExecution().withStatus(TaskStageStatus.RUNNING.getStatus())
+                                .withRevision(stageExecution.getRevision() + 1)
+                                .withStartTime(startTime),
+                        stageExecution.getRevision());
 
-            TaskExecution taskExecution = taskExecutionServiceWrapper.selectById(taskExecutionId, TaskStageStatus.PENDING.getStatus());
-            if (taskExecution != null) {
-//                RLock lock = redissonClient.getLock(RedissonService.getTaskExecutionLockKey(taskExecutionId));
-                try {
-//                    lock.lock(2, TimeUnit.SECONDS);
-                    taskExecutionServiceWrapper.updateSelectiveById(taskExecutionId,
-                            new TaskExecution().withStatus(TaskStageStatus.RUNNING.getStatus()), taskExecution.getRevision());
-
-                    TaskStartup taskStartup = taskStartupServiceWrapper.selectById(taskExecution.getTaskStartupId(),
-                            TaskStageStatus.PENDING.getStatus());
-                    if (taskStartup != null) {
-                        taskStartupServiceWrapper.updateByIdSelective(taskStartup.getId(),
-                                new TaskStartup().withStatus(TaskStageStatus.RUNNING.getStatus()), taskStartup.getRevision());
-                    }
-                } finally {
-//                    lock.unlock();
+                StageStartup stageStartup = stageStartupServiceWrapper.selectById(stageExecution.getStageStartupId(),
+                        TaskStageStatus.PENDING.getStatus());
+                if (stageStartup != null) {
+                    stageStartupServiceWrapper.updateSelectiveById(stageStartup.getId(),
+                            new StageStartup()
+                                    .withRevision(stageStartup.getRevision() + 1)
+                                    .withStatus(TaskStageStatus.RUNNING.getStatus()), stageStartup.getRevision());
                 }
             }
 
+            Long taskExecutionId = datum.getTaskExecutionId();
+            TaskExecution taskExecution = taskExecutionServiceWrapper.selectById(taskExecutionId, TaskStageStatus.PENDING.getStatus());
+            if (taskExecution != null) {
+                taskExecutionServiceWrapper.updateSelectiveById(taskExecutionId,
+                        new TaskExecution()
+                                .withRevision(taskExecution.getRevision())
+                                .withStatus(TaskStageStatus.RUNNING.getStatus()), taskExecution.getRevision());
 
-            Long stageExecutionId = datum.getStageExecutionId();
-            Date startTime = datum.getStartTime();
-            StageExecution stageExecution = stageExecutionServiceWrapper.selectById(stageExecutionId);
-
-            stageExecutionServiceWrapper.updateSelectiveById(stageExecutionId,
-                    new StageExecution().withStatus(TaskStageStatus.RUNNING.getStatus()).withStartTime(startTime),
-                    stageExecution.getRevision());
-
-            StageStartup stageStartup = stageStartupServiceWrapper.selectById(stageExecution.getStageStartupId(),
-                    TaskStageStatus.PENDING.getStatus());
-            if (stageStartup != null) {
-                stageStartupServiceWrapper.updateSelectiveById(stageStartup.getId(),
-                        new StageStartup().withStatus(TaskStageStatus.RUNNING.getStatus()), stageStartup.getRevision());
+                TaskStartup taskStartup = taskStartupServiceWrapper.selectById(taskExecution.getTaskStartupId(),
+                        TaskStageStatus.PENDING.getStatus());
+                if (taskStartup != null) {
+                    taskStartupServiceWrapper.updateByIdSelective(taskStartup.getId(),
+                            new TaskStartup()
+                                    .withRevision(taskStartup.getRevision())
+                                    .withStatus(TaskStageStatus.RUNNING.getStatus()),
+                            taskStartup.getRevision());
+                }
             }
-
         }
     }
 
@@ -353,12 +372,13 @@ public class WorkerTaskDriverService {
     @Transactional(rollbackFor = Exception.class, transactionManager = RepositoryAutoConfig.TRANSACTION_MANAGER_BEAN_NAME)
     public Tuple2<Long, String> prepareForStage(long taskExecutionId, String stageName,
                                                 String encodedSharedContextSnapshotAtStartup) throws IOException {
-        TaskExecution taskExecution = taskExecutionServiceWrapper.selectById(taskExecutionId);
-        VerifyUtil.requireNotNull(taskExecution, String.format("无法找到id为%d的taskExecution对象", taskExecutionId));
+        TaskExecution taskExecution = taskExecutionServiceWrapper.selectById(taskExecutionId, TaskStageStatus.RUNNING.getStatus());
+        VerifyUtil.requireNotNull(taskExecution, String.format("无法找到id为%d的运行中的taskExecution对象", taskExecutionId));
 
-        TaskStartup taskStartup = taskStartupServiceWrapper.selectById(taskExecution.getTaskStartupId());
-        VerifyUtil.requireTrue(!Objects.equals(taskStartup.getStatus(), TaskStageStatus.FAILED.getStatus()),
-                String.format("任务%d已经失败", taskExecutionId));
+        TaskStartup taskStartup = taskStartupServiceWrapper.selectById(taskExecution.getTaskStartupId(),
+                TaskStageStatus.RUNNING.getStatus());
+        VerifyUtil.requireNotNull(taskStartup,
+                String.format("无法找到id为%d的运行中的taskStartup对象", taskExecution.getTaskStartupId()));
 
         StageDefinition stageDefinition = stageDefinitionServiceWrapper.selectByTaskIdStageName(taskStartup.getTaskId(), stageName);
         VerifyUtil.requireNotNull(stageDefinition,
@@ -424,6 +444,8 @@ public class WorkerTaskDriverService {
      */
     public void completeStage(WorkerCompleteStageResultReq.StageResult stageResult) throws IOException {
         Long stageExecutionId = stageResult.getStageExecutionId();
+
+
         StageExecution stageExecution = stageExecutionServiceWrapper.selectById(stageExecutionId, TaskStageStatus.RUNNING.getStatus());
         VerifyUtil.requireTrue(stageExecution != null,
                 "The running execution record for the stage with ID %d does not exist.".formatted(stageExecutionId));
@@ -507,7 +529,7 @@ public class WorkerTaskDriverService {
             // 另一个是不同机器操作同一个taskStartup或者重复创建taskExecution的并发，这个需要通过revision锁或者redis锁
             // 另一个是不同机器之间的并发，比如一个阶段失败了，另一个阶段也失败了，他们如果请求到不同的scheduler，
             // 一个可能希望重试，另一个可能希望直接失败掉任务，这可能会创建重复的taskExe，这种情况下revision控制不住，比如通过锁控制
-            rLock.lock(10, TimeUnit.SECONDS);
+            rLock.lock(5, TimeUnit.SECONDS);
 
             // 拆分为两个方法，确保db操作完成提交之后，再提交runAsync方法去跑真正的retry任务。
             Runnable retryRunnable = failStageAndPrepareRetryRunnable(taskExecutionId, stageExecutionId, errorMsg);
@@ -571,7 +593,7 @@ public class WorkerTaskDriverService {
 
 
         TaskExecution taskExecution = taskExecutionServiceWrapper.selectById(taskExecutionId);
-        if ( stageStartup.getFailCount()>=stageDefinition.getMaxRetryCount()) {
+        if (stageStartup.getFailCount() >= stageDefinition.getMaxRetryCount()) {
             // stage超过重试次数了，stage失败掉
             log.info("stageStartup:{}重试超过最大重试次数，需要将taskExecution:{}设置为失败", stageStartup.getId(), taskExecutionId);
 
@@ -589,7 +611,7 @@ public class WorkerTaskDriverService {
 
             String stageRetryLockKey = String.format("stage-startup-%d", stageStartup.getId());
 
-            if (taskStartup.getFailCount() + 1>=taskDefinition.getMaxRetryCount()) {
+            if (taskStartup.getFailCount() + 1 >= taskDefinition.getMaxRetryCount()) {
                 log.info("taskStartup:{}重试超过最大重试次数，需要将taskStartup设置为失败", taskStartup.getId());
                 // task任务整体重试超过限制了，task任务整体失败
 

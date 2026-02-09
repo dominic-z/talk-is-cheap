@@ -40,7 +40,7 @@ public class TaskRuntimeService {
                 .sharedContextCodec(codec)
                 .encodedSharedContext(workerStartTaskData.getInitialEncodedSharedContext())
                 .sharedContextClass(taskDefinitionBO.getSharedContextClass())
-                .stageEncodedInputs(stageEncodedInputs)
+                .stageEncodedInputs(stageEncodedInputs) // 初始情况选这个属性会存储所有的stage的入参
                 .stageRuntimeEnvs(new ConcurrentHashMap<>()) // 这个可能会并发
                 .taskDefinitionBO(taskDefinitionBO)
                 .build();
