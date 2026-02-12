@@ -128,6 +128,7 @@ public class Task1 {
         log.info("method41, context: {}", ttSharedContext);
         ttSharedContext.setName("method4");
         if (ttSharedContext.getNum() % 2 == 0) {
+            ttSharedContext.setNum(ttSharedContext.getNum() + 1);
             throw new RuntimeException("测试失败");
         }
 

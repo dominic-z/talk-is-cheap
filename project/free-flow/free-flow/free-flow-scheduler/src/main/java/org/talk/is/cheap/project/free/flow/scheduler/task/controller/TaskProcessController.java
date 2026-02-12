@@ -91,7 +91,7 @@ public class TaskProcessController {
                             .taskExecutionId(taskExecutionId)
                             .taskName(data.getTaskName())
                             .taskVersion(data.getTaskVersion())
-                            .initialEncodedSharedContext(null)
+                            .initialEncodedSharedContext(data.getInitialEncodedSharedContext())
                             .stageEncodedInputs(data.getStageEncodedInputs())
                             .startingStageExecutionId(rootStageName2ExecutionId)
                             .build()

@@ -27,6 +27,11 @@ import javax.sql.DataSource;
 //        , sqlSessionTemplateRef = "mySqlSessionTemplate"
 )
 @Slf4j
+/**
+ * https://www.qianwen.com/share/chat/bacc57abbe584eaba1bb6c10811ba555
+ * 在现代 Spring（特别是 Spring Boot）应用中，通常不需要手动添加 @EnableTransactionManagement 注解。
+ */
+//@EnableTransactionManagement
 public class MybatisConfig {
 
     /**
