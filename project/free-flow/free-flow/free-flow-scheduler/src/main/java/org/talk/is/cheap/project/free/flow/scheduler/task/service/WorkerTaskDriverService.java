@@ -317,7 +317,7 @@ public class WorkerTaskDriverService {
     @Transactional(rollbackFor = Exception.class, transactionManager = RepositoryAutoConfig.TRANSACTION_MANAGER_BEAN_NAME)
     public void startStageReport(List<WorkerStartStageReportReq.WorkerStartToExecuteStageReqDatum> startToExecuteStageReqData) {
         for (WorkerStartStageReportReq.WorkerStartToExecuteStageReqDatum datum : startToExecuteStageReqData) {
-            
+
             Long stageExecutionId = datum.getStageExecutionId();
             Date startTime = datum.getStartTime();
             StageExecution stageExecution = stageExecutionServiceWrapper.selectById(stageExecutionId, TaskStageStatus.PENDING.getStatus());
@@ -641,7 +641,7 @@ public class WorkerTaskDriverService {
 
         } else {
             // stage还可以重试
-            log.info("stage:{}重试了{}次，还可以重试", stageExecutionId, stageStartup.getFailCount());
+            log.info("stage(startupId:{})重试了{}次，还可以重试", stageStartup.getId(), stageStartup.getFailCount());
 
 
             StageExecution retryStageExecution = new StageExecution()
