@@ -22,8 +22,8 @@ UPDATE task_definition set name='bb' where id=1;
 SELECT * from seq_generator sg ;
 
 SELECT * from task_definition td order by create_time desc;
-SELECT * from stage_definition sd  WHERE task_id =4;
-SELECT * FROM task_graph_definition tgd WHERE task_id =4;
+SELECT * from stage_definition sd  WHERE task_id =6;
+SELECT sd1.name ,sd2.name ,tgd.* FROM task_graph_definition tgd join stage_definition sd1 join stage_definition sd2 on tgd.from_stage_id=sd1.id and tgd.to_stage_id=sd2.id WHERE tgd.task_id =6;
 
 SELECT * FROM task_startup ts order by create_time desc;
 SELECT * FROM task_execution te WHERE task_startup_id =69 order by create_time desc;
