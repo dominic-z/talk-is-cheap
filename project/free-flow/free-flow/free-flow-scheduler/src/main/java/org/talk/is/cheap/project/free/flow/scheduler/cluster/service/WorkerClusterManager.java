@@ -1,6 +1,7 @@
 package org.talk.is.cheap.project.free.flow.scheduler.cluster.service;
 
 import io.vavr.Tuple2;
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -8,9 +9,14 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.CuratorCache;
 import org.apache.curator.framework.recipes.cache.CuratorCacheListener;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.framework.recipes.cache.TreeCacheEvent;
 import org.apache.curator.framework.recipes.cache.TreeCacheListener;
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -18,9 +24,9 @@ import org.talk.is.cheap.project.free.flow.common.enums.NodeStatus;
 import org.talk.is.cheap.project.free.flow.common.enums.NodeType;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.client.WorkerClusterClient;
+import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.WorkerTaskDefinitionManagerLeaderStartEvent;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.WorkerTerminatedEvent;
 import org.talk.is.cheap.project.free.flow.scheduler.config.property.ZKPathProperty;
-import org.talk.is.cheap.project.free.flow.scheduler.task.service.WorkerTaskDefinitionManager;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.ClusterNodeExample;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNode;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.ClusterNodeService;
@@ -58,7 +64,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Service
 @Slf4j
-public class WorkerClusterManager {
+public class WorkerClusterManager implements ApplicationContextAware {
 
     @Autowired
     private ApplicationEventPublisher publisher;
@@ -76,14 +82,16 @@ public class WorkerClusterManager {
     @Autowired
     private WorkerClusterClient workerClusterClient;
 
-    @Autowired
-    private WorkerTaskDefinitionManager workerTaskDefinitionManager;
+//    @Autowired
+//    private WorkerTaskDefinitionManager workerTaskDefinitionManager;
 
-    private CuratorCache workerCuratorCache;
+    private CuratorCache onlineWorkerCuratorCache;
+    private CuratorCache runnableWorkerCuratorCache;
 
     // 活跃的节点，节点的上下线可能同时发生，因此需要并发安全
     private final Map<String, String> onlineWorkerPathAddress = new ConcurrentHashMap<>();
     private final Map<String, String> runnableWorkerPathAddress = new ConcurrentHashMap<>();
+    private final Map<String, String> runnableWorkerAddressPath = new ConcurrentHashMap<>();
     private final Map<String, Integer> pingFailedPathCounter = new ConcurrentHashMap<>();
     private final Map<String, Integer> pingSucceedPathCounter = new ConcurrentHashMap<>();
     // 终止中的节点
@@ -96,18 +104,27 @@ public class WorkerClusterManager {
     // 确保ping是串行的，后续在ping的时候并行
     private final ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(1);
 
+    private ApplicationContext applicationContext;
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.applicationContext = applicationContext;
+    }
 
     /**
      * 管理worker节点
      */
-    public void start() {
+    public void leaderStart() {
 
         this.onlineWorkerPathAddress.clear();
         this.terminatingWorkerPathAddress.clear();
 
         watchOnlineWorkers();
         pingWorkers();
-        workerTaskDefinitionManager.start();
+
+//        使用事件，避免循环依赖
+        publisher.publishEvent(new WorkerTaskDefinitionManagerLeaderStartEvent(true));
+//        workerTaskDefinitionManager.leaderStart();
     }
 
     private void watchOnlineWorkers() {
@@ -119,10 +136,10 @@ public class WorkerClusterManager {
                     TreeCacheEvent.Type type = event.getType();
                     switch (type) {
                         case NODE_ADDED:
-                            handleAddWorker(event);
+                            onAddOnlineWorker(event);
                             break;
                         case NODE_REMOVED:
-                            handleRemoveWorker(event);
+                            onRemoveOnlineWorker(event);
                             break;
                         default:
                     }
@@ -131,12 +148,12 @@ public class WorkerClusterManager {
         }).build();
 
 
-        workerCuratorCache = CuratorCache.builder(curatorZKClient, zkPathProperty.getWorker().getOnline()).build();
-        workerCuratorCache.listenable().addListener(listener);
-        workerCuratorCache.start();
+        onlineWorkerCuratorCache = CuratorCache.builder(curatorZKClient, zkPathProperty.getWorker().getOnline()).build();
+        onlineWorkerCuratorCache.listenable().addListener(listener);
+        onlineWorkerCuratorCache.start();
     }
 
-    private void handleAddWorker(TreeCacheEvent event) {
+    private void onAddOnlineWorker(TreeCacheEvent event) {
         ChildData eventData = event.getData();
         if (eventData == null) {
             log.warn("handle add worker without data,{}", event);
@@ -167,7 +184,7 @@ public class WorkerClusterManager {
         }
     }
 
-    private void handleRemoveWorker(TreeCacheEvent event) {
+    private void onRemoveOnlineWorker(TreeCacheEvent event) {
         ChildData eventData = event.getData();
         if (eventData == null) {
             return;
@@ -218,10 +235,15 @@ public class WorkerClusterManager {
     // 应用关闭的时候触发
     @PreDestroy
     public void stop() {
-        if (this.workerCuratorCache != null) {
-            this.workerCuratorCache.close();
+        if (this.onlineWorkerCuratorCache != null) {
+            this.onlineWorkerCuratorCache.close();
         }
-        workerTaskDefinitionManager.stop();
+        if (this.runnableWorkerCuratorCache != null) {
+            this.runnableWorkerCuratorCache.close();
+        }
+//        使用事件，避免与workerTaskDefinitionManager构成循环依赖
+        publisher.publishEvent(new WorkerTaskDefinitionManagerLeaderStartEvent(false));
+//        workerTaskDefinitionManager.stop();
     }
 
     /**
@@ -324,6 +346,42 @@ public class WorkerClusterManager {
 
 
     /**
+     * 上面的前提都是leader节点执行的，但是非leader节点也得能监控到runnable的节点，用来给其他组件提供信息
+     */
+    @PostConstruct
+    public void watchRunnableWorkers() {
+        runnableWorkerCuratorCache = CuratorCache.builder(curatorZKClient, zkPathProperty.getWorker().getRunnable()).build();
+        CuratorCacheListener listener = CuratorCacheListener.builder()
+                .forPathChildrenCache(zkPathProperty.getWorker().getRunnable(), curatorZKClient, new PathChildrenCacheListener() {
+                    @Override
+                    public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception {
+                        if (event.getData() == null) {
+                            log.info("on runnable worker event: {}", event.getType());
+                        } else {
+                            String workerAddress = new String(event.getData().getData());
+                            String path = event.getData().getPath();
+                            log.info("on runnable worker event: {}, zkPath: {}, address: {}", event.getType(), path,
+                                    workerAddress);
+                            switch (event.getType()) {
+                                case CHILD_ADDED:
+                                    WorkerClusterManager.this.runnableWorkerPathAddress.put(path, workerAddress);
+                                    WorkerClusterManager.this.runnableWorkerAddressPath.put(workerAddress, path);
+                                    break;
+                                case CHILD_REMOVED:
+                                    WorkerClusterManager.this.runnableWorkerPathAddress.remove(path);
+                                    WorkerClusterManager.this.runnableWorkerAddressPath.remove(workerAddress);
+                                    break;
+                            }
+                        }
+
+                    }
+                }).build();
+
+        runnableWorkerCuratorCache.listenable().addListener(listener);
+        runnableWorkerCuratorCache.start();
+    }
+
+    /**
      * 获取runnable状态的worker
      * 不能直接将runnableWorkerPathId返回出去，防止外界进行操作
      *
@@ -333,17 +391,13 @@ public class WorkerClusterManager {
         return new HashSet<>(this.onlineWorkerPathAddress.values());
     }
 
-
     public static URI getWorkerURI(String workerNodeAddress) {
         return UriComponentsBuilder.fromHttpUrl("http://" + workerNodeAddress).build().toUri();
     }
 
-    public boolean isValid(String zkPath) {
-        try {
-            return curatorZKClient.checkExists().forPath(zkPath) == null;
-        } catch (Exception e) {
-            log.error("检查zkPath:{}是否存在出错", zkPath, e);
-            return false;
-        }
+    public boolean isValidRunnableWorker(String workerAddr) {
+        return this.runnableWorkerAddressPath.containsKey(workerAddr);
     }
+
+
 }

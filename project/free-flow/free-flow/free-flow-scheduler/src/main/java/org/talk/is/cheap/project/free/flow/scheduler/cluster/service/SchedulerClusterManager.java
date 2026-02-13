@@ -152,7 +152,7 @@ public class SchedulerClusterManager {
                 log.info("{} become leader", schedulerAddress);
 
                 // 职责1：leader开始监听管理worker
-                workerClusterManager.start();
+                workerClusterManager.leaderStart();
 
                 // 职责2：负责维护db中节点信息，用于给前端返回正确的数据
                 watchOtherSchedulers();

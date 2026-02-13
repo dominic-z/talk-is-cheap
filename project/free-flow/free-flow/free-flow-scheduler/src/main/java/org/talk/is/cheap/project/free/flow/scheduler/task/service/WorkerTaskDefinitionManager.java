@@ -14,12 +14,14 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.GetWorkerTaskDefinitionResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.dto.TaskDefinitionDTO;
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
+import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.WorkerTaskDefinitionManagerLeaderStartEvent;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.WorkerClusterManager;
 import org.talk.is.cheap.project.free.flow.scheduler.config.property.ZKPathProperty;
 import org.talk.is.cheap.project.free.flow.scheduler.task.client.WorkerTaskDefinitionClient;
@@ -47,7 +49,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import static org.talk.is.cheap.project.free.flow.starter.repository.config.RedisAutoConfig.REDIS_TEMPLATE;
 import static org.talk.is.cheap.project.free.flow.starter.repository.config.RedisAutoConfig.STRING_REDIS_TEMPLATE;
 
 /**
@@ -124,6 +125,9 @@ public class WorkerTaskDefinitionManager {
     private WorkerTaskDefinitionManagerTxnHelper workerTaskDefinitionManagerTxnHelper;
 
     @Autowired
+    private WorkerClusterManager workerClusterManager;
+
+    @Autowired
     private CuratorFramework curatorZKClient;
 
     @Autowired
@@ -133,6 +137,9 @@ public class WorkerTaskDefinitionManager {
     @Autowired
     @Qualifier(STRING_REDIS_TEMPLATE)
     private StringRedisTemplate stringRedisTemplate;
+
+    @Autowired
+    private RedisService redisService;
 
     @Getter
     private static final ModelMapper MODEL_MAPPER = new ModelMapper();
@@ -150,8 +157,12 @@ public class WorkerTaskDefinitionManager {
 
     private CuratorCache curatorCache;
 
-    public void start() {
-        watchRunnableWorker();
+
+    @EventListener(WorkerTaskDefinitionManagerLeaderStartEvent.class)
+    public void leaderStart(WorkerTaskDefinitionManagerLeaderStartEvent e) {
+        if (e.isStart()) {
+            watchRunnableWorker();
+        }
     }
 
     private void watchRunnableWorker() {
@@ -182,6 +193,7 @@ public class WorkerTaskDefinitionManager {
         curatorCache.listenable().addListener(listener);
         curatorCache.start();
     }
+
 
     @PreDestroy
     public void stop() {
@@ -275,7 +287,9 @@ public class WorkerTaskDefinitionManager {
                     if (this.taskWorkerMap.containsKey(taskName) && this.taskWorkerMap.get(taskName).containsKey(taskVersion)) {
                         this.taskWorkerMap.get(taskName).get(taskVersion).remove(nodeAddress);
                     }
-                    stringRedisTemplate.opsForSet().remove(RedisService.getTaskWorkerAddrMapKey(taskName, taskVersion), nodeAddress);
+                    String taskWorkerAddrMapKey = RedisService.getTaskWorkerAddrMapKey(taskName, taskVersion);
+                    stringRedisTemplate.opsForSet().remove(taskWorkerAddrMapKey, nodeAddress);
+                    redisService.deleteEmptySet(taskWorkerAddrMapKey);
                 }
             } finally {
                 lockManagerByWorkerAddress.unlockAndRemove(nodeAddress);
@@ -323,10 +337,22 @@ public class WorkerTaskDefinitionManager {
     // 通过redis，所有的scheduler都有除了启动任务之外的能力了。leader只需要管理redis里的数据就好。
     public Set<String> getWorkerAddressesWithTaskRedis(String taskName, Integer taskVersion) {
 
-        Set<String> addrs = stringRedisTemplate.opsForSet().members(RedisService.getTaskWorkerAddrMapKey(taskName, taskVersion));
+        String taskWorkerAddrMapKey = RedisService.getTaskWorkerAddrMapKey(taskName, taskVersion);
+        Set<String> addrs = stringRedisTemplate.opsForSet().members(taskWorkerAddrMapKey);
+        if (addrs == null) {
+            return new HashSet<>();
+        }
 
-
-        return addrs;
+        // 加一个判断，如果scheduler挂了的同时worker也挂了，那么redis里会存在脏数据，即挂掉的worker还在
+        Set<String> refreshedAddrs = addrs.stream().filter(addr -> {
+            if (workerClusterManager.isValidRunnableWorker(addr)) {
+                return true;
+            }
+            stringRedisTemplate.opsForSet().remove(taskWorkerAddrMapKey,addr);
+            redisService.deleteEmptySet(taskWorkerAddrMapKey);
+            return false;
+        }).collect(Collectors.toSet());
+        return refreshedAddrs;
     }
 
 
