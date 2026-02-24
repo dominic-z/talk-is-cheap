@@ -111,7 +111,6 @@ public class Task1 {
         }
         log.info("method3: {}", stageRuntimeEnv.getInput());
         TTSharedContext ttSharedContext = stageRuntimeEnv.getSharedContext();
-        ttSharedContext.setNum(20);
         log.info("method3 sharedContext: {}", ttSharedContext);
     }
 

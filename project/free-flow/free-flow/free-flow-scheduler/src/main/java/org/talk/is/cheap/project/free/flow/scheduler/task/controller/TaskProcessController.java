@@ -100,7 +100,7 @@ public class TaskProcessController {
 
             WorkerStartTaskResp workerStartTaskResp = workerTaskDriverClient.startTask(WorkerClusterManager.getWorkerURI(workerAddress),
                     workerStartTaskReq);
-            VerifyUtil.requireTrue(workerStartTaskResp.isSuccess(), String.format("启动task(name:{},version:{})错误，原因:%s",
+            VerifyUtil.requireTrue(workerStartTaskResp.isSuccess(), String.format("启动task(name:%s,version:%d)错误，原因:%s",
                     data.getTaskName(), data.getTaskVersion(), workerStartTaskResp.getMsg()));
 
             resp.success("");
