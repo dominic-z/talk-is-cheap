@@ -10,7 +10,7 @@ import org.talk.is.cheap.project.free.flow.starter.worker.task.driver.runtime.St
 
 import java.util.Random;
 
-@Task(name = "task1", version = 4, sharedContextCodecClass = Task1.TTSharedContext.TTSharedContextInputClass.class)
+@Task(name = "task1", version = 5, sharedContextCodecClass = Task1.TTSharedContext.TTSharedContextInputClass.class)
 @Slf4j
 public class Task1 {
 
@@ -85,6 +85,8 @@ public class Task1 {
 
     }
 
+
+    // todo: 其实入参可以拆成三个对象，一个stage的input对象，一个sharedContext对象（可选），一个StageRuntimeEnv对象（可选）
     @RunnableStage(name = "method1", version = 1, toStageName = "method2", isStartingStage = true,
             inputCodecClass = TTMethod1Input.TTMethod1InputCodec.class)
     public void method1(StageRuntimeEnv<TTMethod1Input> stageRuntimeEnv) {
@@ -143,10 +145,6 @@ public class Task1 {
         TTSharedContext ttSharedContext = stageRuntimeEnv.getSharedContext();
         log.info("method41, context: {}", ttSharedContext);
         ttSharedContext.setName("method4");
-        if (ttSharedContext.getNum() % 2 == 0) {
-            ttSharedContext.setNum(ttSharedContext.getNum() + 1);
-            throw new RuntimeException("测试失败");
-        }
 
     }
 
@@ -158,9 +156,11 @@ public class Task1 {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+        throw new RuntimeException("测试异常");
     }
 
-    @RunnableStage(name = "method5", version = 1)
+    @RunnableStage(name = "method5", version = 1,
+            inputCodecClass = TTMethod5Input.TTMethod5InputCodec.class)
     public void method5(StageRuntimeEnv<TTMethod5Input> stageRuntimeEnv) {
 
         log.info("method5, input :{}", stageRuntimeEnv.getInput());
