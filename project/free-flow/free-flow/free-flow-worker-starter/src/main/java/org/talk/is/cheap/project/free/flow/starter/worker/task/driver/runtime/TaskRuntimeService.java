@@ -39,6 +39,7 @@ public class TaskRuntimeService {
                 .taskExecutionId(workerStartTaskData.getTaskExecutionId())
                 .sharedContextCodec(codec)
                 .encodedSharedContext(workerStartTaskData.getInitialEncodedSharedContext())
+                .runtimeEnvStatus(RuntimeEnvStatus.RUNNING)
                 .sharedContextClass(taskDefinitionBO.getSharedContextClass())
                 .stageEncodedInputs(stageEncodedInputs) // 初始情况选这个属性会存储所有的stage的入参
                 .stageRuntimeEnvs(new ConcurrentHashMap<>()) // 这个可能会并发
@@ -65,6 +66,7 @@ public class TaskRuntimeService {
                     .stageExecutionId(stageExecutionId)
                     .inputCodec(inputCodec)
                     .encodedInput(encodedInput)
+                    .runtimeEnvStatus(RuntimeEnvStatus.RUNNING)
                     .taskRuntimeEnv(taskRuntimeEnv)
                     .inputClass(stageDefinitionBO.getInputClass())
                     .stageExecutionBizLogService(stageExecutionBizLogService)
@@ -99,6 +101,7 @@ public class TaskRuntimeService {
                 .stageExecutionId(stageExecutionId)
                 .inputCodec(inputCodec)
                 .encodedInput(taskRuntimeEnv.getStageEncodedInputs().get(stageName))
+                .runtimeEnvStatus(RuntimeEnvStatus.RUNNING)
                 .taskRuntimeEnv(taskRuntimeEnv)
                 .inputClass(stageDefinitionBO.getInputClass())
                 .stageExecutionBizLogService(stageExecutionBizLogService)
@@ -106,6 +109,27 @@ public class TaskRuntimeService {
         taskRuntimeEnv.getStageRuntimeEnvs().put(stageName, stageRuntimeEnv);
         return stageRuntimeEnv;
 
+    }
+
+
+    public StageRuntimeEnv updateRetryStageRuntimeEnv(long taskExecutionId,long retryStageExecutionId,String retryStageName,String encodedInput){
+        TaskRuntimeEnv<?> taskRuntimeEnv = this.get(taskExecutionId);
+        VerifyUtil.requireNotNull(taskRuntimeEnv, String.format("taskExeId:%d的任务运行环境变量已经丢失", taskExecutionId));
+
+        StageRuntimeEnv stageRuntimeEnv = taskRuntimeEnv.getStageRuntimeEnvs().get(retryStageName);
+        VerifyUtil.requireNotNull(stageRuntimeEnv, String.format("taskExeId:%d中stageName:%s的阶段运行环境变量已经丢失", taskExecutionId, retryStageName));
+
+        taskRuntimeEnv.getStageEncodedInputs().put(retryStageName, encodedInput);
+
+        final StageRuntimeEnv retryStageRuntimeEnv = StageRuntimeEnv.builder()
+                .taskRuntimeEnv(taskRuntimeEnv)
+                .inputClass(stageRuntimeEnv.getInputClass())
+                .inputCodec(stageRuntimeEnv.getInputCodec())
+                .encodedInput(encodedInput)
+                .stageExecutionId(retryStageExecutionId).build();
+
+        taskRuntimeEnv.updateStageRuntimeEnv(retryStageName, retryStageRuntimeEnv);
+        return retryStageRuntimeEnv;
     }
 
 

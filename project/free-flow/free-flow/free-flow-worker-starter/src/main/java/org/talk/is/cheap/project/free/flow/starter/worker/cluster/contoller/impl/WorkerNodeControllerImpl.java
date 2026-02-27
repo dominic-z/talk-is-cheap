@@ -6,17 +6,17 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.common.message.ResultCode;
-import org.talk.is.cheap.project.free.flow.starter.worker.cluster.contoller.ClusterController;
-import org.talk.is.cheap.project.free.flow.starter.worker.cluster.service.ClusterService;
+import org.talk.is.cheap.project.free.flow.starter.worker.cluster.contoller.WorkerNodeController;
+import org.talk.is.cheap.project.free.flow.starter.worker.cluster.service.WorkerNodeService;
 
 
 @RequestMapping
 @RestController
 @Slf4j
-public class ClusterControllerImpl implements ClusterController {
+public class WorkerNodeControllerImpl implements WorkerNodeController {
 
     @Autowired
-    private ClusterService clusterService;
+    private WorkerNodeService clusterService;
 
     private int i = 0;
 
@@ -41,8 +41,7 @@ public class ClusterControllerImpl implements ClusterController {
 
         try {
 
-            clusterService.becomeRunnable();
-            resp.success("");
+            resp.success(clusterService.becomeRunnable());
         } catch (Exception e) {
             resp.fail(ResultCode.FAIL, e.getMessage());
         }
@@ -51,12 +50,12 @@ public class ClusterControllerImpl implements ClusterController {
 
     @Override
     public HttpBody<String> terminate() {
-        HttpBody.HttpBodyBuilder<String> builder = HttpBody.<String>builder();
+        HttpBody<String> resp = new HttpBody<>();
         try {
-            clusterService.terminate();
-            return builder.code(ResultCode.SUCCESS.getCode()).build();
+            resp.success(clusterService.terminate());
         } catch (Exception e) {
-            return builder.code(ResultCode.FAIL.getCode()).msg(e.getMessage()).build();
+            resp.fail(ResultCode.FAIL, e.getMessage());
         }
+        return resp;
     }
 }

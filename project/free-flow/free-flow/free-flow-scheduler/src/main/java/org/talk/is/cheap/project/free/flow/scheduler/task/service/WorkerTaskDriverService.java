@@ -14,18 +14,20 @@ import org.springframework.transaction.annotation.Transactional;
 import org.talk.is.cheap.project.free.flow.common.enums.StartupSourceType;
 import org.talk.is.cheap.project.free.flow.common.enums.TaskStageStatus;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.PrepareStageReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerCompleteStageResultReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerStartStageReportReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerResumeTaskReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerRetryStageReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerStartTaskReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerStartTaskResp;
-import org.talk.is.cheap.project.free.flow.common.utils.FieldAwareLockManager;
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.WorkerClusterManager;
 import org.talk.is.cheap.project.free.flow.scheduler.task.client.WorkerTaskDriverClient;
 import org.talk.is.cheap.project.free.flow.starter.repository.config.RedisAutoConfig;
 import org.talk.is.cheap.project.free.flow.starter.repository.config.RepositoryAutoConfig;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.StageStartupExample;
+import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.TaskGraphDefinitionExample;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.es.pojo.ESPojoDTO;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.es.pojo.StageExecutionResultMsg;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.es.pojo.StageStartupParam;
@@ -35,12 +37,15 @@ import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.StageE
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.StageStartup;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskDefinition;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskExecution;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskGraphDefinition;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskStartup;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.StageDefinitionService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.StageExecutionService;
+import org.talk.is.cheap.project.free.flow.starter.repository.service.StageSourceTargetStartupRelationService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.StageStartupService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.TaskExecutionService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.TaskGraphDefinitionService;
+import org.talk.is.cheap.project.free.flow.starter.repository.service.TaskSourceTargetStartupRelationService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.TaskStartupService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.StageDefinitionServiceWrapper;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.StageExecutionServiceWrapper;
@@ -54,16 +59,20 @@ import org.talk.is.cheap.project.free.flow.starter.repository.service.es.TaskSha
 import org.talk.is.cheap.project.free.flow.starter.repository.service.redis.RedissonService;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 /**
@@ -168,6 +177,9 @@ public class WorkerTaskDriverService {
     @Autowired
     private WorkerTaskDriverServiceTxnHelper workerTaskDriverServiceTxnHelper;
 
+    @Autowired
+    private TaskSourceTargetStartupRelationService taskSourceTargetStartupRelationService;
+
     // es
     @Autowired
     private StageStartupParamService stageStartupParamService;
@@ -220,6 +232,8 @@ public class WorkerTaskDriverService {
                                                                   Map<String, String> stageEncodedInputs) {
         TaskDefinition taskDefinition = taskDefinitionServiceWrapper.queryByNameVersion(taskName, taskVersion);
         VerifyUtil.requireNotNull(taskDefinition, "未找到对应的任务定义:%s,%d".formatted(taskName, taskVersion));
+        String workerAddress = taskScheduler.assignTaskToWorkerAddress(taskName, taskDefinition.getVersion());
+        VerifyUtil.requireNotBlank(workerAddress, "No node capable of executing this task can be found.");
 
         // 创建task的startup和execution
         TaskStartup taskStartup = new TaskStartup()
@@ -229,14 +243,14 @@ public class WorkerTaskDriverService {
         VerifyUtil.requireTrue(taskStartupService.create(taskStartup) > 0, "创建task启动记录失败");
 
         try {
+            // 只记录启动时候的
             taskSharedContextService.create(TaskSharedContext.builder()
                     .taskStartupId(taskStartup.getId())
                     .encodedTaskSharedContext(initialEncodedSharedContext)
                     .updateTime(new Date()).build()
             );
 
-            String workerAddress = taskScheduler.assignTaskToWorkerAddress(taskName, taskDefinition.getVersion());
-            VerifyUtil.requireNotBlank(workerAddress, "No node capable of executing this task can be found.");
+
 
             TaskExecution taskExecution = new TaskExecution()
                     .withStatus(TaskStageStatus.PENDING.getStatus())
@@ -273,6 +287,7 @@ public class WorkerTaskDriverService {
                 }
 
                 if (stageEncodedInputs.containsKey(stageName)) {
+                    // 如果对某个stage有设定输入，需要记录输入信息
                     String encodedInput = stageEncodedInputs.get(stageName);
                     stageStartupParamService.create(
                             StageStartupParam.builder().stageStartupId(stageStartup.getId())
@@ -361,17 +376,18 @@ public class WorkerTaskDriverService {
 
 
     /**
-     * worker要运行某个stage，scheduler做好准备，即创建对应的stageExecution并且返回input给worker
+     * worker要运行某个stage，scheduler做好准备，即创建对应的stageExecution并且返回input给worker，非根节点都需要再次prepare
      *
-     * @param taskExecutionId
-     * @param stageName
-     * @param encodedSharedContextSnapshotAtStartup
      * @return
      * @throws IOException
      */
     @Transactional(rollbackFor = Exception.class, transactionManager = RepositoryAutoConfig.TRANSACTION_MANAGER_BEAN_NAME)
-    public Tuple2<Long, String> prepareForStage(long taskExecutionId, String stageName,
-                                                String encodedSharedContextSnapshotAtStartup) throws IOException {
+    public Tuple2<Long, String> prepareForStage(PrepareStageReq.PrepareStageReqData data) throws IOException {
+        long taskExecutionId = data.getTaskExecutionId();
+        String stageName = data.getStageName();
+        String encodedSharedContextSnapshotAtStartup = data.getEncodedSharedContextSnapshotAtStartup();
+        Date prepareTime = data.getPrepareTime();
+
         TaskExecution taskExecution = taskExecutionServiceWrapper.selectById(taskExecutionId, TaskStageStatus.RUNNING.getStatus());
         VerifyUtil.requireNotNull(taskExecution, String.format("无法找到id为%d的运行中的taskExecution对象", taskExecutionId));
 
@@ -406,13 +422,14 @@ public class WorkerTaskDriverService {
                     .stageStartupId(stageStartup.getId())
                     .encodedInput("")
                     .encodedSharedContextSnapshotAtStartup(encodedSharedContextSnapshotAtStartup)
-                    .updateTime(new Date())
+                    .updateTime(prepareTime)
                     .build();
             stageStartupParamService.create(stageStartupParam);
         } else {
             stageStartupParam = stageStartupParamESPojoDTO.getData();
             if (StringUtils.isNotBlank(encodedSharedContextSnapshotAtStartup)) {
                 stageStartupParam.setEncodedSharedContextSnapshotAtStartup(encodedSharedContextSnapshotAtStartup);
+                stageStartupParam.setUpdateTime(prepareTime);
                 stageStartupParamService.update(stageStartupParamESPojoDTO.getId(), stageStartupParam);
             }
         }
@@ -799,6 +816,188 @@ public class WorkerTaskDriverService {
             // 启动失败兜底
             workerTaskDriverServiceTxnHelper.forceFailTask(retryTaskExecutionId, taskStartupId);
         }
+
+    }
+
+    @Transactional(rollbackFor = Exception.class, transactionManager = RepositoryAutoConfig.TRANSACTION_MANAGER_BEAN_NAME)
+    public void rescheduleTask(long pausedTaskExecutionId) throws IOException {
+        TaskExecution pausedTaskExecution = taskExecutionServiceWrapper.selectById(pausedTaskExecutionId);
+        VerifyUtil.requireNotNull(pausedTaskExecution, String.format("未找到id为%d的TaskExecution对象", pausedTaskExecutionId));
+        taskExecutionServiceWrapper.updateSelectiveById(pausedTaskExecutionId,
+                new TaskExecution().withStatus(TaskStageStatus.RESCHEDULING.getStatus()), null);
+
+        // 先定位任务的基础信息
+        TaskStartup pausedTaskStartup = taskStartupServiceWrapper.selectById(pausedTaskExecution.getTaskStartupId());
+        VerifyUtil.requireNotNull(pausedTaskStartup, String.format("未找到id为%d的TaskExecution对象", pausedTaskExecution.getTaskStartupId()));
+
+        TaskDefinition taskDefinition = taskDefinitionServiceWrapper.selectById(pausedTaskStartup.getTaskId());
+        Map<Long, StageDefinition> stageIdDefinition = stageDefinitionServiceWrapper.selectByTaskId(pausedTaskStartup.getTaskId()).stream()
+                .collect(Collectors.toMap(StageDefinition::getId, d -> d));
+
+
+        VerifyUtil.requireNotNull(taskDefinition, String.format("未找到id为%d的TaskDefinition对象", pausedTaskStartup.getTaskId()));
+
+        // 获取这个任务的执行情况
+        Map<Long, StageStartup> pausedTaskIdStageStartup = stageStartupServiceWrapper.selectByTaskExecutionId(pausedTaskExecutionId)
+                .stream().collect(Collectors.toMap(StageStartup::getId, s -> s));
+
+
+        List<ESPojoDTO<StageStartupParam>> pausedTaskStageParamDTOs =
+                stageStartupParamService.getByStageStartupIds(pausedTaskIdStageStartup.values().stream().map(StageStartup::getId).collect(Collectors.toList()));
+        // 寻找最新的共享上下文以及各个stage的入参，此时任务处于暂停状态，没有在运行中的任务，因此买个stageStartup的状态要么是失败，要么是成功。
+        String latestEncodedSharedContext = null;
+        Date latestUpdateTime = null;
+        Map<String, String> stageNameEncodedInputs = new HashMap<>();
+        for (ESPojoDTO<StageStartupParam> stageParamDTO : pausedTaskStageParamDTOs) {
+            StageStartupParam data = stageParamDTO.getData();
+            if (data == null) {
+                continue;
+            }
+            VerifyUtil.requireTrue(
+                    pausedTaskIdStageStartup.containsKey(data.getStageStartupId()) &&
+                            stageIdDefinition.containsKey(pausedTaskIdStageStartup.get(data.getStageStartupId()).getStageId()),
+                    String.format("未找到对应的任务定义：stageStartupId: %d", data.getStageStartupId()));
+            stageNameEncodedInputs.put(stageIdDefinition.get(pausedTaskIdStageStartup.get(data.getStageStartupId()).getStageId()).getName(),
+                    data.getEncodedInput());
+
+            if (latestUpdateTime == null || data.getUpdateTime().compareTo(latestUpdateTime) > 0) {
+                latestUpdateTime = data.getUpdateTime();
+                if (StringUtils.isNotBlank(data.getEncodedSharedContextSnapshotAtCompletion())) {
+                    latestEncodedSharedContext = data.getEncodedSharedContextSnapshotAtCompletion();
+                } else if (StringUtils.isNotBlank(data.getEncodedSharedContextSnapshotAtStartup())) {
+                    latestEncodedSharedContext = data.getEncodedSharedContextSnapshotAtStartup();
+                }
+            }
+        }
+
+
+        Set<Long> pausedTaskSucceedStageIds = new HashSet<>();
+        Set<Long> pausedTaskSucceedStageStartIds = new HashSet<>();
+        for (StageStartup stageStartup : pausedTaskIdStageStartup.values()) {
+            if (TaskStageStatus.SUCCEEDED.getStatus().equals(stageStartup.getStatus())) {
+                pausedTaskSucceedStageIds.add(stageStartup.getStageId());
+                pausedTaskSucceedStageStartIds.add(stageStartup.getId());
+            }
+        }
+  // 通过bfs找到需要从哪开始执行，其实就是通过bfs并且跳过所有的成功的节点，找到第一个未成功的节点
+        /**
+         * 大概意思是比如有这样一个图
+         *          A      D
+         *       B     C        F
+         *     G
+         * A连BC，D连CF，B指向G，如果A D C成功，那么就应该从B和F执行
+         * 本质上就是找到所有全部父节点都已经完成且本节点没有完整的节点
+         */
+        TaskGraphDefinitionExample taskGraphDefinitionExample = new TaskGraphDefinitionExample();
+        taskGraphDefinitionExample.createCriteria().andTaskIdEqualTo(pausedTaskStartup.getTaskId());
+        List<TaskGraphDefinition> taskGraphDefinitions = taskGraphDefinitionService.selectByExample(taskGraphDefinitionExample);
+        Map<Long, Set<Long>> pointOutStageIdGraph = new HashMap<>();
+        Map<Long, Set<Long>> pointInStageIdGraph = new HashMap<>();
+        for (TaskGraphDefinition d : taskGraphDefinitions) {
+            pointOutStageIdGraph.computeIfAbsent(d.getFromStageId(),(k)->new HashSet<>()).add(d.getToStageId());
+            pointInStageIdGraph.computeIfAbsent(d.getToStageId(),(k)->new HashSet<>()).add(d.getFromStageId());
+        }
+
+        // 根节点，使用gset数据结构，这个是因为有可能多个节点会指向同一个父节点
+        Set<Long> layer =
+                stageIdDefinition.values().stream().filter(StageDefinition::getIsStartingStage).map(StageDefinition::getId).collect(Collectors.toSet());
+        HashSet<Long> resumeTaskStartingStageIds = new HashSet<>();
+        while(!layer.isEmpty()){
+            HashSet<Long> nextLayer = new HashSet<>();
+            for (Long stageId : layer) {
+                if(stageIdDefinition.get(stageId).getIsStartingStage()){
+                    // 如果是根节点，那么直接认为其父节点是成功的。
+                    if(!pausedTaskSucceedStageIds.contains(stageId)){
+                        // 如果当前这个根节点没有成功，则直接作为新的启动节点
+                        resumeTaskStartingStageIds.add(stageId);
+                    }
+                }else{
+                    // 如果不是根节点
+                    if(!pausedTaskSucceedStageIds.contains(stageId) && pausedTaskSucceedStageIds.containsAll(pointInStageIdGraph.get(stageId))){
+                        // 如果当前节点未成功，并且父节点全都成功，那么就是恢复的启动stage之一
+                        resumeTaskStartingStageIds.add(stageId);
+                    }
+                }
+                if(pointOutStageIdGraph.containsKey(stageId)){
+                    nextLayer.addAll(pointOutStageIdGraph.get(stageId));
+                }
+            }
+            layer = nextLayer;
+        }
+
+
+        // 创建Task和Stage的各种Startup
+        TaskStartup resumeTaskStartup = new TaskStartup()
+                .withTaskId(pausedTaskStartup.getTaskId())
+                .withFailCount(pausedTaskStartup.getFailCount())
+                .withStatus(TaskStageStatus.PENDING.getStatus())
+                .withSourceType(StartupSourceType.TASK_RESUME.getValue())
+                .withSourceId(pausedTaskStartup.getId());
+        taskStartupService.create(resumeTaskStartup);
+
+        TaskSharedContext resumeTaskSharedContext = TaskSharedContext.builder().taskStartupId(resumeTaskStartup.getId())
+                .encodedTaskSharedContext(latestEncodedSharedContext).build();
+        taskSharedContextService.create(resumeTaskSharedContext);
+        String resumeTaskWorkerAddr = taskScheduler.assignTaskToWorkerAddress(taskDefinition.getName(), taskDefinition.getVersion());
+        if (resumeTaskWorkerAddr == null) {
+            // todo: 这个可以通过mq来改造，从而实现一个暂时没有被成功恢复的任务可以再次被尝试恢复。
+            log.error("未找到能够恢复继续执行taskStartupId:{}的节点，恢复失败", pausedTaskStartup.getId());
+            return;
+        }
+        TaskExecution resumeTaskExecution = new TaskExecution().withAssignedWorkerAddr(resumeTaskWorkerAddr)
+                .withTaskStartupId(resumeTaskStartup.getId())
+                .withStatus(TaskStageStatus.PENDING.getStatus());
+        taskExecutionService.create(resumeTaskExecution);
+        Map<String, Long> resumeTaskStartingStageNameExecutionIds = new HashMap<>();
+        for (StageDefinition stageD : stageIdDefinition.values()) {
+            if(pausedTaskSucceedStageIds.contains(stageD.getId())){
+                // 如果已经成功，就不用创建了
+                continue;
+            }
+            StageStartup stageStartup = new StageStartup()
+                    .withTaskExecutionId(resumeTaskExecution.getId())
+                    .withStageId(stageD.getId())
+                    .withStatus(TaskStageStatus.PENDING.getStatus());
+            stageStartupService.create(stageStartup);
+
+            if(resumeTaskStartingStageIds.contains(stageD.getId())){
+                // 与prepareTask一样，启动task之前至少需要将启动节点的execturiong对象准备好
+                StageExecution stageExecution = new StageExecution()
+                        .withStageStartupId(stageStartup.getId())
+                        .withWorkerAddress(resumeTaskWorkerAddr)
+                        .withStatus(TaskStageStatus.PENDING.getStatus());
+                stageExecutionService.create(stageExecution);
+
+                resumeTaskStartingStageNameExecutionIds.put(stageD.getName(),stageExecution.getId());
+            }
+
+            if(stageNameEncodedInputs.containsKey(stageD.getName())){
+                // 同样的，与prepareTask一样，如果有输入，就需要记录
+                String encodedInput = stageNameEncodedInputs.get(stageD.getName());
+                stageStartupParamService.create(
+                        StageStartupParam.builder().stageStartupId(stageStartup.getId())
+                                .encodedInput(encodedInput)
+                                .encodedSharedContextSnapshotAtStartup(latestEncodedSharedContext)
+                                .updateTime(new Date())
+                                .build());
+            }
+        }
+
+
+        // todo: 启动worker
+
+        WorkerResumeTaskReq workerResumeTaskReq = new WorkerResumeTaskReq();
+        WorkerResumeTaskReq.Data data = new WorkerResumeTaskReq.Data();
+        data.setTaskName(taskDefinition.getName());
+        data.setTaskVersion(taskDefinition.getVersion());
+        data.setTaskExecutionId(resumeTaskExecution.getId());
+        data.setFinishedStageNames(pausedTaskSucceedStageIds.stream().map(id->stageIdDefinition.get(id).getName()).collect(Collectors.toSet()));
+        data.setStageEncodedInputs(stageNameEncodedInputs);
+        data.setInitialEncodedSharedContext(latestEncodedSharedContext);
+        data.setStartingStageExecutionId(resumeTaskStartingStageNameExecutionIds);
+
+
+        workerTaskDriverClient
 
     }
 }

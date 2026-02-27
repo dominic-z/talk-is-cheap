@@ -13,6 +13,7 @@ public enum StartupSourceType {
     EXTERNAL(0,"调用来源来自于外界，例如外界希望启动某个task、stage"),
     OTHER_STAGE_EXECUTION(1,"调用来源来自于其他stage的execution"),
     OTHER_TASK_EXECUTION(2,"调用来源来自于其他task的execution，例如scheduleTask"),
+    TASK_RESUME(3,"Task的执行来自于恢复其他task的执行"),
 
     ;
 

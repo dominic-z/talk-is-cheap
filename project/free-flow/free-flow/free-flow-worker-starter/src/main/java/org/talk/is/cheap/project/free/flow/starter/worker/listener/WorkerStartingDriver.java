@@ -5,7 +5,7 @@ import org.springframework.boot.context.event.ApplicationStartedEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.talk.is.cheap.project.free.flow.common.exception.IllegalTaskDefinitionException;
-import org.talk.is.cheap.project.free.flow.starter.worker.cluster.service.ClusterService;
+import org.talk.is.cheap.project.free.flow.starter.worker.cluster.service.WorkerNodeService;
 import org.talk.is.cheap.project.free.flow.starter.worker.task.definition.service.LocalTaskDefinitionService;
 
 
@@ -19,7 +19,7 @@ public class WorkerStartingDriver implements ApplicationListener<ApplicationStar
     public void onApplicationEvent(ApplicationStartedEvent event) {
         // 没法通过注入的方式获取，因为这个只是个listener回调
         ConfigurableApplicationContext applicationContext = event.getApplicationContext();
-        ClusterService clusterService = applicationContext.getBean(ClusterService.class);
+        WorkerNodeService clusterService = applicationContext.getBean(WorkerNodeService.class);
         clusterService.listenAndSetSchedulerLeader();
 
         LocalTaskDefinitionService localTaskDefinitionService = applicationContext.getBean(LocalTaskDefinitionService.class);

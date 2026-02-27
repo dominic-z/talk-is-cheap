@@ -97,7 +97,7 @@ public class HttpLoggingFilter implements WebFilter {
                     String requestBody = truncate(requestBodyRef.get(), MAX_LOG_LENGTH);
                     String responseBody = truncate(responseBodyRef.get(), MAX_LOG_LENGTH);
 
-                    if(StringUtils.equals(URIs.WorkerClusterURIs.PING,request.getPath().toString())){
+                    if(StringUtils.equals(URIs.WorkerNodeURIs.PING,request.getPath().toString())){
                         // ping这个路径不要打印了
                         log.debug("Method: {}, Path: {}, Request Body: {}, Response Status: {}, Response Body: {}",
                                 request.getMethod(),request.getPath(),requestBody,originalResponse.getStatusCode(),responseBody

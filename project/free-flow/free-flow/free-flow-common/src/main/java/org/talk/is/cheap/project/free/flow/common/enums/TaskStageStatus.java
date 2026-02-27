@@ -19,6 +19,8 @@ public enum TaskStageStatus {
     TERMINATING(6, "TERMINATING"),
     TERMINATED(7, "TERMINATED"),
     SKIPPED(8, "SKIPPED"),
+    RESCHEDULING(9, "RESCHEDULING"),
+    RESCHEDULED(10, "RESCHEDULED"),
     ;
 
     @Getter

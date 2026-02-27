@@ -12,17 +12,17 @@ import org.talk.is.cheap.project.free.flow.common.router.URIs;
 /**
  * 用于对外提供本worker的状态心跳、流转的controller
  */
-public interface ClusterController {
+public interface WorkerNodeController {
 
-    @GetMapping(path = URIs.WorkerClusterURIs.PING)
+    @GetMapping(path = URIs.WorkerNodeURIs.PING)
     @ResponseBody
     HttpBody<String> ping();
 
-    @GetMapping(path = URIs.WorkerClusterURIs.ALLOW_TO_RUN)
+    @GetMapping(path = URIs.WorkerNodeURIs.ALLOW_TO_RUN)
     @ResponseBody
     HttpBody<String> allowToRun(@RequestParam("zKPath") String zkPath,@RequestParam("zkData") String zkData);
 
-    @PostMapping(path = URIs.WorkerClusterURIs.TERMINATE)
+    @GetMapping(path = URIs.WorkerNodeURIs.TERMINATE)
     @ResponseBody
     HttpBody<String> terminate();
 }

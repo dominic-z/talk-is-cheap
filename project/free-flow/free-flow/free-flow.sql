@@ -105,6 +105,20 @@ index idx_source_id(source_id)
 '任务启动表，每当有一个指令声明需要执行一个task，一条startup数据将被创建，相当于一个待办指令列表，仅仅表征有意图执行一个task，一条startup会唤起至少一条execution来真正的执行任务（为了支持任务可以失败重试，因此将发起任务的意图和任务的执行分离）';
 
 
+drop table if exists task_source_target_startup_relation;
+create table if not exists task_source_target_startup_relation(
+`id` bigint AUTO_INCREMENT primary key,
+`source_type` int not null comment '用于描述此次task启动的原因的类型，例如作为初始stage、循环触发、前一个stage完成等等',
+`source_id` bigint comment '用于描述此次task启动的原因的id',
+`target_task_startup_id` bigint not null comment 'stage启动的id',
+`revision` bigint not null default 0 comment '并发控制编号',
+`create_time` datetime not null default now() comment '创建日期',
+`update_time` datetime not null default now() ON UPDATE now() comment '更新日期', 
+index idx_target_id(target_task_startup_id),
+index idx_source_target(source_type,source_id,target_task_startup_id),
+index idx_source_id(source_id)
+)ENGINE = InnoDB default charset = utf8mb4 comment '任务启动来源关系表，一个任务的启动可能是被重新调度而生成的，该表用于记录启动一个task的原因';
+
 
 drop table if exists task_execution;
 create table if not exists task_execution(

@@ -171,22 +171,27 @@ public class WorkerTaskDefinitionManager {
                 .forPathChildrenCache(zkPathProperty.getWorker().getRunnable(), curatorZKClient, new PathChildrenCacheListener() {
                     @Override
                     public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception {
-                        if (event.getData() == null) {
-                            log.info("on runnable worker event: {}", event.getType());
-                        } else {
-                            String workerAddress = new String(event.getData().getData());
-                            log.info("on runnable worker event: {}, zkPath: {}, address: {}", event.getType(), event.getData().getPath(),
-                                    workerAddress);
-                            switch (event.getType()) {
-                                case CHILD_ADDED:
-                                    onAddRunnableWorkerEvent(workerAddress);
-                                    break;
-                                case CHILD_REMOVED:
-                                    onRemoveRunnableWorker(workerAddress);
-                                    break;
-                            }
-                        }
 
+                        try {
+                            if (event.getData() == null) {
+                                log.info("on runnable worker event: {}", event.getType());
+                            } else {
+                                String workerAddress = new String(event.getData().getData());
+                                log.info("on runnable worker event: {}, zkPath: {}, address: {}", event.getType(),
+                                        event.getData().getPath(),
+                                        workerAddress);
+                                switch (event.getType()) {
+                                    case CHILD_ADDED:
+                                        onAddRunnableWorkerEvent(workerAddress);
+                                        break;
+                                    case CHILD_REMOVED:
+                                        onRemoveRunnableWorker(workerAddress);
+                                        break;
+                                }
+                            }
+                        } catch (Exception e) {
+                            log.error("监听{}的事件处理失败", zkPathProperty.getWorker().getRunnable(), e);
+                        }
                     }
                 }).build();
 
@@ -348,7 +353,7 @@ public class WorkerTaskDefinitionManager {
             if (workerClusterManager.isValidRunnableWorker(addr)) {
                 return true;
             }
-            stringRedisTemplate.opsForSet().remove(taskWorkerAddrMapKey,addr);
+            stringRedisTemplate.opsForSet().remove(taskWorkerAddrMapKey, addr);
             redisService.deleteEmptySet(taskWorkerAddrMapKey);
             return false;
         }).collect(Collectors.toSet());

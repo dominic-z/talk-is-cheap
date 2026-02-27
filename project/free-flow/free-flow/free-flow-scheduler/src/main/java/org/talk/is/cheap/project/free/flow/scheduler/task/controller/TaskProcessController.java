@@ -16,6 +16,7 @@ import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.common.message.ResultCode;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.PrepareStageReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.PrepareStageResp;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.ReScheduleTaskReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.StartTaskReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerCompleteStageResultReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerFailStageReq;
@@ -152,9 +153,7 @@ public class TaskProcessController {
 
         PrepareStageReq.PrepareStageReqData data = req.getData();
         try {
-            Tuple2<Long, String> stageExecutionIdAndParam = workerTaskDriverService.prepareForStage(data.getTaskExecutionId(),
-                    data.getStageName(),
-                    data.getEncodedSharedContextSnapshotAtStartup());
+            Tuple2<Long, String> stageExecutionIdAndParam = workerTaskDriverService.prepareForStage(data);
             Long stageExecutionId = stageExecutionIdAndParam._1();
             String encodedInput = stageExecutionIdAndParam._2();
 
@@ -211,7 +210,20 @@ public class TaskProcessController {
             resp.fail(ResultCode.FAIL, e.getMessage());
         }
         return resp;
+    }
+    @RequestMapping(path = URIs.SchedulerTaskProcessURIs.RE_SCHEDULE, method = RequestMethod.POST,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public HttpBody<String> reScheduleTask(@RequestBody ReScheduleTaskReq req){
+        HttpBody<String> resp = new HttpBody<>();
 
-
+        try{
+            VerifyUtil.requireNotNull(req.getData(),"请求体为空");
+            VerifyUtil.requireNotNull(req.getData().getTaskExecutionId(),"请求体的TaskExecutionId为空");
+            resp.success("");
+        }catch (Exception e){
+            resp.fail(ResultCode.FAIL,e.getMessage());
+        }
+        return resp;
     }
 }

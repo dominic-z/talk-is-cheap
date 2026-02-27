@@ -23,7 +23,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 import org.talk.is.cheap.project.free.flow.common.enums.NodeStatus;
 import org.talk.is.cheap.project.free.flow.common.enums.NodeType;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
-import org.talk.is.cheap.project.free.flow.scheduler.cluster.client.WorkerClusterClient;
+import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
+import org.talk.is.cheap.project.free.flow.scheduler.cluster.client.WorkerNodeClient;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.WorkerTaskDefinitionManagerLeaderStartEvent;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.WorkerTerminatedEvent;
 import org.talk.is.cheap.project.free.flow.scheduler.config.property.ZKPathProperty;
@@ -41,6 +42,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -80,7 +82,7 @@ public class WorkerClusterManager implements ApplicationContextAware {
     private ClusterNodeServiceWrapper clusterNodeServiceWrapper;
 
     @Autowired
-    private WorkerClusterClient workerClusterClient;
+    private WorkerNodeClient workerNodeClient;
 
 //    @Autowired
 //    private WorkerTaskDefinitionManager workerTaskDefinitionManager;
@@ -128,24 +130,29 @@ public class WorkerClusterManager implements ApplicationContextAware {
     }
 
     private void watchOnlineWorkers() {
-        CuratorCacheListener listener = CuratorCacheListener.builder().forTreeCache(curatorZKClient, new TreeCacheListener() {
-            @Override
-            public void childEvent(CuratorFramework client, TreeCacheEvent event) throws Exception {
-                log.debug("A Zookeeper node path event has been monitored.");
-                handleWorkerEventThreadPool.submit(() -> {
-                    TreeCacheEvent.Type type = event.getType();
-                    switch (type) {
-                        case NODE_ADDED:
-                            onAddOnlineWorker(event);
-                            break;
-                        case NODE_REMOVED:
-                            onRemoveOnlineWorker(event);
-                            break;
-                        default:
+        CuratorCacheListener listener = CuratorCacheListener.builder().forPathChildrenCache(zkPathProperty.getWorker().getOnline(),
+                curatorZKClient, new PathChildrenCacheListener() {
+                    @Override
+                    public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception {
+                        log.debug("A Zookeeper node path event has been monitored.");
+                        CompletableFuture.runAsync(() -> {
+                                    PathChildrenCacheEvent.Type type = event.getType();
+                                    switch (type) {
+                                        case CHILD_ADDED:
+                                            onAddOnlineWorker(event);
+                                            break;
+                                        case CHILD_REMOVED:
+                                            onRemoveOnlineWorker(event);
+                                            break;
+                                        default:
+                                    }
+                                }, handleWorkerEventThreadPool)
+                                .exceptionally(e -> {
+                                    log.error("处理{}路径的监听事件报错", zkPathProperty.getWorker().getOnline(), e);
+                                    return null;
+                                });
                     }
-                });
-            }
-        }).build();
+                }).build();
 
 
         onlineWorkerCuratorCache = CuratorCache.builder(curatorZKClient, zkPathProperty.getWorker().getOnline()).build();
@@ -153,7 +160,7 @@ public class WorkerClusterManager implements ApplicationContextAware {
         onlineWorkerCuratorCache.start();
     }
 
-    private void onAddOnlineWorker(TreeCacheEvent event) {
+    private void onAddOnlineWorker(PathChildrenCacheEvent event) {
         ChildData eventData = event.getData();
         if (eventData == null) {
             log.warn("handle add worker without data,{}", event);
@@ -162,29 +169,25 @@ public class WorkerClusterManager implements ApplicationContextAware {
         String workerNodeAddress = new String(eventData.getData(), StandardCharsets.UTF_8);
         String zkPath = eventData.getPath();
 
-        String parentPath = Paths.get(eventData.getPath()).getParent().toString();
-        if (StringUtils.equals(parentPath, zkPathProperty.getWorker().getOnline())) {
-            // 如果是online下的节点
-            log.info("new online worker, path: {}, workerNodeAddress: {}", zkPath, workerNodeAddress);
-            onlineWorkerPathAddress.put(zkPath, workerNodeAddress);
+        log.info("new online worker, path: {}, workerNodeAddress: {}", zkPath, workerNodeAddress);
+        onlineWorkerPathAddress.put(zkPath, workerNodeAddress);
 
-            clusterNodeService.createOnDuplicateKey(
-                    new ClusterNode()
-                            .withStatus(NodeStatus.RUNNABLE.getStatus())
-                            .withNodeZkPath(zkPath)
-                            .withNodeAddress(workerNodeAddress)
-                            .withNodeType(NodeType.WORKER.getType())
-            );
+        clusterNodeService.createOnDuplicateKey(
+                new ClusterNode()
+                        .withStatus(NodeStatus.INITIALIZING.getStatus())
+                        .withNodeZkPath(zkPath)
+                        .withNodeAddress(workerNodeAddress)
+                        .withNodeType(NodeType.WORKER.getType())
+        );
 
 
-        } else if (StringUtils.equals(parentPath, zkPathProperty.getWorker().getTerminating())) {
-            // 如果是terminating下的节点
-            log.info("add terminating worker, path: {}, workerNodeAddress: {}", zkPath, workerNodeAddress);
-            terminatingWorkerPathAddress.put(zkPath, workerNodeAddress);
-        }
+        // 如果是terminating下的节点
+//            log.info("add terminating worker, path: {}, workerNodeAddress: {}", zkPath, workerNodeAddress);
+//            terminatingWorkerPathAddress.put(zkPath, workerNodeAddress);
     }
 
-    private void onRemoveOnlineWorker(TreeCacheEvent event) {
+    // 如果online下线，那么说明这个节点真的已经下线而来
+    private void onRemoveOnlineWorker(PathChildrenCacheEvent event) {
         ChildData eventData = event.getData();
         if (eventData == null) {
             return;
@@ -193,41 +196,41 @@ public class WorkerClusterManager implements ApplicationContextAware {
         String workerNodeAddress = new String(eventData.getData(), StandardCharsets.UTF_8);
         String zkPath = eventData.getPath();
 
-        String parentPath = Paths.get(zkPath).getParent().toString();
-        if (StringUtils.equals(parentPath, zkPathProperty.getWorker().getOnline())) {
-            // 如果是online下的节点被移除了
-            // 因为监听事件并不是串行的，即使发送是串行的，到达也可能不是串行的。因此需要考虑一些节点反复上下线导致的并发异常，例如一个节点上线->下线->上线，如果下线事件反而最后处理，那么这个节点可能就丢了。
-            // 可以借鉴“延迟双删”的策略，加一个延迟事件处理队列，在x秒之后再读取一下这个节点，如果在线的话，就尝试put，如果不在线就删除，当然无法完全解决问题，但是能够降低概率。
-            log.info("remove online worker, path: {}, workerNodeAddress: {}", zkPath, workerNodeAddress);
-            onlineWorkerPathAddress.remove(zkPath);
-            pingSucceedPathCounter.remove(zkPath);
-            pingFailedPathCounter.remove(zkPath);
-            try {
-                curatorZKClient.delete()
-                        .forPath(Paths.get(zkPathProperty.getWorker().getRunnable(), Paths.get(zkPath).getFileName().toString()).toString());
-            } catch (Exception e) {
-                log.error("error when delete runnable node", e); // 此时这个节点可能还没到runnable路径里呢，或者worker节点直接下线了，runnable路径的临时文件会自动清除
-            }
-
-            // 避免网络问题导致的更新为Terminated操作先于更新为TERMINATING状态
-            ClusterNodeExample example = new ClusterNodeExample();
-            example.createCriteria().andNodeAddressEqualTo(workerNodeAddress)
-                    .andStatusIn(List.of(NodeStatus.RUNNABLE.getStatus(), NodeStatus.INITIALIZING.getStatus()));
-            clusterNodeService.updateByExampleSelective(
-                    new ClusterNode()
-                            .withNodeAddress(workerNodeAddress)
-                            .withStatus(NodeStatus.TERMINATING.getStatus()), example);
-        } else if (StringUtils.equals(parentPath, zkPathProperty.getWorker().getTerminating())) {
-            // 如果是terminating下的节点被移除了，那就是真下线了
-            log.info("remove terminating worker, path: {}, workerNodeAddress: {}", zkPath, workerNodeAddress);
-            terminatingWorkerPathAddress.remove(zkPath);
-            publisher.publishEvent(new WorkerTerminatedEvent(workerNodeAddress));
-            clusterNodeServiceWrapper.updateByNodeAddressSelective(
-                    workerNodeAddress,
-                    new ClusterNode()
-                            .withNodeAddress(workerNodeAddress)
-                            .withStatus(NodeStatus.TERMINATED.getStatus()));
+//        String parentPath = Paths.get(zkPath).getParent().toString();
+//        if (StringUtils.equals(parentPath, zkPathProperty.getWorker().getOnline())) {
+        // 如果是online下的节点被移除了
+        // 因为监听事件并不是串行的，即使发送是串行的，到达也可能不是串行的。因此需要考虑一些节点反复上下线导致的并发异常，例如一个节点上线->下线->上线，如果下线事件反而最后处理，那么这个节点可能就丢了。
+        // 可以借鉴“延迟双删”的策略，加一个延迟事件处理队列，在x秒之后再读取一下这个节点，如果在线的话，就尝试put，如果不在线就删除，当然无法完全解决问题，但是能够降低概率。
+        log.info("remove online worker, path: {}, workerNodeAddress: {}", zkPath, workerNodeAddress);
+        onlineWorkerPathAddress.remove(zkPath);
+        pingSucceedPathCounter.remove(zkPath);
+        pingFailedPathCounter.remove(zkPath);
+        try {
+            curatorZKClient.delete()
+                    .forPath(Paths.get(zkPathProperty.getWorker().getRunnable(), Paths.get(zkPath).getFileName().toString()).toString());
+        } catch (Exception e) {
+            log.error("error when delete runnable node", e); // 此时这个节点可能还没到runnable路径里呢，或者worker节点直接下线了，runnable路径的临时文件会自动清除
         }
+
+//            // 避免网络问题导致的更新为Terminated操作先于更新为TERMINATING状态
+//            ClusterNodeExample example = new ClusterNodeExample();
+//            example.createCriteria().andNodeAddressEqualTo(workerNodeAddress)
+//                    .andStatusIn(List.of(NodeStatus.RUNNABLE.getStatus(), NodeStatus.INITIALIZING.getStatus()));
+//            clusterNodeService.updateByExampleSelective(
+//                    new ClusterNode()
+//                            .withNodeAddress(workerNodeAddress)
+//                            .withStatus(NodeStatus.TERMINATING.getStatus()), example);
+//        } else if (StringUtils.equals(parentPath, zkPathProperty.getWorker().getTerminating())) {
+//            // 如果是terminating下的节点被移除了，那就是真下线了
+//            log.info("remove terminating worker, path: {}, workerNodeAddress: {}", zkPath, workerNodeAddress);
+//            terminatingWorkerPathAddress.remove(zkPath);
+//            publisher.publishEvent(new WorkerTerminatedEvent(workerNodeAddress));
+//            clusterNodeServiceWrapper.updateByNodeAddressSelective(
+//                    workerNodeAddress,
+//                    new ClusterNode()
+//                            .withNodeAddress(workerNodeAddress)
+//                            .withStatus(NodeStatus.TERMINATED.getStatus()));
+//        }
 
     }
 
@@ -291,7 +294,7 @@ public class WorkerClusterManager implements ApplicationContextAware {
 //                           导致新的leader无法主动删除runnable节点，
 //                           一种方案是，改成通知worker自己去向runnable路径创建节点，但这样想是不是如果某个节点ping失败次数过多，应当由scheduler通知worker将自己从runnable中移除
 //                           但是ping都失败了，咋通知呢？
-//                           想那么多干啥，不用通知worker自己删，scheduler来亲自删除就可以了
+//                           想那么多干啥，不用通知worker自己删，scheduler来亲自删除就可以了，见上文delete方法
 //
 //                            if (curatorZKClient.checkExists().forPath(runnablePath.toString()) == null) {
 //                                // 之所以判断一下，因为很有可能worker已经在runnable路径了，比如scheduler-leader节点全都下线了
@@ -299,7 +302,15 @@ public class WorkerClusterManager implements ApplicationContextAware {
 //                                        .withMode(CreateMode.PERSISTENT)
 //                                        .forPath(runnablePath.toString(), address.getBytes());
 //                            }
-                                workerClusterClient.allowToRun(getWorkerURI(address), runnablePath.toString(), address);
+                                HttpBody<String> allowToRunResp = workerNodeClient.allowToRun(getWorkerURI(address),
+                                        runnablePath.toString(), address);
+                                clusterNodeService.createOnDuplicateKey(
+                                        new ClusterNode()
+                                                .withStatus(NodeStatus.RUNNABLE.getStatus())
+                                                .withNodeZkPath(allowToRunResp.getData())
+                                                .withNodeAddress(address)
+                                                .withNodeType(NodeType.WORKER.getType())
+                                );
 
                             } catch (Exception e) {
                                 log.error("error when create connected worker path", e);
@@ -329,7 +340,7 @@ public class WorkerClusterManager implements ApplicationContextAware {
         for (Map.Entry<String, String> kv : workerPathAddress.entrySet()) {
             URI host = this.getWorkerURI(kv.getValue());
             try {
-                HttpBody<String> ping = workerClusterClient.ping(host);
+                HttpBody<String> ping = workerNodeClient.ping(host);
                 newConnectedWorkerAddressPath.put(kv.getKey(), kv.getValue());
             } catch (Exception e) {
                 log.error("error when ping active {}", kv.getValue(), e);
@@ -346,7 +357,7 @@ public class WorkerClusterManager implements ApplicationContextAware {
 
 
     /**
-     * 上面的前提都是leader节点执行的，但是非leader节点也得能监控到runnable的节点，用来给其他组件提供信息
+     * 上面的online节点的监听都是leader节点执行的，但是非leader节点也得能监控到runnable的节点，用来给其他组件提供信息
      */
     @PostConstruct
     public void watchRunnableWorkers() {
@@ -355,25 +366,28 @@ public class WorkerClusterManager implements ApplicationContextAware {
                 .forPathChildrenCache(zkPathProperty.getWorker().getRunnable(), curatorZKClient, new PathChildrenCacheListener() {
                     @Override
                     public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception {
-                        if (event.getData() == null) {
-                            log.info("on runnable worker event: {}", event.getType());
-                        } else {
-                            String workerAddress = new String(event.getData().getData());
-                            String path = event.getData().getPath();
-                            log.info("on runnable worker event: {}, zkPath: {}, address: {}", event.getType(), path,
-                                    workerAddress);
-                            switch (event.getType()) {
-                                case CHILD_ADDED:
-                                    WorkerClusterManager.this.runnableWorkerPathAddress.put(path, workerAddress);
-                                    WorkerClusterManager.this.runnableWorkerAddressPath.put(workerAddress, path);
-                                    break;
-                                case CHILD_REMOVED:
-                                    WorkerClusterManager.this.runnableWorkerPathAddress.remove(path);
-                                    WorkerClusterManager.this.runnableWorkerAddressPath.remove(workerAddress);
-                                    break;
+                        try {
+                            if (event.getData() == null) {
+                                log.info("on runnable worker event: {}", event.getType());
+                            } else {
+                                String workerAddress = new String(event.getData().getData());
+                                String path = event.getData().getPath();
+                                log.info("on runnable worker event: {}, zkPath: {}, address: {}", event.getType(), path,
+                                        workerAddress);
+                                switch (event.getType()) {
+                                    case CHILD_ADDED:
+                                        WorkerClusterManager.this.runnableWorkerPathAddress.put(path, workerAddress);
+                                        WorkerClusterManager.this.runnableWorkerAddressPath.put(workerAddress, path);
+                                        break;
+                                    case CHILD_REMOVED:
+                                        WorkerClusterManager.this.runnableWorkerPathAddress.remove(path);
+                                        WorkerClusterManager.this.runnableWorkerAddressPath.remove(workerAddress);
+                                        break;
+                                }
                             }
+                        } catch (Exception e) {
+                            log.error("处理{}路径的监听事件异常", zkPathProperty.getWorker().getRunnable(), e);
                         }
-
                     }
                 }).build();
 
@@ -399,5 +413,18 @@ public class WorkerClusterManager implements ApplicationContextAware {
         return this.runnableWorkerAddressPath.containsKey(workerAddr);
     }
 
+
+    public void terminate(String workerAddress) {
+        VerifyUtil.requireTrue(this.onlineWorkerPathAddress.containsKey(workerAddress),
+                String.format("不存在地址为%s的worker节点", workerAddress));
+
+        HttpBody<String> terminateResp = workerNodeClient.terminate(getWorkerURI(workerAddress));
+        VerifyUtil.requireTrue(terminateResp.isSuccess(), terminateResp.getMsg());
+
+        ClusterNodeExample clusterNodeExample = new ClusterNodeExample();
+        clusterNodeExample.createCriteria().andNodeAddressEqualTo(workerAddress);
+        clusterNodeService.updateByExampleSelective(new ClusterNode().withStatus(NodeStatus.TERMINATING.getStatus()), clusterNodeExample);
+
+    }
 
 }
