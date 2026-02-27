@@ -13,14 +13,14 @@ import org.springframework.http.converter.HttpMessageConverter;
 import org.talk.is.cheap.project.free.flow.starter.worker.client.SchedulerClusterInternalClient;
 import org.talk.is.cheap.project.free.flow.starter.worker.client.SchedulerTaskDefinitionClient;
 import org.talk.is.cheap.project.free.flow.starter.worker.client.SchedulerTaskProcessClient;
-import org.talk.is.cheap.project.free.flow.starter.worker.cluster.contoller.ClusterController;
-import org.talk.is.cheap.project.free.flow.starter.worker.cluster.service.ClusterService;
+import org.talk.is.cheap.project.free.flow.starter.worker.cluster.contoller.WorkerNodeController;
+import org.talk.is.cheap.project.free.flow.starter.worker.cluster.service.WorkerNodeService;
 
 import java.util.stream.Collectors;
 
 @Configuration
 @EnableFeignClients(clients = {SchedulerClusterInternalClient.class, SchedulerTaskDefinitionClient.class, SchedulerTaskProcessClient.class})
-@ComponentScan(basePackageClasses = {ClusterService.class, ClusterController.class})
+@ComponentScan(basePackageClasses = {WorkerNodeService.class, WorkerNodeController.class})
 public class ClusterAutoConfig {
 
     /**

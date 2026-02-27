@@ -10,7 +10,7 @@ import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.QueryTa
 import org.talk.is.cheap.project.free.flow.common.message.impl.dto.TaskDefinitionDTO;
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.starter.worker.client.SchedulerTaskDefinitionClient;
-import org.talk.is.cheap.project.free.flow.starter.worker.cluster.service.ClusterService;
+import org.talk.is.cheap.project.free.flow.starter.worker.cluster.service.WorkerNodeService;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -28,10 +28,10 @@ public class RemoteTaskDefinitionService {
     private SchedulerTaskDefinitionClient schedulerTaskDefinitionClient;
 
     @Autowired
-    private ClusterService clusterService;
+    private WorkerNodeService workerNodeService;
 
     public List<TaskDefinitionDTO> getTaskDefinitionDTOs(List<Tuple2<String, Integer>> taskNameAndVersions) {
-        URI schedulerLeaderUri = clusterService.getRandomSchedulerURI();
+        URI schedulerLeaderUri = workerNodeService.getRandomSchedulerURI();
 
         List<QueryTaskDefinitionReq.QueryTaskDefinitionReqData.Query> queries =
                 taskNameAndVersions.stream()

@@ -101,7 +101,9 @@ public class StageStartupParamService {
 
 
     public List<ESPojoDTO<StageStartupParam>> getByStageStartupIds(List<Long> stageStartupIds) throws IOException {
-
+        if(stageStartupIds.isEmpty()){
+            return new ArrayList<>();
+        }
         SearchRequest searchRequest = new SearchRequest.Builder()
                 .index(INDEX_NAME)
                 .query(qb -> qb.terms(termsB -> termsB.field(StageStartupParam.STAGE_STARTUP_ID)

@@ -13,7 +13,8 @@ public enum NodeStatus {
     INITIALIZING(0,"初始化中"),
     RUNNABLE(1, "可以运行任务"),
     TERMINATING(2, "终止中"),
-    TERMINATED(3, "已经终止");
+    SAFE_TO_TERMINATE(3, "可以安全退出"),
+    TERMINATED(4, "已经终止");
     @Getter
     private final Integer status;
     @Getter

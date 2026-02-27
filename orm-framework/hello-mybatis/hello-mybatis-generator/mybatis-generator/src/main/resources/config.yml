@@ -60,14 +60,16 @@ tables:
 #  - id: 6
 #    name: task_startup
   - id: 7
-    name: task_execution
+    name: task_source_target_startup_relation
 #  - id: 8
-#    name: stage_startup
+#    name: task_execution
 #  - id: 9
-#    name: stage_source_target_startup_relation
+#    name: stage_startup
 #  - id: 10
-#    name: stage_execution
+#    name: stage_source_target_startup_relation
 #  - id: 11
+#    name: stage_execution
+#  - id: 12
 #    name: seq_generator
   # code-package
 basePackage: org.talk.is.cheap.project.free.flow.starter.repository

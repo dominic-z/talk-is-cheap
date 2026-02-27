@@ -10,13 +10,13 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.framework.state.ConnectionState;
 import org.apache.curator.framework.state.ConnectionStateListener;
 import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.data.Stat;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.talk.is.cheap.project.free.flow.common.enums.EnvType;
+import org.talk.is.cheap.project.free.flow.common.enums.NodeStatus;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.common.utils.IPUtil;
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 @Slf4j
 @Service
-public class ClusterService {
+public class WorkerNodeService {
 
     private static class DistinctAddressList {
         List<String> addressList = new ArrayList<>();
@@ -82,7 +82,7 @@ public class ClusterService {
     @Value("${server.port}")
     private int port;
 
-    private final DistinctAddressList distinctAddressList = new DistinctAddressList();
+    private final DistinctAddressList distinctSchedulerAddressList = new DistinctAddressList();
 
     @Autowired
     private SchedulerClusterInternalClient schedulerClusterClient;
@@ -90,10 +90,17 @@ public class ClusterService {
     private final AtomicReference<String> schedulerLeaderAddress = new AtomicReference<String>("");
 
     @Getter
-    private String selfAbsoluteZKPath;
+    private String selfRunnableAbsoluteZKPath;
+    private String selfTerminatingAbsoluteZKPath;
 
     private final CountDownLatch initialized = new CountDownLatch(1);
 
+    private final AtomicReference<NodeStatus> nodeStatus = new AtomicReference<>(null);
+
+
+    public NodeStatus getStatus() {
+        return this.nodeStatus.get();
+    }
 
     /*  scheduler集群信息监听  */
     public URI getSchedulerLeaderUri() {
@@ -124,19 +131,24 @@ public class ClusterService {
                 .forPathChildrenCache(electionPath, starterCuratorZKClient, new PathChildrenCacheListener() {
                     @Override
                     public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception {
-                        log.info("leader election event: {}", event);
-                        if (event.getData() != null) {
-                            String schedulerAddress = new String(event.getData().getData(), StandardCharsets.UTF_8);
-                            switch (event.getType()) {
-                                case CHILD_ADDED:
-                                    distinctAddressList.add(schedulerAddress);
-                                    break;
-                                case CHILD_REMOVED:
-                                    distinctAddressList.remove(schedulerAddress);
-                                    break;
+                        try {
+
+                            log.info("leader election event: {}", event);
+                            if (event.getData() != null) {
+                                String schedulerAddress = new String(event.getData().getData(), StandardCharsets.UTF_8);
+                                switch (event.getType()) {
+                                    case CHILD_ADDED:
+                                        distinctSchedulerAddressList.add(schedulerAddress);
+                                        break;
+                                    case CHILD_REMOVED:
+                                        distinctSchedulerAddressList.remove(schedulerAddress);
+                                        break;
+                                }
                             }
+                            updateSchedulerLeader();
+                        } catch (Exception e) {
+                            log.error("监听路径{}下的回调事件异常", electionPath, e);
                         }
-                        updateSchedulerLeader();
                     }
                 }).build();
 
@@ -151,8 +163,8 @@ public class ClusterService {
             URI uri = getUri(randomSchedulerAddress);
             HttpBody<String> resp = schedulerClusterClient.getLeaderAddress(uri);
             log.info("getLeaderResp: {}", resp);
-            initialized.countDown();
             this.schedulerLeaderAddress.compareAndExchange(this.schedulerLeaderAddress.get(), resp.getData());
+            initialized.countDown();
         } catch (Exception e) {
             log.error("error when get to scheduler leader", e);
             throw new RuntimeException(e);
@@ -170,9 +182,9 @@ public class ClusterService {
      */
     private String getRandomSchedulerAddress() {
         try {
-            VerifyUtil.requireFalse(distinctAddressList.addressList.isEmpty(), "can't find any scheduler host");
+            VerifyUtil.requireFalse(distinctSchedulerAddressList.addressList.isEmpty(), "can't find any scheduler host");
 
-            return distinctAddressList.addressList.get(new Random().nextInt(distinctAddressList.addressList.size()));
+            return distinctSchedulerAddressList.addressList.get(new Random().nextInt(distinctSchedulerAddressList.addressList.size()));
         } catch (Exception e) {
             log.error("can't find leader host", e);
             throw new RuntimeException(e);
@@ -200,11 +212,13 @@ public class ClusterService {
     private void becomeOnlineInZK() {
         // worker需要自己注册到zk里，这样才能通过zk的心跳机制确保zk中记录的节点都是存活的
         try {
-            selfAbsoluteZKPath = starterCuratorZKClient.create()
+            selfRunnableAbsoluteZKPath = starterCuratorZKClient.create()
                     .creatingParentsIfNeeded()
                     .withMode(CreateMode.EPHEMERAL)
                     .forPath(Paths.get(zkConfigProperties.getZookeeper().getPath().getWorker().getOnline(), getSelfZKWorkerPath()).toString(),
                             getWorkerAddress().getBytes(StandardCharsets.UTF_8));
+            nodeStatus.set(NodeStatus.INITIALIZING);
+
         } catch (Exception e) {
             log.error("error when create online path to zk", e);
             throw new RuntimeException(e);
@@ -212,19 +226,22 @@ public class ClusterService {
     }
 
 
-    public void becomeRunnable() {
+    public String becomeRunnable() {
         // worker需要自己注册到zk里，这样才能通过zk的心跳机制确保zk中记录的节点都是存活的
         try {
             String path =
                     Paths.get(zkConfigProperties.getZookeeper().getPath().getWorker().getRunnable(), getSelfZKWorkerPath()).toString();
-            if (starterCuratorZKClient.checkExists().forPath(path)!=null) {
-                log.info("runnable: {}节点已经存在",path);
-                return;
+            if (starterCuratorZKClient.checkExists().forPath(path) != null) {
+                log.info("runnable: {}节点已经存在", path);
+                return selfRunnableAbsoluteZKPath;
             }
-            selfAbsoluteZKPath = starterCuratorZKClient.create()
+            selfRunnableAbsoluteZKPath = starterCuratorZKClient.create()
                     .creatingParentsIfNeeded()
                     .withMode(CreateMode.EPHEMERAL)
                     .forPath(path, getWorkerAddress().getBytes(StandardCharsets.UTF_8));
+            nodeStatus.set(NodeStatus.RUNNABLE);
+
+            return selfRunnableAbsoluteZKPath;
         } catch (Exception e) {
             log.error("error when create runnable path to zk", e);
             throw new RuntimeException(e);
@@ -235,17 +252,18 @@ public class ClusterService {
      * 在terminating路径下创建，从而通知scheduler不要再派任务给自己
      * todo: 支持设置最长等待时长、任务执行完毕之后关闭自己
      */
-    public void terminate() {
+    public String terminate() {
 
         try {
             starterCuratorZKClient.delete()
-                    .forPath(this.selfAbsoluteZKPath);
-            String terminatingPath = starterCuratorZKClient.create()
+                    .forPath(this.selfRunnableAbsoluteZKPath);
+            selfTerminatingAbsoluteZKPath = starterCuratorZKClient.create()
                     .creatingParentsIfNeeded()
                     .withMode(CreateMode.EPHEMERAL)
                     .forPath(Paths.get(zkConfigProperties.getZookeeper().getPath().getWorker().getTerminating(), getSelfZKWorkerPath()).toString(),
                             getWorkerAddress().getBytes(StandardCharsets.UTF_8));
-
+            nodeStatus.set(NodeStatus.TERMINATING);
+            return selfTerminatingAbsoluteZKPath;
         } catch (Exception e) {
             log.error("error when terminate", e);
             throw new RuntimeException(e);

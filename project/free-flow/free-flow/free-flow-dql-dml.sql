@@ -21,14 +21,17 @@ UPDATE task_definition set name='bb' where id=1;
 
 SELECT * from seq_generator sg ;
 
+SELECT * from cluster_node cn ;
+
 SELECT * from task_definition td order by create_time desc;
-SELECT * from stage_definition sd  WHERE task_id =6;
+SELECT * from stage_definition sd  WHERE task_id =7;
+SELECT * from task_graph_definition tgd2 where task_id =7;
 SELECT sd1.name ,sd2.name ,tgd.* FROM task_graph_definition tgd join stage_definition sd1 join stage_definition sd2 on tgd.from_stage_id=sd1.id and tgd.to_stage_id=sd2.id WHERE tgd.task_id =6;
 
 SELECT * FROM task_startup ts order by create_time desc;
-SELECT * FROM task_execution te WHERE task_startup_id =69 order by create_time desc;
-SELECT sd.name ,ss.* FROM stage_startup ss join task_execution te join stage_definition sd  on te.task_startup_id=69 and te.id=ss.task_execution_id and  ss.stage_id = sd.id  order by ss.create_time desc;
-SELECT sd.name,sd.id ,se.* FROM stage_execution se join stage_startup ss join stage_definition sd  on  ss.task_execution_id=54 and ss.id=se.stage_startup_id and ss.stage_id =sd.id  order by se.create_time desc;
+SELECT * FROM task_execution te WHERE task_startup_id =81 order by create_time desc;
+SELECT sd.name ,ss.* FROM stage_startup ss join task_execution te join stage_definition sd  on te.task_startup_id=79 and te.id=ss.task_execution_id and  ss.stage_id = sd.id  order by ss.create_time desc;
+SELECT sd.name,sd.id ,se.* FROM stage_execution se join stage_startup ss join stage_definition sd  on  ss.task_execution_id=64 and ss.id=se.stage_startup_id and ss.stage_id =sd.id  order by se.create_time desc;
 
 
 SELECT  * from task_execution te where id=39;

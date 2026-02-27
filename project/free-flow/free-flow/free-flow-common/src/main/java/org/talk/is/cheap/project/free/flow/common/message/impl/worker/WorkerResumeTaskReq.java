@@ -6,9 +6,10 @@ import lombok.NoArgsConstructor;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 
 import java.util.Map;
+import java.util.Set;
 
 
-public class WorkerStartTaskReq extends HttpBody<WorkerStartTaskReq.Data> {
+public class WorkerResumeTaskReq extends HttpBody<WorkerResumeTaskReq.Data> {
 
     @lombok.Data
     @Builder
@@ -23,6 +24,7 @@ public class WorkerStartTaskReq extends HttpBody<WorkerStartTaskReq.Data> {
         private Map<String, String> stageEncodedInputs;
         // 仅仅包含启动的stage的信息
         private Map<String, Long> startingStageExecutionId;
+        private Set<String> finishedStageNames;
     }
 
     @lombok.Data

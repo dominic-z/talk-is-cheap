@@ -6,9 +6,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.talk.is.cheap.project.free.flow.common.enums.NodeStatus;
 import org.talk.is.cheap.project.free.flow.common.enums.NodeType;
+import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
+import org.talk.is.cheap.project.free.flow.common.message.ResultCode;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.QueryClusterInfoReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.QueryClusterInfoResp;
-import org.talk.is.cheap.project.free.flow.scheduler.cluster.controller.ClusterInfoController;
+import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
+import org.talk.is.cheap.project.free.flow.scheduler.cluster.controller.ClusterManageController;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.SchedulerClusterManager;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.WorkerClusterManager;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.ClusterNodeExample;
@@ -16,13 +19,12 @@ import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.Cluste
 import org.talk.is.cheap.project.free.flow.starter.repository.service.ClusterNodeService;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 
 @RestController
 @RequestMapping
 @Slf4j
-public class ClusterInfoControllerImpl implements ClusterInfoController {
+public class ClusterManageControllerImpl implements ClusterManageController {
 
     @Autowired
     private SchedulerClusterManager schedulerClusterManager;
@@ -79,6 +81,17 @@ public class ClusterInfoControllerImpl implements ClusterInfoController {
             resp.success(respData);
         }
 
+        return resp;
+    }
+
+    @Override
+    public HttpBody<String> terminateWorker(String workerAddress) {
+        HttpBody<String> resp = new HttpBody<>();
+        try{
+            workerClusterManager.terminate(workerAddress);
+        }catch (Exception e){
+            resp.fail(ResultCode.FAIL,e.getMessage());
+        }
         return resp;
     }
 }
