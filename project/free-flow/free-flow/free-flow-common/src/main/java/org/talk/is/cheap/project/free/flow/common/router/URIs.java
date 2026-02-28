@@ -62,6 +62,8 @@ public class URIs {
 
         public static final String TASK_START = PREFIX + "/task/start";
         public static final String STAGE_RETRY = PREFIX + "/stage/retry";
+        public static final String TASK_CLEAR = PREFIX + "/task/clear";
+        public static final String TASK_RESUME = PREFIX + "/task/resume";
 
     }
 }

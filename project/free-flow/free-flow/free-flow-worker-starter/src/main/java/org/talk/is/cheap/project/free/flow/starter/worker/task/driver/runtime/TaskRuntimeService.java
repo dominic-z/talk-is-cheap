@@ -9,6 +9,7 @@ import org.talk.is.cheap.project.free.flow.common.task.definition.bo.StageDefini
 import org.talk.is.cheap.project.free.flow.common.task.definition.bo.TaskDefinitionBO;
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.es.StageExecutionBizLogService;
+import org.talk.is.cheap.project.free.flow.starter.worker.domain.dto.CreateTaskRuntimeEnvDTO;
 import org.talk.is.cheap.project.free.flow.starter.worker.task.definition.service.LocalTaskDefinitionService;
 
 import java.lang.reflect.InvocationTargetException;
@@ -28,17 +29,17 @@ public class TaskRuntimeService {
     private final Map<Long, TaskRuntimeEnv<?>> taskExeIdRuntimeEnvMap = new ConcurrentHashMap<>();
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public TaskRuntimeEnv createTaskRuntimeEnvs(TaskDefinitionBO taskDefinitionBO,
-                                                WorkerStartTaskReq.Data workerStartTaskData) throws InstantiationException,
+    public TaskRuntimeEnv createTaskRuntimeEnv(TaskDefinitionBO taskDefinitionBO,
+                                               CreateTaskRuntimeEnvDTO dto) throws InstantiationException,
             IllegalAccessException, InvocationTargetException, NoSuchMethodException {
 
 
         InputCodec codec = (InputCodec) taskDefinitionBO.getSharedContextCodecClass().getDeclaredConstructor().newInstance();
-        Map<String, String> stageEncodedInputs = workerStartTaskData.getStageEncodedInputs();
+        Map<String, String> stageEncodedInputs = dto.getStageEncodedInputs();
         TaskRuntimeEnv taskRuntimeEnv = TaskRuntimeEnv.builder()
-                .taskExecutionId(workerStartTaskData.getTaskExecutionId())
+                .taskExecutionId(dto.getTaskExecutionId())
                 .sharedContextCodec(codec)
-                .encodedSharedContext(workerStartTaskData.getInitialEncodedSharedContext())
+                .encodedSharedContext(dto.getInitialEncodedSharedContext())
                 .runtimeEnvStatus(RuntimeEnvStatus.RUNNING)
                 .sharedContextClass(taskDefinitionBO.getSharedContextClass())
                 .stageEncodedInputs(stageEncodedInputs) // 初始情况选这个属性会存储所有的stage的入参
@@ -47,7 +48,7 @@ public class TaskRuntimeService {
                 .build();
 
         // 使用懒加载的方式创建，一开始只创建starting stage的stageRuntimeEnv，因为这时候只有这些stage有stageExecutionId
-        for (Map.Entry<String, Long> entry : workerStartTaskData.getStartingStageExecutionId().entrySet()) {
+        for (Map.Entry<String, Long> entry : dto.getStartingStageExecutionId().entrySet()) {
 
             String stageName = entry.getKey();
             Long stageExecutionId = entry.getValue();
@@ -66,14 +67,13 @@ public class TaskRuntimeService {
                     .stageExecutionId(stageExecutionId)
                     .inputCodec(inputCodec)
                     .encodedInput(encodedInput)
-                    .runtimeEnvStatus(RuntimeEnvStatus.RUNNING)
                     .taskRuntimeEnv(taskRuntimeEnv)
                     .inputClass(stageDefinitionBO.getInputClass())
                     .stageExecutionBizLogService(stageExecutionBizLogService)
                     .build();
             taskRuntimeEnv.getStageRuntimeEnvs().put(stageName, stageRuntimeEnv);
         }
-        this.taskExeIdRuntimeEnvMap.put(workerStartTaskData.getTaskExecutionId(), taskRuntimeEnv);
+        this.taskExeIdRuntimeEnvMap.put(dto.getTaskExecutionId(), taskRuntimeEnv);
         return taskRuntimeEnv;
 
     }
@@ -101,7 +101,6 @@ public class TaskRuntimeService {
                 .stageExecutionId(stageExecutionId)
                 .inputCodec(inputCodec)
                 .encodedInput(taskRuntimeEnv.getStageEncodedInputs().get(stageName))
-                .runtimeEnvStatus(RuntimeEnvStatus.RUNNING)
                 .taskRuntimeEnv(taskRuntimeEnv)
                 .inputClass(stageDefinitionBO.getInputClass())
                 .stageExecutionBizLogService(stageExecutionBizLogService)

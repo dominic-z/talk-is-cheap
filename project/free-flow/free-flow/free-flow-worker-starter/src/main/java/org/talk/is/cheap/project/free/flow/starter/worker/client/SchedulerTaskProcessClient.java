@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.PrepareStageReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.PrepareStageResp;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.ReScheduleTaskReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerCompleteStageResultReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerFailStageReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerFailStageResp;
@@ -48,4 +49,10 @@ public interface SchedulerTaskProcessClient {
             produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     WorkerFailStageResp failStage(URI host, @RequestBody WorkerFailStageReq req);
+
+
+    @RequestMapping(path = URIs.SchedulerTaskProcessURIs.RE_SCHEDULE, method = RequestMethod.POST,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    HttpBody<String> reScheduleTask(@RequestBody ReScheduleTaskReq req);
 }

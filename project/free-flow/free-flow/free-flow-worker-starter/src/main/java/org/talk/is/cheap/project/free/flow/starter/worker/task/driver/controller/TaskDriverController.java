@@ -7,10 +7,14 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.common.message.ResultCode;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.ReScheduleTaskReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerResumeTaskReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerResumeTaskResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerRetryStageReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerStartTaskReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerStartTaskResp;
@@ -64,8 +68,46 @@ public class TaskDriverController {
             resp.success("");
         } catch (Exception e) {
             log.error("重试任务失败", e);
-            resp.fail(ResultCode.FAIL, "重试任务失败");
+            resp.fail(ResultCode.FAIL, String.format("重试任务失败，%s", e.getMessage()));
         }
         return resp;
     }
+
+    @RequestMapping(path = URIs.WorkerDriverURIs.TASK_CLEAR, method = RequestMethod.GET,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public HttpBody<String> clearTask(@RequestParam("taskExecutionId") long taskExecutionId) {
+        HttpBody<String> resp = new HttpBody<>();
+        try {
+            taskDriverService.clearCompletedTaskObject(taskExecutionId);
+            resp.success("");
+        } catch (Exception e) {
+            log.error("重试任务失败", e);
+            resp.fail(ResultCode.FAIL, String.format("清空任务对象失败，%s", e.getMessage()));
+        }
+        return resp;
+    }
+
+    @RequestMapping(path = URIs.WorkerDriverURIs.TASK_RESUME, method = RequestMethod.POST,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public WorkerResumeTaskResp resumeTask(@RequestBody WorkerResumeTaskReq req) {
+        WorkerResumeTaskResp resp = new WorkerResumeTaskResp();
+
+        try {
+
+            WorkerResumeTaskReq.Data data = req.getData();
+            VerifyUtil.requireNotNull(data, "恢复任务信息为空");
+            taskDriverService.resumeTask(data);
+            resp.success(null);
+        } catch (Exception e) {
+            log.error("恢复任务{}失败", req.getData(), e);
+            resp.fail(ResultCode.FAIL, e.getMessage());
+        }
+        return resp;
+
+    }
+
+
+
 }

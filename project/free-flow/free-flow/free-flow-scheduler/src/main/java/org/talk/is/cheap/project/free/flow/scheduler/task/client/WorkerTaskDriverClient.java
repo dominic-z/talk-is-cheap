@@ -5,8 +5,12 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
+import org.talk.is.cheap.project.free.flow.common.message.ResultCode;
+import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerResumeTaskReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerResumeTaskResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerRetryStageReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerStartTaskReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerStartTaskResp;
@@ -34,4 +38,14 @@ public interface WorkerTaskDriverClient {
     @ResponseBody
     HttpBody<String> retryStage(URI host, @RequestBody WorkerRetryStageReq req);
 
+
+    @RequestMapping(path = URIs.WorkerDriverURIs.TASK_CLEAR, method = RequestMethod.GET,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    HttpBody<String> clearTask(URI host, @RequestParam("taskExecutionId") long taskExecutionId);
+
+    @RequestMapping(path = URIs.WorkerDriverURIs.TASK_RESUME, method = RequestMethod.POST,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    WorkerResumeTaskResp resumeTask(URI host, @RequestBody WorkerResumeTaskReq req);
 }
