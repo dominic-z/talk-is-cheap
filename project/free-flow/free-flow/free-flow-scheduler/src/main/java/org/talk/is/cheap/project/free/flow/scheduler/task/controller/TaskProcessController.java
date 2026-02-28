@@ -202,7 +202,8 @@ public class TaskProcessController {
 
         WorkerFailStageReq.WorkerFailStageReqData data = req.getData();
         try {
-            workerTaskDriverService.failStageAndRetry(data.getTaskExecutionId(), data.getStageExecutionId(), data.getErrorMsg());
+            workerTaskDriverService.failStageAndRetry(data.getTaskExecutionId(), data.getStageExecutionId(), data.getErrorMsg(),
+                    data.isPausing());
             WorkerFailStageResp.WorkerFailStageReqData respData = new WorkerFailStageResp.WorkerFailStageReqData();
             resp.success(respData);
         } catch (Exception e) {
@@ -211,18 +212,20 @@ public class TaskProcessController {
         }
         return resp;
     }
+
     @RequestMapping(path = URIs.SchedulerTaskProcessURIs.RE_SCHEDULE, method = RequestMethod.POST,
             produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
-    public HttpBody<String> reScheduleTask(@RequestBody ReScheduleTaskReq req){
+    public HttpBody<String> reScheduleTask(@RequestBody ReScheduleTaskReq req) {
         HttpBody<String> resp = new HttpBody<>();
 
-        try{
-            VerifyUtil.requireNotNull(req.getData(),"请求体为空");
-            VerifyUtil.requireNotNull(req.getData().getTaskExecutionId(),"请求体的TaskExecutionId为空");
+        try {
+            VerifyUtil.requireNotNull(req.getData(), "请求体为空");
+            VerifyUtil.requireNotNull(req.getData().getTaskExecutionId(), "请求体的TaskExecutionId为空");
+            workerTaskDriverService.rescheduleTask(req.getData().getTaskExecutionId());
             resp.success("");
-        }catch (Exception e){
-            resp.fail(ResultCode.FAIL,e.getMessage());
+        } catch (Exception e) {
+            resp.fail(ResultCode.FAIL, e.getMessage());
         }
         return resp;
     }

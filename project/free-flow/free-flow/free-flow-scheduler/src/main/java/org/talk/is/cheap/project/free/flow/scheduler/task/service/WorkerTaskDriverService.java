@@ -18,6 +18,7 @@ import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.Prepare
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerCompleteStageResultReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerStartStageReportReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerResumeTaskReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerResumeTaskResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerRetryStageReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerStartTaskReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerStartTaskResp;
@@ -249,7 +250,6 @@ public class WorkerTaskDriverService {
                     .encodedTaskSharedContext(initialEncodedSharedContext)
                     .updateTime(new Date()).build()
             );
-
 
 
             TaskExecution taskExecution = new TaskExecution()
@@ -525,6 +525,7 @@ public class WorkerTaskDriverService {
                             .withRevision(taskStartup.getRevision() + 1),
                     null
             );
+            workerTaskDriverClient.clearTask(WorkerClusterManager.getWorkerURI(taskExecution.getAssignedWorkerAddr()), stageExecutionId);
         }
 
     }
@@ -533,10 +534,15 @@ public class WorkerTaskDriverService {
     /**
      * 某个stage失败了，对应的task也要失败
      *
+     */
+    /**
      * @param taskExecutionId
      * @param stageExecutionId
+     * @param errorMsg
+     * @param workerPausing    如果worker在暂停状态中，那么就不需要重试，这个任务需要等待重新分配
+     * @throws IOException
      */
-    public void failStageAndRetry(long taskExecutionId, long stageExecutionId, String errorMsg) throws IOException {
+    public void failStageAndRetry(long taskExecutionId, long stageExecutionId, String errorMsg, boolean workerPausing) throws IOException {
 
         log.info("任务失败：taskExeId:{},stageExeId:{}", taskExecutionId, stageExecutionId);
         RLock rLock = redissonClient.getLock(RedissonService.getTaskExecutionLockKey(taskExecutionId));
@@ -549,7 +555,7 @@ public class WorkerTaskDriverService {
             rLock.lock(5, TimeUnit.SECONDS);
 
             // 拆分为两个方法，确保db操作完成提交之后，再提交runAsync方法去跑真正的retry任务。
-            Runnable retryRunnable = failStageAndPrepareRetryRunnable(taskExecutionId, stageExecutionId, errorMsg);
+            Runnable retryRunnable = failStageAndPrepareRetryRunnable(taskExecutionId, stageExecutionId, errorMsg, workerPausing);
 
             if (retryRunnable != null) {
                 CompletableFuture.runAsync(retryRunnable, threadPoolExecutor)
@@ -577,11 +583,13 @@ public class WorkerTaskDriverService {
      * @param taskExecutionId
      * @param stageExecutionId
      * @param errorMsg
+     * @param workerPausing    这个worker是否已经在暂停中，如果这个worker是在暂停中，那么retryStage的操作不要发起
      * @return
      * @throws IOException
      */
     @Transactional(rollbackFor = Exception.class, transactionManager = RepositoryAutoConfig.TRANSACTION_MANAGER_BEAN_NAME)
-    private Runnable failStageAndPrepareRetryRunnable(long taskExecutionId, long stageExecutionId, String errorMsg) throws IOException {
+    private Runnable failStageAndPrepareRetryRunnable(long taskExecutionId, long stageExecutionId, String errorMsg,
+                                                      boolean workerPausing) throws IOException {
         StageExecution stageExecution = stageExecutionServiceWrapper.selectById(stageExecutionId, TaskStageStatus.RUNNING.getStatus());
         if (stageExecution == null) {
             log.info("未发现运行中的id={}的StageExecution对象，可能任务并未启动", stageExecutionId);
@@ -639,11 +647,18 @@ public class WorkerTaskDriverService {
                         taskStartup.getRevision()) != 1) {
                     log.warn("更新taskStartup:{}为失败状态失败，可能是已经被其他任务并发失败", taskStartup.getId());
                 }
+                workerTaskDriverClient.clearTask(WorkerClusterManager.getWorkerURI(taskExecution.getAssignedWorkerAddr()),
+                        taskExecutionId);
                 return null;
 
             } else {
                 // task还可以重试
-                log.info("taskStartup:{}重试了{}次，还可以重试", taskStartup.getId(), taskStartup.getFailCount());
+                if (workerPausing) {
+                    log.info("taskStartup:{}重试了{}次，还可以重试，但是worker在暂停中，所以不重试等待重调度即可", taskStartup.getId(), taskStartup.getFailCount());
+                } else {
+                    log.info("taskStartup:{}重试了{}次，还可以重试", taskStartup.getId(), taskStartup.getFailCount());
+                }
+
                 VerifyUtil.requireTrue(
                         taskStartupServiceWrapper.updateByIdSelective(taskStartup.getId(),
                                 new TaskStartup()
@@ -651,16 +666,20 @@ public class WorkerTaskDriverService {
                                         .withStatus(TaskStageStatus.PENDING.getStatus())
                                         .withRevision(taskStartup.getRevision() + 1), taskStartup.getRevision()) == 1,
                         String.format("恢复taskStartup:%d为PENDING状态失败，可能已经被恢复", taskStartup.getId()));
-                return () -> {
-                    retryTask(taskStartup.getId(), taskExecutionId);
-                };
+                workerTaskDriverClient.clearTask(WorkerClusterManager.getWorkerURI(taskExecution.getAssignedWorkerAddr()),
+                        taskExecutionId);
+                if (workerPausing) {
+                    return null;
+                } else {
+                    return () -> {
+                        retryTask(taskStartup.getId(), taskExecutionId);
+                    };
+                }
             }
 
         } else {
             // stage还可以重试
             log.info("stage(startupId:{})重试了{}次，还可以重试", stageStartup.getId(), stageStartup.getFailCount());
-
-
             StageExecution retryStageExecution = new StageExecution()
                     .withStageStartupId(stageStartup.getId())
                     .withStatus(TaskStageStatus.PENDING.getStatus())
@@ -681,6 +700,10 @@ public class WorkerTaskDriverService {
                 stageStartupParamService.create(stageStartupParam);
             } else {
                 stageStartupParam = esPojoDTO.getData();
+            }
+            if (workerPausing) {
+                // worker停止中，等待重调度即可
+                return null;
             }
 
             return () -> {
@@ -823,6 +846,11 @@ public class WorkerTaskDriverService {
     public void rescheduleTask(long pausedTaskExecutionId) throws IOException {
         TaskExecution pausedTaskExecution = taskExecutionServiceWrapper.selectById(pausedTaskExecutionId);
         VerifyUtil.requireNotNull(pausedTaskExecution, String.format("未找到id为%d的TaskExecution对象", pausedTaskExecutionId));
+        if (TaskStageStatus.FAILED.getStatus().equals(pausedTaskExecution.getStatus())) {
+            // 对应上述fail操作的时候，如果某个task失败次数超过限制，而刚好对应节点在暂停中，重新调度的时候需要避免某个已经完整失败的task被重新调度。
+            log.info("任务已经失败，无需重新调度");
+            return;
+        }
         taskExecutionServiceWrapper.updateSelectiveById(pausedTaskExecutionId,
                 new TaskExecution().withStatus(TaskStageStatus.RESCHEDULING.getStatus()), null);
 
@@ -879,7 +907,7 @@ public class WorkerTaskDriverService {
                 pausedTaskSucceedStageStartIds.add(stageStartup.getId());
             }
         }
-  // 通过bfs找到需要从哪开始执行，其实就是通过bfs并且跳过所有的成功的节点，找到第一个未成功的节点
+        // 通过bfs找到需要从哪开始执行，其实就是通过bfs并且跳过所有的成功的节点，找到第一个未成功的节点
         /**
          * 大概意思是比如有这样一个图
          *          A      D
@@ -894,31 +922,31 @@ public class WorkerTaskDriverService {
         Map<Long, Set<Long>> pointOutStageIdGraph = new HashMap<>();
         Map<Long, Set<Long>> pointInStageIdGraph = new HashMap<>();
         for (TaskGraphDefinition d : taskGraphDefinitions) {
-            pointOutStageIdGraph.computeIfAbsent(d.getFromStageId(),(k)->new HashSet<>()).add(d.getToStageId());
-            pointInStageIdGraph.computeIfAbsent(d.getToStageId(),(k)->new HashSet<>()).add(d.getFromStageId());
+            pointOutStageIdGraph.computeIfAbsent(d.getFromStageId(), (k) -> new HashSet<>()).add(d.getToStageId());
+            pointInStageIdGraph.computeIfAbsent(d.getToStageId(), (k) -> new HashSet<>()).add(d.getFromStageId());
         }
 
         // 根节点，使用gset数据结构，这个是因为有可能多个节点会指向同一个父节点
         Set<Long> layer =
                 stageIdDefinition.values().stream().filter(StageDefinition::getIsStartingStage).map(StageDefinition::getId).collect(Collectors.toSet());
         HashSet<Long> resumeTaskStartingStageIds = new HashSet<>();
-        while(!layer.isEmpty()){
+        while (!layer.isEmpty()) {
             HashSet<Long> nextLayer = new HashSet<>();
             for (Long stageId : layer) {
-                if(stageIdDefinition.get(stageId).getIsStartingStage()){
+                if (stageIdDefinition.get(stageId).getIsStartingStage()) {
                     // 如果是根节点，那么直接认为其父节点是成功的。
-                    if(!pausedTaskSucceedStageIds.contains(stageId)){
+                    if (!pausedTaskSucceedStageIds.contains(stageId)) {
                         // 如果当前这个根节点没有成功，则直接作为新的启动节点
                         resumeTaskStartingStageIds.add(stageId);
                     }
-                }else{
+                } else {
                     // 如果不是根节点
-                    if(!pausedTaskSucceedStageIds.contains(stageId) && pausedTaskSucceedStageIds.containsAll(pointInStageIdGraph.get(stageId))){
+                    if (!pausedTaskSucceedStageIds.contains(stageId) && pausedTaskSucceedStageIds.containsAll(pointInStageIdGraph.get(stageId))) {
                         // 如果当前节点未成功，并且父节点全都成功，那么就是恢复的启动stage之一
                         resumeTaskStartingStageIds.add(stageId);
                     }
                 }
-                if(pointOutStageIdGraph.containsKey(stageId)){
+                if (pointOutStageIdGraph.containsKey(stageId)) {
                     nextLayer.addAll(pointOutStageIdGraph.get(stageId));
                 }
             }
@@ -950,7 +978,7 @@ public class WorkerTaskDriverService {
         taskExecutionService.create(resumeTaskExecution);
         Map<String, Long> resumeTaskStartingStageNameExecutionIds = new HashMap<>();
         for (StageDefinition stageD : stageIdDefinition.values()) {
-            if(pausedTaskSucceedStageIds.contains(stageD.getId())){
+            if (pausedTaskSucceedStageIds.contains(stageD.getId())) {
                 // 如果已经成功，就不用创建了
                 continue;
             }
@@ -960,7 +988,7 @@ public class WorkerTaskDriverService {
                     .withStatus(TaskStageStatus.PENDING.getStatus());
             stageStartupService.create(stageStartup);
 
-            if(resumeTaskStartingStageIds.contains(stageD.getId())){
+            if (resumeTaskStartingStageIds.contains(stageD.getId())) {
                 // 与prepareTask一样，启动task之前至少需要将启动节点的execturiong对象准备好
                 StageExecution stageExecution = new StageExecution()
                         .withStageStartupId(stageStartup.getId())
@@ -968,10 +996,10 @@ public class WorkerTaskDriverService {
                         .withStatus(TaskStageStatus.PENDING.getStatus());
                 stageExecutionService.create(stageExecution);
 
-                resumeTaskStartingStageNameExecutionIds.put(stageD.getName(),stageExecution.getId());
+                resumeTaskStartingStageNameExecutionIds.put(stageD.getName(), stageExecution.getId());
             }
 
-            if(stageNameEncodedInputs.containsKey(stageD.getName())){
+            if (stageNameEncodedInputs.containsKey(stageD.getName())) {
                 // 同样的，与prepareTask一样，如果有输入，就需要记录
                 String encodedInput = stageNameEncodedInputs.get(stageD.getName());
                 stageStartupParamService.create(
@@ -991,13 +1019,17 @@ public class WorkerTaskDriverService {
         data.setTaskName(taskDefinition.getName());
         data.setTaskVersion(taskDefinition.getVersion());
         data.setTaskExecutionId(resumeTaskExecution.getId());
-        data.setFinishedStageNames(pausedTaskSucceedStageIds.stream().map(id->stageIdDefinition.get(id).getName()).collect(Collectors.toSet()));
+        data.setFinishedStageNames(pausedTaskSucceedStageIds.stream().map(id -> stageIdDefinition.get(id).getName()).collect(Collectors.toSet()));
         data.setStageEncodedInputs(stageNameEncodedInputs);
         data.setInitialEncodedSharedContext(latestEncodedSharedContext);
         data.setStartingStageExecutionId(resumeTaskStartingStageNameExecutionIds);
+        workerResumeTaskReq.setData(data);
 
 
-        workerTaskDriverClient
+        WorkerResumeTaskResp workerResumeTaskResp =
+                workerTaskDriverClient.resumeTask(WorkerClusterManager.getWorkerURI(resumeTaskWorkerAddr), workerResumeTaskReq);
+        VerifyUtil.requireTrue(workerResumeTaskResp.isSuccess(),
+                String.format("恢复任务（taskExecutionId: %d）失败", pausedTaskExecutionId));
 
     }
 }

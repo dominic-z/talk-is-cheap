@@ -11,5 +11,6 @@ public class WorkerFailStageReq extends HttpBody<WorkerFailStageReq.WorkerFailSt
         private Long stageExecutionId;
         private String errorMsg;
 
+        private boolean pausing;
     }
 }

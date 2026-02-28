@@ -27,13 +27,4 @@ public class WorkerResumeTaskReq extends HttpBody<WorkerResumeTaskReq.Data> {
         private Set<String> finishedStageNames;
     }
 
-    @lombok.Data
-    @Builder
-    @AllArgsConstructor
-    @NoArgsConstructor
-    public static class StartStageDatum {
-        private Long stageExecutionId;
-        private String stageName;
-
-    }
 }
