@@ -457,12 +457,12 @@ public class WorkerTaskDriverService {
 
     /**
      * 某个stage已经完成，记录shareContext快照，正常情况下不需要考虑并发，因为一般情况下一个stage只会有一个scheduler在操作
-     * 仅仅updatestage信息，task是否完成会由worker再次主动上报，不需要事务
+     * 仅仅updatestage信息
+     *
+     * update:
      */
     public void completeStage(WorkerCompleteStageResultReq.StageResult stageResult) throws IOException {
         Long stageExecutionId = stageResult.getStageExecutionId();
-
-
         StageExecution stageExecution = stageExecutionServiceWrapper.selectById(stageExecutionId, TaskStageStatus.RUNNING.getStatus());
         VerifyUtil.requireTrue(stageExecution != null,
                 "The running execution record for the stage with ID %d does not exist.".formatted(stageExecutionId));
@@ -497,37 +497,24 @@ public class WorkerTaskDriverService {
         stageStartupParam.setEncodedSharedContextSnapshotAtCompletion(stageResult.getEncodedSharedContextAtCompletion());
         stageStartupParam.setUpdateTime(new Date());
         stageStartupParamService.update(esPojoDTO.getId(), stageStartupParam);
+    }
 
-        // 判断task是否已经整体完成，考虑了一下，似乎没有并发问题，最后一个走到这一步的请求会尝试将全部task设置为成功
-        TaskExecution taskExecution = taskExecutionServiceWrapper.selectById(stageStartup.getTaskExecutionId());
+    public void completeTask(long taskExecutionId){
+        // 判断task是否已经整体完成，考虑了一下，似乎没有并发问题
+        TaskExecution taskExecution = taskExecutionServiceWrapper.selectById(taskExecutionId);
         TaskStartup taskStartup = taskStartupServiceWrapper.selectById(taskExecution.getTaskStartupId());
-        TaskDefinition taskDefinition = taskDefinitionServiceWrapper.selectById(taskStartup.getTaskId());
-        List<StageDefinition> stageDefinitions = stageDefinitionServiceWrapper.selectByTaskId(taskDefinition.getId());
+        taskExecutionServiceWrapper.updateSelectiveById(taskExecution.getId(),
+                new TaskExecution().withStatus(TaskStageStatus.SUCCEEDED.getStatus())
+                        .withCompletionTime(new Date())
+                        .withRevision(taskExecution.getRevision() + 1),
+                null
+        );
 
-        // bug，目前只有leader有完整的workerTaskDefinitionManager，其他的都得读数据库
-//        TaskDefinitionDTO taskDefinitionDTO = workerTaskDefinitionManager.getTaskDefinitionDTO(taskDefinition.getName(),
-//                taskDefinition.getVersion());
-
-        List<StageStartup> stageStartupsWithSameTaskExe =
-                stageStartupServiceWrapper.selectByTaskExecutionId(stageStartup.getTaskExecutionId());
-        if (stageDefinitions.size() == stageStartupsWithSameTaskExe.size() &&
-                stageStartupsWithSameTaskExe.stream().allMatch(s -> TaskStageStatus.SUCCEEDED.getStatus().equals(s.getStatus()))) {
-            // 全部stage都已经尝试启动了，并且状态也已经成功了。更新task状态为成功
-            taskExecutionServiceWrapper.updateSelectiveById(taskExecution.getId(),
-                    new TaskExecution().withStatus(TaskStageStatus.SUCCEEDED.getStatus())
-                            .withCompletionTime(new Date())
-                            .withRevision(taskExecution.getRevision() + 1),
-                    null
-            );
-
-            taskStartupServiceWrapper.updateByIdSelective(taskStartup.getId(),
-                    new TaskStartup().withStatus(TaskStageStatus.SUCCEEDED.getStatus())
-                            .withRevision(taskStartup.getRevision() + 1),
-                    null
-            );
-            workerTaskDriverClient.clearTask(WorkerClusterManager.getWorkerURI(taskExecution.getAssignedWorkerAddr()), stageExecutionId);
-        }
-
+        taskStartupServiceWrapper.updateByIdSelective(taskStartup.getId(),
+                new TaskStartup().withStatus(TaskStageStatus.SUCCEEDED.getStatus())
+                        .withRevision(taskStartup.getRevision() + 1),
+                null
+        );
     }
 
 

@@ -20,6 +20,8 @@ public class WorkerCompleteStageResultReq extends HttpBody<WorkerCompleteStageRe
     public static class Data {
 
         private List<StageResult> stageResultList;
+        private Long taskExecutionId;
+        private Boolean taskSucceed;
 
     }
 

@@ -4,15 +4,12 @@ import io.vavr.Tuple2;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.CuratorCache;
 import org.apache.curator.framework.recipes.cache.CuratorCacheListener;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
-import org.apache.curator.framework.recipes.cache.TreeCacheEvent;
-import org.apache.curator.framework.recipes.cache.TreeCacheListener;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
@@ -26,7 +23,6 @@ import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.client.WorkerNodeClient;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.WorkerTaskDefinitionManagerLeaderStartEvent;
-import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.WorkerTerminatedEvent;
 import org.talk.is.cheap.project.free.flow.scheduler.config.property.ZKPathProperty;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.ClusterNodeExample;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNode;
@@ -39,7 +35,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -414,17 +409,22 @@ public class WorkerClusterManager implements ApplicationContextAware {
     }
 
 
-    public void terminate(String workerAddress) {
+    public void tryTerminate(String workerAddress) {
         VerifyUtil.requireTrue(this.onlineWorkerPathAddress.containsKey(workerAddress),
                 String.format("不存在地址为%s的worker节点", workerAddress));
 
-        HttpBody<String> terminateResp = workerNodeClient.terminate(getWorkerURI(workerAddress));
+        HttpBody<String> terminateResp = workerNodeClient.tryTerminate(getWorkerURI(workerAddress));
         VerifyUtil.requireTrue(terminateResp.isSuccess(), terminateResp.getMsg());
 
         ClusterNodeExample clusterNodeExample = new ClusterNodeExample();
         clusterNodeExample.createCriteria().andNodeAddressEqualTo(workerAddress);
         clusterNodeService.updateByExampleSelective(new ClusterNode().withStatus(NodeStatus.TERMINATING.getStatus()), clusterNodeExample);
+    }
 
+    public void safeToTerminate(String workerAddress){
+        ClusterNodeExample clusterNodeExample = new ClusterNodeExample();
+        clusterNodeExample.createCriteria().andNodeAddressEqualTo(workerAddress);
+        clusterNodeService.updateByExampleSelective(new ClusterNode().withStatus(NodeStatus.SAFE_TO_TERMINATE.getStatus()), clusterNodeExample);
     }
 
 }

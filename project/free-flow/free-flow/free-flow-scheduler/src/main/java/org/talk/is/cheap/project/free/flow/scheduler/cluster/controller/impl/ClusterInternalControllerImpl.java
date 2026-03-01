@@ -11,6 +11,7 @@ import org.talk.is.cheap.project.free.flow.common.message.ResultCode;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.RegistryWorkerReq;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.controller.ClusterInternalController;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.SchedulerClusterManager;
+import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.WorkerClusterManager;
 
 @RestController
 @RequestMapping
@@ -19,6 +20,9 @@ public class ClusterInternalControllerImpl implements ClusterInternalController 
 
     @Autowired
     private SchedulerClusterManager schedulerClusterManager;
+
+    @Autowired
+    private WorkerClusterManager workerClusterManager;
 
     @Override
     public HttpBody<String> getSchedulerAddress() {
@@ -39,5 +43,17 @@ public class ClusterInternalControllerImpl implements ClusterInternalController 
     public HttpBody<String> registryWorker(@RequestBody RegistryWorkerReq req) {
         log.info("WorkerRegistryReq {}", req);
         return HttpBody.<String>builder().code(ResultCode.SUCCESS.getCode()).build();
+    }
+
+    @Override
+    public HttpBody<Void> safeToTerminate(String workerAddr) {
+        HttpBody<Void> resp = new HttpBody<>();
+        try {
+            workerClusterManager.safeToTerminate(workerAddr);
+            resp.success();
+        } catch (Exception e) {
+            resp.fail(ResultCode.FAIL, e.getMessage());
+        }
+        return resp;
     }
 }

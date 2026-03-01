@@ -2,7 +2,6 @@ package org.talk.is.cheap.project.free.flow.starter.worker.cluster.contoller;
 
 
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
@@ -22,7 +21,7 @@ public interface WorkerNodeController {
     @ResponseBody
     HttpBody<String> allowToRun(@RequestParam("zKPath") String zkPath,@RequestParam("zkData") String zkData);
 
-    @GetMapping(path = URIs.WorkerNodeURIs.TERMINATE)
+    @GetMapping(path = URIs.WorkerNodeURIs.TRY_TERMINATE)
     @ResponseBody
-    HttpBody<String> terminate();
+    HttpBody<String> tryTerminate();
 }

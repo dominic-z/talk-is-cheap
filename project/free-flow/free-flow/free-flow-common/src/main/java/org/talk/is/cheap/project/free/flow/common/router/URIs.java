@@ -20,6 +20,7 @@ public class URIs {
         public static final String IDS = PREFIX + "/ids";
         public static final String LEADER = PREFIX + "/leader";
         public static final String REGISTRY_WORKER = PREFIX + "/registry-worker";
+        public static final String SAFE_TO_TERMINATE = PREFIX + "/safe-to-terminate";
     }
 
     public static class ClusterManageURIs {
@@ -48,7 +49,7 @@ public class URIs {
 
         public static final String PING = PREFIX + "/ping";
         public static final String ALLOW_TO_RUN = PREFIX + "/allow-to-run";
-        public static final String TERMINATE = PREFIX + "/terminate";
+        public static final String TRY_TERMINATE = PREFIX + "/try-terminate";
     }
 
     public static class WorkerDefinitionURIs {
