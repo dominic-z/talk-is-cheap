@@ -49,10 +49,10 @@ public class WorkerNodeControllerImpl implements WorkerNodeController {
     }
 
     @Override
-    public HttpBody<String> terminate() {
+    public HttpBody<String> tryTerminate() {
         HttpBody<String> resp = new HttpBody<>();
         try {
-            resp.success(clusterService.terminate());
+            resp.success(clusterService.tryTerminate());
         } catch (Exception e) {
             resp.fail(ResultCode.FAIL, e.getMessage());
         }

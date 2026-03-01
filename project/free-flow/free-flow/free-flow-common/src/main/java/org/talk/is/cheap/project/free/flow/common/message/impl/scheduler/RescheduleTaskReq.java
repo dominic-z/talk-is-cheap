@@ -2,9 +2,7 @@ package org.talk.is.cheap.project.free.flow.common.message.impl.scheduler;
 
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 
-import java.util.Map;
-
-public class ReScheduleTaskReq extends HttpBody<ReScheduleTaskReq.Data> {
+public class RescheduleTaskReq extends HttpBody<RescheduleTaskReq.Data> {
 
     @lombok.Data
     public static class Data {

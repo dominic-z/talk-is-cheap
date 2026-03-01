@@ -10,7 +10,6 @@ import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.common.message.ResultCode;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.QueryClusterInfoReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.QueryClusterInfoResp;
-import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.controller.ClusterManageController;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.SchedulerClusterManager;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.WorkerClusterManager;
@@ -85,10 +84,10 @@ public class ClusterManageControllerImpl implements ClusterManageController {
     }
 
     @Override
-    public HttpBody<String> terminateWorker(String workerAddress) {
+    public HttpBody<String> tryTerminateWorker(String workerAddress) {
         HttpBody<String> resp = new HttpBody<>();
         try{
-            workerClusterManager.terminate(workerAddress);
+            workerClusterManager.tryTerminate(workerAddress);
         }catch (Exception e){
             resp.fail(ResultCode.FAIL,e.getMessage());
         }

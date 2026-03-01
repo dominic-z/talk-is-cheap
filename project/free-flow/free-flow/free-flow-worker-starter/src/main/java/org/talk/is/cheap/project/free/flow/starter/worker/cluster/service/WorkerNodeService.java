@@ -10,8 +10,11 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.framework.state.ConnectionState;
 import org.apache.curator.framework.state.ConnectionStateListener;
 import org.apache.zookeeper.CreateMode;
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -22,6 +25,7 @@ import org.talk.is.cheap.project.free.flow.common.utils.IPUtil;
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.starter.worker.client.SchedulerClusterInternalClient;
 import org.talk.is.cheap.project.free.flow.starter.worker.config.properties.ZKConfigProperties;
+import org.talk.is.cheap.project.free.flow.starter.worker.task.driver.service.TaskDriverService;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -32,6 +36,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 
@@ -42,7 +47,13 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 @Slf4j
 @Service
-public class WorkerNodeService {
+public class WorkerNodeService implements ApplicationContextAware {
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        // 避免循环依赖用的。
+        this.applicationContext = applicationContext;
+    }
 
     private static class DistinctAddressList {
         List<String> addressList = new ArrayList<>();
@@ -68,6 +79,9 @@ public class WorkerNodeService {
     private ApplicationEventPublisher applicationEventPublisher;
 
     @Autowired
+    private ApplicationContext applicationContext;
+
+    @Autowired
     private CuratorFramework starterCuratorZKClient;
 
     @Autowired
@@ -86,7 +100,8 @@ public class WorkerNodeService {
 
     @Autowired
     private SchedulerClusterInternalClient schedulerClusterClient;
-
+    @Autowired
+    private SchedulerClusterInternalClient schedulerClusterInternalClient;
     private final AtomicReference<String> schedulerLeaderAddress = new AtomicReference<String>("");
 
     @Getter
@@ -252,7 +267,7 @@ public class WorkerNodeService {
      * 在terminating路径下创建，从而通知scheduler不要再派任务给自己
      * todo: 支持设置最长等待时长、任务执行完毕之后关闭自己
      */
-    public String terminate() {
+    public String tryTerminate() {
 
         try {
             starterCuratorZKClient.delete()
@@ -263,6 +278,22 @@ public class WorkerNodeService {
                     .forPath(Paths.get(zkConfigProperties.getZookeeper().getPath().getWorker().getTerminating(), getSelfZKWorkerPath()).toString(),
                             getWorkerAddress().getBytes(StandardCharsets.UTF_8));
             nodeStatus.set(NodeStatus.TERMINATING);
+
+            // 使用applicationContext是为了避免循环依赖
+            /**
+             * 等待10s后，如果仍然没有新的任务到来，那么就safeToTerminate
+             * 想第一种场景
+             * 当前worker完全没有任务，scheduler发起的tryTerminate指令到达了并且完成了处理
+             * 那么按理来说，worker需要判断下自己是不是没有任务了，如果是的话，直接safeToTerminate
+             *
+             * 但是想第二种场景
+             * scheduler发了一个启动任务的调用，但是这个数据还没传过来
+             * 然后scheduler发起的tryTerminate指令到达了并且完成了处理，因为这时候任务还没到，所以worker觉得自己没任务了，直接safeToTerminate
+             * 然后启动任务的调用到达了，这时候你说这个任务是继续执行还是直接报错。如果继续执行，那么就会将一个在执行的任务kill掉，如果直接报错，体验不太好。
+             *
+             * 因此我就使用了另一种方式，等待10s之后，如果还没有任务到达，那么就safeToTerminate
+             */
+            applicationContext.getBean(TaskDriverService.class).onNoTasksAfterDelay(10, TimeUnit.SECONDS);
             return selfTerminatingAbsoluteZKPath;
         } catch (Exception e) {
             log.error("error when terminate", e);
@@ -291,4 +322,10 @@ public class WorkerNodeService {
     }
 
 
+    public void safeToTerminate() {
+        HttpBody<Void> resp = schedulerClusterInternalClient.safeToTerminate(getRandomSchedulerURI(), getWorkerAddress());
+        if (!resp.isSuccess()) {
+            log.error("上报可以正常停止失败，原因{}", resp.getMsg());
+        }
+    }
 }

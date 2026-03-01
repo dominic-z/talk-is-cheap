@@ -5,6 +5,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Data;
 import lombok.Getter;
+import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.talk.is.cheap.project.free.flow.common.task.codec.InputCodec;
 import org.talk.is.cheap.project.free.flow.common.task.codec.JsonInputCodec;
@@ -32,6 +33,7 @@ public class TaskRuntimeEnv<T> {
     @Getter(AccessLevel.NONE)
     private T sharedContext;
 
+    @Setter
     private RuntimeEnvStatus runtimeEnvStatus;
 
     private Map<String, String> stageEncodedInputs;
@@ -39,7 +41,7 @@ public class TaskRuntimeEnv<T> {
     private Map<String, StageRuntimeEnv<?>> stageRuntimeEnvs;
 
     // 已经完成运行的stage
-    private Set<String> finishedStages = new ConcurrentHashSet<>();
+    private Set<String> succeedStages = new ConcurrentHashSet<>();
     // 已经失败的stage
     private Set<String> failedStages = new ConcurrentHashSet<>();
     // 存储那些已经要执行或者正在执行中的stage

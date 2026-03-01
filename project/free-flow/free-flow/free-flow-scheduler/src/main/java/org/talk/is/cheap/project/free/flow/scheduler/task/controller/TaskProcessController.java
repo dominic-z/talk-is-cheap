@@ -16,7 +16,7 @@ import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.common.message.ResultCode;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.PrepareStageReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.PrepareStageResp;
-import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.ReScheduleTaskReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.RescheduleTaskReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.StartTaskReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerCompleteStageResultReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerFailStageReq;
@@ -182,8 +182,12 @@ public class TaskProcessController {
     public HttpBody<String> completeStage(@RequestBody WorkerCompleteStageResultReq req) {
         HttpBody<String> resp = new HttpBody<>();
         try {
+            VerifyUtil.requireNotNull(req.getData(), "请求体为空");
             for (WorkerCompleteStageResultReq.StageResult stageResult : req.getData().getStageResultList()) {
                 workerTaskDriverService.completeStage(stageResult);
+            }
+            if (req.getData().getTaskSucceed()) {
+                workerTaskDriverService.completeTask(req.getData().getTaskExecutionId());
             }
             resp.success("");
         } catch (Exception e) {
@@ -216,7 +220,7 @@ public class TaskProcessController {
     @RequestMapping(path = URIs.SchedulerTaskProcessURIs.RE_SCHEDULE, method = RequestMethod.POST,
             produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
-    public HttpBody<String> reScheduleTask(@RequestBody ReScheduleTaskReq req) {
+    public HttpBody<String> reScheduleTask(@RequestBody RescheduleTaskReq req) {
         HttpBody<String> resp = new HttpBody<>();
 
         try {

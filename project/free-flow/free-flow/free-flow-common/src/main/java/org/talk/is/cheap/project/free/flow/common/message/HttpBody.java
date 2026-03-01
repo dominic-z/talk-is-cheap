@@ -32,6 +32,10 @@ public class HttpBody<T> {
         success(data, null);
     }
 
+    public void success() {
+        success(null, null);
+    }
+
     public void fail(ResultCode resultCode, String msg) {
         this.code = resultCode.getCode();
         this.msg = msg;

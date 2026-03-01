@@ -25,13 +25,13 @@ public interface ClusterManageController {
      * 2. worker进入终止中的状态；
      * 3. worker控制自己的每个任务进入到stw的状态，每当一个任务进入到stw的状态，就通知scheduler对任务重新指派
      * 4. 持续步骤3直到没有运行的任务了
-     * 5.
+     * 5. worker上报scheduler自己可以被安全终止
      * @param workerAddress
      * @return
      */
     @RequestMapping(path = URIs.ClusterManageURIs.TERMINATE_WORKER, method = RequestMethod.POST)
     @ResponseBody
-    HttpBody<String> terminateWorker(@RequestParam("workerAddress") String workerAddress);
+    HttpBody<String> tryTerminateWorker(@RequestParam("workerAddress") String workerAddress);
 
 
 }
