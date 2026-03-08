@@ -24,7 +24,9 @@ public class WorkerResumeTaskReq extends HttpBody<WorkerResumeTaskReq.Data> {
         private Map<String, String> stageEncodedInputs;
         // 仅仅包含启动的stage的信息
         private Map<String, Long> startingStageExecutionId;
-        private Set<String> finishedStageNames;
+        private Map<String, Integer> stageFailedCount;
+        private Set<String> succeedStageNames;
+        private Integer taskFailedCount;
     }
 
 }

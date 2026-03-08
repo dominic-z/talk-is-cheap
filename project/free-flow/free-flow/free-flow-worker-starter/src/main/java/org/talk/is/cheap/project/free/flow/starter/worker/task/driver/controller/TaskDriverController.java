@@ -63,7 +63,7 @@ public class TaskDriverController {
             WorkerRetryStageReq.WorkerRetryStageReqData data = req.getData();
             VerifyUtil.requireAllNotNull("存在入参为空", data, data.getStageName(), data.getTaskExecutionId(), data.getStageExecutionId());
             taskDriverService.retryStage(data.getTaskExecutionId(), data.getStageName(), data.getStageExecutionId(),
-                    data.getEncodedInput());
+                    data.getEncodedInput(), data.getStageFailedCount());
             resp.success("");
         } catch (Exception e) {
             log.error("重试任务失败", e);
@@ -106,7 +106,6 @@ public class TaskDriverController {
         return resp;
 
     }
-
 
 
 }

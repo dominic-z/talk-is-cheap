@@ -11,6 +11,7 @@ import org.talk.is.cheap.project.free.flow.common.task.codec.InputCodec;
 import org.talk.is.cheap.project.free.flow.common.task.codec.JsonInputCodec;
 import org.talk.is.cheap.project.free.flow.common.task.definition.bo.TaskDefinitionBO;
 
+import java.util.Date;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -30,6 +31,9 @@ public class TaskRuntimeEnv<T> {
     private final InputCodec<T> sharedContextCodec;
     private final Class<T> sharedContextClass;
     private final String encodedSharedContext;
+    private final Date startTime;
+    private final Date deadline;// 超时截止时间
+    private final Integer taskFailedCount;
     @Getter(AccessLevel.NONE)
     private T sharedContext;
 
