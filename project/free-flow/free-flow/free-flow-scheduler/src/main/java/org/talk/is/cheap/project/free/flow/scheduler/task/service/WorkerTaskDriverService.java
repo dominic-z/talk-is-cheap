@@ -5,6 +5,7 @@ import io.vavr.Tuple2;
 import io.vavr.Tuple3;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.jetbrains.annotations.Nullable;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.talk.is.cheap.project.free.flow.common.enums.StartupSourceType;
 import org.talk.is.cheap.project.free.flow.common.enums.TaskStageStatus;
+import org.talk.is.cheap.project.free.flow.common.exception.TaskExecutionErrorCode;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.PrepareStageReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerCompleteStageResultReq;
@@ -42,7 +44,6 @@ import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskGr
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskStartup;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.StageDefinitionService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.StageExecutionService;
-import org.talk.is.cheap.project.free.flow.starter.repository.service.StageSourceTargetStartupRelationService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.StageStartupService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.TaskExecutionService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.TaskGraphDefinitionService;
@@ -60,7 +61,6 @@ import org.talk.is.cheap.project.free.flow.starter.repository.service.es.TaskSha
 import org.talk.is.cheap.project.free.flow.starter.repository.service.redis.RedissonService;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -73,7 +73,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 
 /**
@@ -264,7 +263,7 @@ public class WorkerTaskDriverService {
             for (StageDefinition stageDefinition : stageDefinitions) {
                 String stageName = stageDefinition.getName();
 
-
+                // 为所有stage都创建Startup
                 StageStartup stageStartup = new StageStartup()
                         .withTaskExecutionId(taskExecution.getId())
                         .withStatus(TaskStageStatus.PENDING.getStatus())
@@ -458,7 +457,7 @@ public class WorkerTaskDriverService {
     /**
      * 某个stage已经完成，记录shareContext快照，正常情况下不需要考虑并发，因为一般情况下一个stage只会有一个scheduler在操作
      * 仅仅updatestage信息
-     *
+     * <p>
      * update:
      */
     public void completeStage(WorkerCompleteStageResultReq.StageResult stageResult) throws IOException {
@@ -499,7 +498,7 @@ public class WorkerTaskDriverService {
         stageStartupParamService.update(esPojoDTO.getId(), stageStartupParam);
     }
 
-    public void completeTask(long taskExecutionId){
+    public void completeTask(long taskExecutionId) {
         // 判断task是否已经整体完成，考虑了一下，似乎没有并发问题
         TaskExecution taskExecution = taskExecutionServiceWrapper.selectById(taskExecutionId);
         TaskStartup taskStartup = taskStartupServiceWrapper.selectById(taskExecution.getTaskStartupId());
@@ -529,7 +528,7 @@ public class WorkerTaskDriverService {
      * @param workerPausing    如果worker在暂停状态中，那么就不需要重试，这个任务需要等待重新分配
      * @throws IOException
      */
-    public void failStageAndRetry(long taskExecutionId, long stageExecutionId, String errorMsg, boolean workerPausing) throws IOException {
+    public void failStageAndRetry(long taskExecutionId, long stageExecutionId, Integer errorCode, String errorMsg, boolean workerPausing) throws IOException {
 
         log.info("任务失败：taskExeId:{},stageExeId:{}", taskExecutionId, stageExecutionId);
         RLock rLock = redissonClient.getLock(RedissonService.getTaskExecutionLockKey(taskExecutionId));
@@ -541,8 +540,16 @@ public class WorkerTaskDriverService {
             // 一个可能希望重试，另一个可能希望直接失败掉任务，这可能会创建重复的taskExe，这种情况下revision控制不住，比如通过锁控制
             rLock.lock(5, TimeUnit.SECONDS);
 
+            Runnable retryRunnable = null;
             // 拆分为两个方法，确保db操作完成提交之后，再提交runAsync方法去跑真正的retry任务。
-            Runnable retryRunnable = failStageAndPrepareRetryRunnable(taskExecutionId, stageExecutionId, errorMsg, workerPausing);
+            if (TaskExecutionErrorCode.TASK_TIME_OUT.getCode().equals(errorCode)) {
+                // 如果是任务超时，那不需要对stage做任何判断，直接对task做失败处理
+                retryRunnable = failTaskAndPrepareRetryRunnable(taskExecutionId, errorCode);
+            } else {
+                retryRunnable = failStageAndPrepareRetryRunnable(taskExecutionId, stageExecutionId, errorCode, errorMsg,
+                        workerPausing);
+            }
+
 
             if (retryRunnable != null) {
                 CompletableFuture.runAsync(retryRunnable, threadPoolExecutor)
@@ -575,14 +582,18 @@ public class WorkerTaskDriverService {
      * @throws IOException
      */
     @Transactional(rollbackFor = Exception.class, transactionManager = RepositoryAutoConfig.TRANSACTION_MANAGER_BEAN_NAME)
-    private Runnable failStageAndPrepareRetryRunnable(long taskExecutionId, long stageExecutionId, String errorMsg,
+    private Runnable failStageAndPrepareRetryRunnable(long taskExecutionId, long stageExecutionId, Integer errorCode, String errorMsg,
                                                       boolean workerPausing) throws IOException {
         StageExecution stageExecution = stageExecutionServiceWrapper.selectById(stageExecutionId, TaskStageStatus.RUNNING.getStatus());
         if (stageExecution == null) {
             log.info("未发现运行中的id={}的StageExecution对象，可能任务并未启动", stageExecutionId);
             return null;
         }
-        stageExecution.setStatus(TaskStageStatus.FAILED.getStatus());
+
+        TaskStageStatus stageStatus = TaskStageStatus.FAILED;
+        if (TaskExecutionErrorCode.STAGE_TIME_OUT.getCode().equals(errorCode)) {
+            stageStatus = TaskStageStatus.TIME_OUT;
+        }
         stageExecution.setRevision(stageExecution.getRevision() + 1);
         stageExecutionServiceWrapper.updateSelectiveById(stageExecutionId,
                 new StageExecution().withStatus(stageExecution.getStatus()).withRevision(stageExecution.getRevision()),
@@ -591,8 +602,7 @@ public class WorkerTaskDriverService {
         StageStartup stageStartup = stageStartupServiceWrapper.selectById(stageExecution.getStageStartupId());
         stageStartup.setFailCount(stageStartup.getFailCount() + 1);
         stageStartup.setRevision(stageStartup.getRevision() + 1);
-        stageStartupServiceWrapper.updateSelectiveById(stageStartup.getId(),
-                new StageStartup().withFailCount(stageStartup.getFailCount()).withRevision(stageStartup.getRevision()), null);
+
         // 记录结果信息
         if (StringUtils.isNotBlank(errorMsg)) {
             stageExecutionResultMsgService.create(StageExecutionResultMsg.builder()
@@ -604,65 +614,16 @@ public class WorkerTaskDriverService {
         StageDefinition stageDefinition = stageDefinitionServiceWrapper.selectById(stageStartup.getStageId());
 
 
-        TaskExecution taskExecution = taskExecutionServiceWrapper.selectById(taskExecutionId);
         if (stageStartup.getFailCount() >= stageDefinition.getMaxRetryCount()) {
             // stage超过重试次数了，stage失败掉
-            log.info("stageStartup:{}重试超过最大重试次数，需要将taskExecution:{}设置为失败", stageStartup.getId(), taskExecutionId);
+            log.info("stageStartup:{}重试超过最大重试次数设置为失败，还需要将taskExecution:{}设置为失败", stageStartup.getId(), taskExecutionId);
+            stageStartupServiceWrapper.updateSelectiveById(stageStartup.getId(),
+                    new StageStartup()
+                            .withFailCount(stageStartup.getFailCount())
+                            .withStatus(stageStatus.getStatus())
+                            .withRevision(stageStartup.getRevision()), null);
 
-            if (taskExecutionServiceWrapper.updateSelectiveById(taskExecutionId, new TaskExecution()
-                            .withStatus(TaskStageStatus.FAILED.getStatus())
-                            .withRevision(taskExecution.getRevision() + 1),
-                    taskExecution.getRevision()) != 1) {
-                log.warn("更新taskExecution:{}为失败状态失败，可能是已经被其他任务并发失败", taskExecutionId);
-            }
-
-            TaskStartup taskStartup = taskStartupServiceWrapper.selectById(taskExecution.getTaskStartupId(),
-                    TaskStageStatus.RUNNING.getStatus());
-            TaskDefinition taskDefinition = taskDefinitionServiceWrapper.selectById(taskStartup.getTaskId());
-
-
-            String stageRetryLockKey = String.format("stage-startup-%d", stageStartup.getId());
-
-            if (taskStartup.getFailCount() + 1 >= taskDefinition.getMaxRetryCount()) {
-                log.info("taskStartup:{}重试超过最大重试次数，需要将taskStartup设置为失败", taskStartup.getId());
-                // task任务整体重试超过限制了，task任务整体失败
-
-                if (taskStartupServiceWrapper.updateByIdSelective(taskStartup.getId(),
-                        new TaskStartup().withFailCount(taskStartup.getFailCount() + 1)
-                                .withStatus(TaskStageStatus.FAILED.getStatus())
-                                .withRevision(taskStartup.getRevision() + 1),
-                        taskStartup.getRevision()) != 1) {
-                    log.warn("更新taskStartup:{}为失败状态失败，可能是已经被其他任务并发失败", taskStartup.getId());
-                }
-                workerTaskDriverClient.clearTask(WorkerClusterManager.getWorkerURI(taskExecution.getAssignedWorkerAddr()),
-                        taskExecutionId);
-                return null;
-
-            } else {
-                // task还可以重试
-                if (workerPausing) {
-                    log.info("taskStartup:{}重试了{}次，还可以重试，但是worker在暂停中，所以不重试等待重调度即可", taskStartup.getId(), taskStartup.getFailCount());
-                } else {
-                    log.info("taskStartup:{}重试了{}次，还可以重试", taskStartup.getId(), taskStartup.getFailCount());
-                }
-
-                VerifyUtil.requireTrue(
-                        taskStartupServiceWrapper.updateByIdSelective(taskStartup.getId(),
-                                new TaskStartup()
-                                        .withFailCount(taskStartup.getFailCount() + 1)
-                                        .withStatus(TaskStageStatus.PENDING.getStatus())
-                                        .withRevision(taskStartup.getRevision() + 1), taskStartup.getRevision()) == 1,
-                        String.format("恢复taskStartup:%d为PENDING状态失败，可能已经被恢复", taskStartup.getId()));
-                workerTaskDriverClient.clearTask(WorkerClusterManager.getWorkerURI(taskExecution.getAssignedWorkerAddr()),
-                        taskExecutionId);
-                if (workerPausing) {
-                    return null;
-                } else {
-                    return () -> {
-                        retryTask(taskStartup.getId(), taskExecutionId);
-                    };
-                }
-            }
+            return failTaskAndPrepareRetryRunnable(taskExecutionId, errorCode);
 
         } else {
             // stage还可以重试
@@ -689,7 +650,7 @@ public class WorkerTaskDriverService {
                 stageStartupParam = esPojoDTO.getData();
             }
             if (workerPausing) {
-                // worker停止中，等待重调度即可
+                // worker停止中，等待重调度到新的节点继续执行
                 return null;
             }
 
@@ -701,6 +662,7 @@ public class WorkerTaskDriverService {
                     data.setStageExecutionId(retryStageExecution.getId());
                     data.setTaskExecutionId(taskExecutionId);
                     data.setEncodedInput(stageStartupParam.getEncodedInput());
+                    data.setStageFailedCount(stageStartup.getFailCount());
 
                     WorkerRetryStageReq workerRetryStageReq = new WorkerRetryStageReq();
                     workerRetryStageReq.setData(data);
@@ -720,6 +682,57 @@ public class WorkerTaskDriverService {
             };
         }
 
+    }
+
+    @Nullable
+    @Transactional(rollbackFor = Exception.class, transactionManager = RepositoryAutoConfig.TRANSACTION_MANAGER_BEAN_NAME)
+    private Runnable failTaskAndPrepareRetryRunnable(long taskExecutionId, Integer errorCode) {
+        TaskExecution taskExecution = taskExecutionServiceWrapper.selectById(taskExecutionId);
+        Integer status = TaskExecutionErrorCode.TASK_TIME_OUT.getCode().equals(errorCode) ?
+                TaskStageStatus.TIME_OUT.getStatus() : TaskStageStatus.FAILED.getStatus();
+        if (taskExecutionServiceWrapper.updateSelectiveById(taskExecutionId, new TaskExecution()
+                        .withStatus(status)
+                        .withRevision(taskExecution.getRevision() + 1),
+                taskExecution.getRevision()) != 1) {
+            log.warn("更新taskExecution:{}为失败状态失败，可能是已经被其他任务并发失败", taskExecutionId);
+        }
+
+        TaskStartup taskStartup = taskStartupServiceWrapper.selectById(taskExecution.getTaskStartupId(),
+                TaskStageStatus.RUNNING.getStatus());
+        TaskDefinition taskDefinition = taskDefinitionServiceWrapper.selectById(taskStartup.getTaskId());
+
+        if (taskStartup.getFailCount() + 1 >= taskDefinition.getMaxRetryCount()) {
+            log.info("taskStartup:{}重试超过最大重试次数，需要将taskStartup设置为失败", taskStartup.getId());
+            // task任务整体重试超过限制了，task任务整体失败
+
+            if (taskStartupServiceWrapper.updateByIdSelective(taskStartup.getId(),
+                    new TaskStartup().withFailCount(taskStartup.getFailCount() + 1)
+                            .withStatus(status)
+                            .withRevision(taskStartup.getRevision() + 1),
+                    taskStartup.getRevision()) != 1) {
+                log.warn("更新taskStartup:{}为失败状态失败，可能是已经被其他任务并发失败", taskStartup.getId());
+            }
+            workerTaskDriverClient.clearTask(WorkerClusterManager.getWorkerURI(taskExecution.getAssignedWorkerAddr()),
+                    taskExecutionId);
+            return null;
+
+        } else {
+            // task还可以重试
+            log.info("taskStartup:{}重试了{}次，还可以重试", taskStartup.getId(), taskStartup.getFailCount());
+
+            VerifyUtil.requireTrue(
+                    taskStartupServiceWrapper.updateByIdSelective(taskStartup.getId(),
+                            new TaskStartup()
+                                    .withFailCount(taskStartup.getFailCount() + 1)
+                                    .withStatus(TaskStageStatus.PENDING.getStatus())
+                                    .withRevision(taskStartup.getRevision() + 1), taskStartup.getRevision()) == 1,
+                    String.format("恢复taskStartup:%d为PENDING状态失败，可能已经被恢复", taskStartup.getId()));
+            workerTaskDriverClient.clearTask(WorkerClusterManager.getWorkerURI(taskExecution.getAssignedWorkerAddr()),
+                    taskExecutionId);
+            return () -> {
+                retryTask(taskStartup.getId(), taskExecutionId);
+            };
+        }
     }
 
 
@@ -757,7 +770,7 @@ public class WorkerTaskDriverService {
                             },
                             ESPojoDTO::getData));
 
-
+            // 有可能会被调度到新的节点执行
             String workerAddress = taskScheduler.assignTaskToWorkerAddress(taskDefinition.getName(), taskDefinition.getVersion());
 
             TaskExecution retryTaskExecution = new TaskExecution().withTaskStartupId(taskStartup.getId())
@@ -813,6 +826,7 @@ public class WorkerTaskDriverService {
                     .taskExecutionId(retryTaskExecution.getId())
                     .initialEncodedSharedContext(taskSharedContext.getEncodedTaskSharedContext())
                     .startingStageExecutionId(startingStageName2ExecutionId)
+                    .taskFailedCount(taskStartup.getFailCount())
                     .build();
             req.setData(data);
 
@@ -834,8 +848,12 @@ public class WorkerTaskDriverService {
         TaskExecution pausedTaskExecution = taskExecutionServiceWrapper.selectById(pausedTaskExecutionId);
         VerifyUtil.requireNotNull(pausedTaskExecution, String.format("未找到id为%d的TaskExecution对象", pausedTaskExecutionId));
         if (TaskStageStatus.FAILED.getStatus().equals(pausedTaskExecution.getStatus())) {
-            // 对应上述fail操作的时候，如果某个task失败次数超过限制，而刚好对应节点在暂停中，重新调度的时候需要避免某个已经完整失败的task被重新调度。
-            log.info("任务已经失败，无需重新调度");
+            // 如果pausedTaskExecutionId已经失败了，不应该被重新调度了。
+            // 对应上述fail操作的时候，如果某个task的失败，会有两种原因：
+            // 1. task执行次数超过限制，task执行已经失败，不应当重新调度；
+            // 2. task执行次数没有超过限制，failStage中已经重新分配节点执行，那么pausedTaskExecutionId也不应当被重新调度
+            // 综上，重新调度的时候需要避免某个已经完整失败的task被重新调度。
+            log.info("任务TaskExecutionId:{}已经失败，无需重新调度", pausedTaskExecution);
             return;
         }
         taskExecutionServiceWrapper.updateSelectiveById(pausedTaskExecutionId,
@@ -853,26 +871,26 @@ public class WorkerTaskDriverService {
         VerifyUtil.requireNotNull(taskDefinition, String.format("未找到id为%d的TaskDefinition对象", pausedTaskStartup.getTaskId()));
 
         // 获取这个任务的执行情况
-        Map<Long, StageStartup> pausedTaskIdStageStartup = stageStartupServiceWrapper.selectByTaskExecutionId(pausedTaskExecutionId)
-                .stream().collect(Collectors.toMap(StageStartup::getId, s -> s));
-
-
+        List<StageStartup> pausedTaskStageStartups = stageStartupServiceWrapper.selectByTaskExecutionId(pausedTaskExecutionId);
         List<ESPojoDTO<StageStartupParam>> pausedTaskStageParamDTOs =
-                stageStartupParamService.getByStageStartupIds(pausedTaskIdStageStartup.values().stream().map(StageStartup::getId).collect(Collectors.toList()));
+                stageStartupParamService.getByStageStartupIds(pausedTaskStageStartups.stream().map(StageStartup::getId).collect(Collectors.toList()));
+
         // 寻找最新的共享上下文以及各个stage的入参，此时任务处于暂停状态，没有在运行中的任务，因此买个stageStartup的状态要么是失败，要么是成功。
         String latestEncodedSharedContext = null;
         Date latestUpdateTime = null;
         Map<String, String> stageNameEncodedInputs = new HashMap<>();
+        Map<Long, StageStartup> pausedTaskStageStartupIdMap =
+                pausedTaskStageStartups.stream().collect(Collectors.toMap(StageStartup::getId, s -> s));
         for (ESPojoDTO<StageStartupParam> stageParamDTO : pausedTaskStageParamDTOs) {
             StageStartupParam data = stageParamDTO.getData();
             if (data == null) {
                 continue;
             }
             VerifyUtil.requireTrue(
-                    pausedTaskIdStageStartup.containsKey(data.getStageStartupId()) &&
-                            stageIdDefinition.containsKey(pausedTaskIdStageStartup.get(data.getStageStartupId()).getStageId()),
+                    pausedTaskStageStartupIdMap.containsKey(data.getStageStartupId()) &&
+                            stageIdDefinition.containsKey(pausedTaskStageStartupIdMap.get(data.getStageStartupId()).getStageId()),
                     String.format("未找到对应的任务定义：stageStartupId: %d", data.getStageStartupId()));
-            stageNameEncodedInputs.put(stageIdDefinition.get(pausedTaskIdStageStartup.get(data.getStageStartupId()).getStageId()).getName(),
+            stageNameEncodedInputs.put(stageIdDefinition.get(pausedTaskStageStartupIdMap.get(data.getStageStartupId()).getStageId()).getName(),
                     data.getEncodedInput());
 
             if (latestUpdateTime == null || data.getUpdateTime().compareTo(latestUpdateTime) > 0) {
@@ -888,7 +906,7 @@ public class WorkerTaskDriverService {
 
         Set<Long> pausedTaskSucceedStageIds = new HashSet<>();
         Set<Long> pausedTaskSucceedStageStartIds = new HashSet<>();
-        for (StageStartup stageStartup : pausedTaskIdStageStartup.values()) {
+        for (StageStartup stageStartup : pausedTaskStageStartups) {
             if (TaskStageStatus.SUCCEEDED.getStatus().equals(stageStartup.getStatus())) {
                 pausedTaskSucceedStageIds.add(stageStartup.getStageId());
                 pausedTaskSucceedStageStartIds.add(stageStartup.getId());
@@ -914,6 +932,8 @@ public class WorkerTaskDriverService {
         }
 
         // 根节点，使用gset数据结构，这个是因为有可能多个节点会指向同一个父节点
+        Map<Long, StageStartup> pausedTaskStageStartupStageIdMap =
+                pausedTaskStageStartups.stream().collect(Collectors.toMap(StageStartup::getStageId, s -> s));
         Set<Long> layer =
                 stageIdDefinition.values().stream().filter(StageDefinition::getIsStartingStage).map(StageDefinition::getId).collect(Collectors.toSet());
         HashSet<Long> resumeTaskStartingStageIds = new HashSet<>();
@@ -964,15 +984,18 @@ public class WorkerTaskDriverService {
                 .withStatus(TaskStageStatus.PENDING.getStatus());
         taskExecutionService.create(resumeTaskExecution);
         Map<String, Long> resumeTaskStartingStageNameExecutionIds = new HashMap<>();
+        Map<String, Integer> resumeTaskStartingStageNameFailedCount = new HashMap<>();
         for (StageDefinition stageD : stageIdDefinition.values()) {
             if (pausedTaskSucceedStageIds.contains(stageD.getId())) {
-                // 如果已经成功，就不用创建了
+                // 如果已经成功，就不用创建了startup对象了
                 continue;
             }
+            Integer stageFailCount = pausedTaskStageStartupStageIdMap.get(stageD.getId()).getFailCount();
             StageStartup stageStartup = new StageStartup()
                     .withTaskExecutionId(resumeTaskExecution.getId())
                     .withStageId(stageD.getId())
-                    .withStatus(TaskStageStatus.PENDING.getStatus());
+                    .withStatus(TaskStageStatus.PENDING.getStatus())
+                    .withFailCount(stageFailCount);
             stageStartupService.create(stageStartup);
 
             if (resumeTaskStartingStageIds.contains(stageD.getId())) {
@@ -984,6 +1007,7 @@ public class WorkerTaskDriverService {
                 stageExecutionService.create(stageExecution);
 
                 resumeTaskStartingStageNameExecutionIds.put(stageD.getName(), stageExecution.getId());
+                resumeTaskStartingStageNameFailedCount.put(stageD.getName(), stageFailCount);
             }
 
             if (stageNameEncodedInputs.containsKey(stageD.getName())) {
@@ -999,17 +1023,17 @@ public class WorkerTaskDriverService {
         }
 
 
-        // todo: 启动worker
-
         WorkerResumeTaskReq workerResumeTaskReq = new WorkerResumeTaskReq();
         WorkerResumeTaskReq.Data data = new WorkerResumeTaskReq.Data();
         data.setTaskName(taskDefinition.getName());
         data.setTaskVersion(taskDefinition.getVersion());
         data.setTaskExecutionId(resumeTaskExecution.getId());
-        data.setFinishedStageNames(pausedTaskSucceedStageIds.stream().map(id -> stageIdDefinition.get(id).getName()).collect(Collectors.toSet()));
+        data.setSucceedStageNames(pausedTaskSucceedStageIds.stream().map(id -> stageIdDefinition.get(id).getName()).collect(Collectors.toSet()));
         data.setStageEncodedInputs(stageNameEncodedInputs);
         data.setInitialEncodedSharedContext(latestEncodedSharedContext);
         data.setStartingStageExecutionId(resumeTaskStartingStageNameExecutionIds);
+        data.setTaskFailedCount(resumeTaskStartup.getFailCount());
+        data.setStageFailedCount(resumeTaskStartingStageNameFailedCount);
         workerResumeTaskReq.setData(data);
 
 
@@ -1019,4 +1043,13 @@ public class WorkerTaskDriverService {
                 String.format("恢复任务（taskExecutionId: %d）失败", pausedTaskExecutionId));
 
     }
+
+    public void terminateTask(long taskExecutionId) {
+        TaskExecution taskExecution = taskExecutionServiceWrapper.selectById(taskExecutionId);
+        taskExecution.setStatus(TaskStageStatus.TERMINATED.getStatus());
+
+
+        taskExecutionServiceWrapper.updateSelectiveById(taskExecutionId, taskExecution, taskExecution.getRevision());
+    }
+
 }

@@ -13,6 +13,9 @@ import org.talk.is.cheap.project.free.flow.starter.worker.domain.dto.CreateTaskR
 import org.talk.is.cheap.project.free.flow.starter.worker.task.definition.service.LocalTaskDefinitionService;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -36,16 +39,32 @@ public class TaskRuntimeService {
 
         InputCodec codec = (InputCodec) taskDefinitionBO.getSharedContextCodecClass().getDeclaredConstructor().newInstance();
         Map<String, String> stageEncodedInputs = dto.getStageEncodedInputs();
+
+        Date deadline = null;
+        Calendar cal = Calendar.getInstance();
+        Date current = cal.getTime();
+        if (taskDefinitionBO.getTimeoutInSecond() > 0) {
+            cal.add(Calendar.SECOND, taskDefinitionBO.getTimeoutInSecond());
+            deadline = cal.getTime();
+        }
         TaskRuntimeEnv taskRuntimeEnv = TaskRuntimeEnv.builder()
                 .taskExecutionId(dto.getTaskExecutionId())
                 .sharedContextCodec(codec)
-                .encodedSharedContext(dto.getInitialEncodedSharedContext())
-                .runtimeEnvStatus(RuntimeEnvStatus.RUNNING)
                 .sharedContextClass(taskDefinitionBO.getSharedContextClass())
+                .encodedSharedContext(dto.getInitialEncodedSharedContext())
+                .startTime(current)
+                .deadline(deadline)
+                .runtimeEnvStatus(RuntimeEnvStatus.RUNNING)
                 .stageEncodedInputs(stageEncodedInputs) // 初始情况选这个属性会存储所有的stage的入参
                 .stageRuntimeEnvs(new ConcurrentHashMap<>()) // 这个可能会并发
                 .taskDefinitionBO(taskDefinitionBO)
+                .taskFailedCount(dto.getTaskFailedCount())
                 .build();
+
+        if (dto.getSucceedStageNames() != null && dto.getSucceedStageNames().isEmpty()) {
+            taskRuntimeEnv.getSucceedStages().addAll(dto.getSucceedStageNames());
+            taskRuntimeEnv.getDispatchedStages().addAll(dto.getSucceedStageNames());
+        }
 
         // 使用懒加载的方式创建，一开始只创建starting stage的stageRuntimeEnv，因为这时候只有这些stage有stageExecutionId
         for (Map.Entry<String, Long> entry : dto.getStartingStageExecutionId().entrySet()) {
@@ -63,13 +82,23 @@ public class TaskRuntimeService {
             if (stageEncodedInputs != null) {
                 encodedInput = stageEncodedInputs.get(stageName);
             }
+            Calendar stageCal = Calendar.getInstance();
+            Date stageStartTime = stageCal.getTime();
+            Date stageDeadline = null;
+            if (stageDefinitionBO.getTimeout() > 0) {
+                cal.add(Calendar.SECOND, stageDefinitionBO.getTimeout());
+                stageDeadline = stageCal.getTime();
+            }
             StageRuntimeEnv stageRuntimeEnv = StageRuntimeEnv.builder()
                     .stageExecutionId(stageExecutionId)
                     .inputCodec(inputCodec)
                     .encodedInput(encodedInput)
+                    .startTime(stageStartTime)
+                    .deadline(stageDeadline)
                     .taskRuntimeEnv(taskRuntimeEnv)
                     .inputClass(stageDefinitionBO.getInputClass())
                     .stageExecutionBizLogService(stageExecutionBizLogService)
+                    .stageFailedCount(dto.getStageFailedCount() != null ? dto.getStageFailedCount().getOrDefault(stageName, 0) : 0)
                     .build();
             taskRuntimeEnv.getStageRuntimeEnvs().put(stageName, stageRuntimeEnv);
         }
@@ -104,28 +133,33 @@ public class TaskRuntimeService {
                 .taskRuntimeEnv(taskRuntimeEnv)
                 .inputClass(stageDefinitionBO.getInputClass())
                 .stageExecutionBizLogService(stageExecutionBizLogService)
+                .stageFailedCount(0)
                 .build();
         taskRuntimeEnv.getStageRuntimeEnvs().put(stageName, stageRuntimeEnv);
         return stageRuntimeEnv;
 
     }
 
-
-    public StageRuntimeEnv updateRetryStageRuntimeEnv(long taskExecutionId,long retryStageExecutionId,String retryStageName,String encodedInput){
+    // 重新执行taskExecutionId下的retryStageName的之前，需要更新一个新的stageRuntimeEnv
+    public StageRuntimeEnv updateRetryStageRuntimeEnv(long taskExecutionId, long retryStageExecutionId, String retryStageName,
+                                                      String encodedInput, Integer stageFailedCount) {
         TaskRuntimeEnv<?> taskRuntimeEnv = this.get(taskExecutionId);
         VerifyUtil.requireNotNull(taskRuntimeEnv, String.format("taskExeId:%d的任务运行环境变量已经丢失", taskExecutionId));
 
-        StageRuntimeEnv stageRuntimeEnv = taskRuntimeEnv.getStageRuntimeEnvs().get(retryStageName);
-        VerifyUtil.requireNotNull(stageRuntimeEnv, String.format("taskExeId:%d中stageName:%s的阶段运行环境变量已经丢失", taskExecutionId, retryStageName));
+        StageRuntimeEnv failedStageRuntimeEnv = taskRuntimeEnv.getStageRuntimeEnvs().get(retryStageName);
+        VerifyUtil.requireNotNull(failedStageRuntimeEnv, String.format("taskExeId:%d中stageName:%s的阶段运行环境变量已经丢失", taskExecutionId,
+                retryStageName));
 
         taskRuntimeEnv.getStageEncodedInputs().put(retryStageName, encodedInput);
 
         final StageRuntimeEnv retryStageRuntimeEnv = StageRuntimeEnv.builder()
                 .taskRuntimeEnv(taskRuntimeEnv)
-                .inputClass(stageRuntimeEnv.getInputClass())
-                .inputCodec(stageRuntimeEnv.getInputCodec())
+                .inputClass(failedStageRuntimeEnv.getInputClass())
+                .inputCodec(failedStageRuntimeEnv.getInputCodec())
                 .encodedInput(encodedInput)
-                .stageExecutionId(retryStageExecutionId).build();
+                .stageExecutionId(retryStageExecutionId)
+                .stageFailedCount(failedStageRuntimeEnv.getStageFailedCount() + 1) // 重试stage，失败次数+1
+                .build();
 
         taskRuntimeEnv.updateStageRuntimeEnv(retryStageName, retryStageRuntimeEnv);
         return retryStageRuntimeEnv;

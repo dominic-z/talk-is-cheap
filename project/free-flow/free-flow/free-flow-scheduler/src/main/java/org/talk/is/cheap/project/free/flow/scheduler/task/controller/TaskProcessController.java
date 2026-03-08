@@ -95,6 +95,7 @@ public class TaskProcessController {
                             .initialEncodedSharedContext(data.getInitialEncodedSharedContext())
                             .stageEncodedInputs(data.getStageEncodedInputs())
                             .startingStageExecutionId(rootStageName2ExecutionId)
+                            .taskFailedCount(0)
                             .build()
             );
 
@@ -206,7 +207,7 @@ public class TaskProcessController {
 
         WorkerFailStageReq.WorkerFailStageReqData data = req.getData();
         try {
-            workerTaskDriverService.failStageAndRetry(data.getTaskExecutionId(), data.getStageExecutionId(), data.getErrorMsg(),
+            workerTaskDriverService.failStageAndRetry(data.getTaskExecutionId(), data.getStageExecutionId(),data.getErrorCode(), data.getErrorMsg(),
                     data.isPausing());
             WorkerFailStageResp.WorkerFailStageReqData respData = new WorkerFailStageResp.WorkerFailStageReqData();
             resp.success(respData);
@@ -220,7 +221,7 @@ public class TaskProcessController {
     @RequestMapping(path = URIs.SchedulerTaskProcessURIs.RE_SCHEDULE, method = RequestMethod.POST,
             produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
-    public HttpBody<String> reScheduleTask(@RequestBody RescheduleTaskReq req) {
+    public HttpBody<String> rescheduleTask(@RequestBody RescheduleTaskReq req) {
         HttpBody<String> resp = new HttpBody<>();
 
         try {

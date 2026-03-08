@@ -9,6 +9,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.talk.is.cheap.project.free.flow.common.task.codec.InputCodec;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.es.StageExecutionBizLogService;
 
+import java.util.Date;
+
 @Builder
 @Getter
 @ToString
@@ -18,6 +20,9 @@ public class StageRuntimeEnv<T> {
     private final InputCodec<T> inputCodec;
     private final Class<T> inputClass;
     private final String encodedInput;
+    private final Date startTime;
+    private final Date deadline;
+    private final Integer stageFailedCount;
     private final StageExecutionBizLogService stageExecutionBizLogService;
     @Getter(AccessLevel.NONE)
     private T input;

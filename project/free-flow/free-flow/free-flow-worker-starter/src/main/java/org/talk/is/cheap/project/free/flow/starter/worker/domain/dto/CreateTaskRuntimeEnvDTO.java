@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Map;
+import java.util.Set;
 
 @Data
 @AllArgsConstructor
@@ -19,4 +20,7 @@ public class CreateTaskRuntimeEnvDTO {
     private Map<String, String> stageEncodedInputs;
     // 仅仅包含启动的stage的信息
     private Map<String, Long> startingStageExecutionId;
+    private Set<String> succeedStageNames;
+    private Integer taskFailedCount;
+    private Map<String,Integer> stageFailedCount;
 }

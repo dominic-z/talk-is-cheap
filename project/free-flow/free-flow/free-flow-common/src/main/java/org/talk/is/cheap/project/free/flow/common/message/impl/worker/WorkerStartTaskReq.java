@@ -23,6 +23,8 @@ public class WorkerStartTaskReq extends HttpBody<WorkerStartTaskReq.Data> {
         private Map<String, String> stageEncodedInputs;
         // 仅仅包含启动的stage的信息
         private Map<String, Long> startingStageExecutionId;
+        // 这个task已经失败的次数
+        private Integer taskFailedCount;
     }
 
     @lombok.Data

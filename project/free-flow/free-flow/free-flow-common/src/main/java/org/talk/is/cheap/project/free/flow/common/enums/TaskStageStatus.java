@@ -21,6 +21,7 @@ public enum TaskStageStatus {
     SKIPPED(8, "SKIPPED"),
     RESCHEDULING(9, "RESCHEDULING"),
     RESCHEDULED(10, "RESCHEDULED"),
+    TIME_OUT(11, "TIME_OUT"),
     ;
 
     @Getter
@@ -32,6 +33,9 @@ public enum TaskStageStatus {
 
     static {
         for (TaskStageStatus nodeStatus : TaskStageStatus.values()) {
+            if (STATUS_MAP.containsKey(nodeStatus.getStatus())) {
+                throw new RuntimeException("枚举值重复");
+            }
             STATUS_MAP.put(nodeStatus.getStatus(), nodeStatus);
         }
     }

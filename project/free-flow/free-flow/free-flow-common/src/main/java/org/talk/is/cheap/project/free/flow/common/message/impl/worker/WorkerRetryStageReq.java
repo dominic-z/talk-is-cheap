@@ -21,6 +21,7 @@ public class WorkerRetryStageReq extends HttpBody<WorkerRetryStageReq.WorkerRetr
         // 如果重试任务stage，不允许重设encodedSharedContextSnapshotAtStartup
         // 因为sharedContext是整个任务共享的，可能其他阶段还在运行并且在执行操作sharedCOntenxt，如果只是某个stage重试导致重写了sharedContext，可能会导致其他任务错乱
 //        private String encodedSharedContextSnapshotAtStartup;
-
+        // 这个stage已经失败的次数
+        private Integer stageFailedCount;
     }
 }

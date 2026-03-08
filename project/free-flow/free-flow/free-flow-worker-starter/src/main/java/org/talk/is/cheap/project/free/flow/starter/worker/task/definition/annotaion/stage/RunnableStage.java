@@ -62,6 +62,6 @@ public @interface RunnableStage {
      * 超时时间，默认不生效
      * @return
      */
-    int timeout() default -1;
+    int timeoutInSecond() default -1;
 
 }
