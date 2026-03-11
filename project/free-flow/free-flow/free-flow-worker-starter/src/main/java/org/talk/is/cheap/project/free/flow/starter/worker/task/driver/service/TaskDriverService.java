@@ -1,17 +1,20 @@
 package org.talk.is.cheap.project.free.flow.starter.worker.task.driver.service;
 
+import cn.hutool.core.collection.ConcurrentHashSet;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import org.talk.is.cheap.project.free.flow.common.enums.NodeStatus;
+import org.talk.is.cheap.project.free.flow.common.enums.TaskStageStatus;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.PrepareStageReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.PrepareStageResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.RescheduleTaskReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerCompleteStageResultReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerFailStageReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerFailTaskReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerStartStageReportReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerResumeTaskReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerStartTaskReq;
@@ -128,6 +131,7 @@ public class TaskDriverService {
                         .startingStageExecutionId(workerStartTaskData.getStartingStageExecutionId())
                         .taskFailedCount(workerStartTaskData.getTaskFailedCount())
                         .stageFailedCount(new HashMap<>())
+                        .succeedStageNames(new ConcurrentHashSet<>())
                         .build());
 
         taskExecutionIdBeanMap.put(workerStartTaskData.getTaskExecutionId(), taskBean);
@@ -141,7 +145,7 @@ public class TaskDriverService {
     }
 
     // stageName对应的stageExecution需要确实存在于在数据库中
-    private void executeStage(TaskDefinitionBO taskDefinitionBO, TaskRuntimeEnv<?> taskRuntimeEnv, Object taskBean, String stageName) throws NoSuchMethodException {
+    private void executeStage(TaskDefinitionBO taskDefinitionBO, TaskRuntimeEnv<?> taskRuntimeEnv, Object taskBean, String stageName) throws NoSuchMethodException, InterruptedException {
         StageDefinitionBO stageDefinitionBO = taskDefinitionBO.getStageDefinitionMap().get(stageName);
         Class<?> taskClass = taskDefinitionBO.getTaskClass();
         Method stageMethod = taskClass.getDeclaredMethod(stageDefinitionBO.getMethodName(),
@@ -154,6 +158,11 @@ public class TaskDriverService {
         final Long stageExecutionId = stageRuntimeEnv.getStageExecutionId();
         CompletableFuture<Long> stageFuture = CompletableFuture.supplyAsync(() -> {
             try {
+                // 坑：scheduler prepareStage写入es，completeStage的时候需要查询es并更新，
+                // 但es是每一秒刷一次盘，也就是说写入的数据要在1s之后才能看到，为了降低es的压力，prepare之前等待1.5s
+                // https://www.qianwen.com/share/chat/df009f25897c44c7b789f2a9b7d9375b
+                Thread.sleep(1500);
+
                 // 告知scheduler某个stage已经排到要执行了
                 WorkerStartStageReportReq req = new WorkerStartStageReportReq();
                 req.setData(List.of(WorkerStartStageReportReq.WorkerStartToExecuteStageReqDatum.builder()
@@ -161,6 +170,7 @@ public class TaskDriverService {
                         .stageExecutionId(stageExecutionId)
                         .build()));
                 schedulerTaskProcessClient.stageStartReport(workerNodeService.getRandomSchedulerURI(), req);
+                stageRuntimeEnv.setStartTime(new Date());
                 if (stageDefinitionBO.getParameters().length == 0) {
                     stageMethod.invoke(taskBean, new Object[0]);
                 } else {
@@ -217,19 +227,20 @@ public class TaskDriverService {
             if (RuntimeEnvStatus.SUCCEED.equals(taskRuntimeEnv.getRuntimeEnvStatus())) {
                 // 如果任务完成，清理掉任务对象，
                 clearCompletedTaskObject(taskRuntimeEnv.getTaskExecutionId());
-                if (this.workerNodeService.getStatus() == NodeStatus.TERMINATING && this.taskExecutionIdBeanMap.isEmpty()) {
-                    // 如果节点状态不是运行中，那么那么清理掉任务对象，并且本任务也不用重调度
-                    // 没有运行的任务了，可以上报停止了，这个方法多次重复调用是幂等的。
-                    workerNodeService.safeToTerminate();
-                }
-            } else if (taskRuntimeEnv.getDeadline() != null && current.compareTo(taskRuntimeEnv.getDeadline()) > 0) {
-                // 说明task超时了，当前这个taskExecution当做失败处理
-                // 单独判断task是否超时，这是为了考虑到stage如果正常执行完也没有超时啥的，那stage状态应该正常成功，但仅仅将task设置为超时。
-                taskRuntimeEnv.setRuntimeEnvStatus(RuntimeEnvStatus.TIME_OUT);
-                throw new TaskExecutionException(TaskExecutionErrorCode.TASK_TIME_OUT.getCode(), String.format("taskExecutionId:%d超时",
-                        taskRuntimeEnv.getTaskExecutionId()));
             } else if (RuntimeEnvStatus.RUNNING.equals(taskRuntimeEnv.getRuntimeEnvStatus())) {
-                if (this.workerNodeService.getStatus() == NodeStatus.RUNNABLE) {
+                if (taskRuntimeEnv.getDeadline() != null && current.compareTo(taskRuntimeEnv.getDeadline()) > 0) {
+                    // 说明task超时了，当前这个taskExecution当做失败处理
+                    // 单独判断task是否超时，这是为了考虑到stage如果正常执行完也没有超时啥的，那stage状态应该正常成功，但仅仅将task设置为超时。
+                    taskRuntimeEnv.setRuntimeEnvStatus(RuntimeEnvStatus.TIME_OUT);
+                    WorkerFailTaskReq req = new WorkerFailTaskReq();
+                    WorkerFailTaskReq.WorkerFailTaskReqData data = new WorkerFailTaskReq.WorkerFailTaskReqData();
+                    data.setTaskExecutionId(taskRuntimeEnv.getTaskExecutionId());
+                    data.setErrorCode(TaskExecutionErrorCode.TASK_TIME_OUT.getCode());
+                    data.setErrorMsg(TaskExecutionErrorCode.TASK_TIME_OUT.getMsg());
+                    data.setPausing(this.workerNodeService.getStatus() == NodeStatus.TERMINATING);
+                    req.setData(data);
+                    schedulerTaskProcessClient.failTask(workerNodeService.getRandomSchedulerURI(), req);
+                } else if (this.workerNodeService.getStatus() == NodeStatus.RUNNABLE) {
                     // 尝试驱动下一个stage
                     tryNextStages(taskDefinitionBO, taskRuntimeEnv, taskBean, stageName);
                 } else if (this.workerNodeService.getStatus() == NodeStatus.TERMINATING &&
@@ -260,22 +271,23 @@ public class TaskDriverService {
     //  所以需要task失败的时候，worker能够感知到，从而停止其他stage继续执行。因此把判断是否重试的逻辑挪到worker做好。
     //  但是我实在改不动了，就简单加个错误次数判断吧
     private void failStage(TaskRuntimeEnv<?> taskRuntimeEnv, String stageName, Long stageExecutionId, Throwable e) {
-        log.error("执行执行阶段（taskExeId: {}, stageExeId: {}）出现异常", taskRuntimeEnv.getTaskExecutionId(), stageExecutionId, e);
-        taskRuntimeEnv.getFailedStages().add(stageName);
+        try {
+            taskExecutionLockManager.lock(taskRuntimeEnv.getTaskExecutionId()); // 需要整体加锁，和completeStageAndTryNext需要并发安全，因为现在有个进入到stw
 
-        WorkerFailStageReq workerFailStageReq = new WorkerFailStageReq();
-        WorkerFailStageReq.WorkerFailStageReqData data = new WorkerFailStageReq.WorkerFailStageReqData();
-        data.setTaskExecutionId(taskRuntimeEnv.getTaskExecutionId());
-        data.setStageExecutionId(stageExecutionId);
-        if (e instanceof TaskExecutionException bizE) {
-            data.setErrorCode(bizE.getErrorCode());
-        }
-        data.setErrorMsg(e.getMessage());
-        workerFailStageReq.setData(data);
 
-        if (this.workerNodeService.getStatus() == NodeStatus.RUNNABLE) {
-            data.setPausing(false);
-            schedulerTaskProcessClient.failStage(workerNodeService.getRandomSchedulerURI(), workerFailStageReq);
+            // 状态以及重新调度的判断，这需要stage的运行状态进入一个稳定的状态，即成功的stage已经全都完全处理完毕，失败的stage也都完全处理完毕（完成上报、状态修改等）
+            log.error("执行执行阶段（taskExeId: {}, stageExeId: {}）出现异常", taskRuntimeEnv.getTaskExecutionId(), stageExecutionId, e);
+            taskRuntimeEnv.getFailedStages().add(stageName);
+
+            WorkerFailStageReq workerFailStageReq = new WorkerFailStageReq();
+            WorkerFailStageReq.WorkerFailStageReqData data = new WorkerFailStageReq.WorkerFailStageReqData();
+            data.setTaskExecutionId(taskRuntimeEnv.getTaskExecutionId());
+            data.setStageExecutionId(stageExecutionId);
+            if (e instanceof TaskExecutionException bizE) {
+                data.setErrorCode(bizE.getErrorCode());
+            }
+            data.setErrorMsg(e.getMessage());
+            workerFailStageReq.setData(data);
 
             // 但是我实在改不动了，就简单加个错误次数判断吧 简单加个判断自行修改taskRuntimeEnv的状态吧。
             StageRuntimeEnv<?> stageRuntimeEnv = taskRuntimeEnv.getStageRuntimeEnvs().get(stageName);
@@ -284,44 +296,39 @@ public class TaskDriverService {
             if (stageDefinitionBO.getMaxRetryCount() <= stageRuntimeEnv.getStageFailedCount() + 1) {
                 taskRuntimeEnv.setRuntimeEnvStatus(RuntimeEnvStatus.FAILED);
             }
-        } else {
-            // 用于告知scheduler当前节点在暂停中，防止stage被重试（而是等待重新调度）
-            data.setPausing(true);
-            schedulerTaskProcessClient.failStage(workerNodeService.getRandomSchedulerURI(), workerFailStageReq);
-            // 告知scheduler可以重新调度了。即使这个task已经超过重试次数了，scheduler重调度的时候会判断这个task是否已经失败，避免一个失败的taskStartup被重新调度
-            if ((taskRuntimeEnv.getSucceedStages().size() + taskRuntimeEnv.getFailedStages().size()) == taskRuntimeEnv.getDispatchedStages().size() &&
-                    taskRuntimeEnv.getRuntimeEnvStatus() != RuntimeEnvStatus.RESCHEDULED) {
-                // 既然失败了，就不可能有task整体成功的场景了，一定需要重新调度
-                taskExecutionLockManager.lock(taskRuntimeEnv.getTaskExecutionId());
-                try {
-                    // 如果这个判断是false，说明还有没完成的stage，等这个stage
-                    if ((taskRuntimeEnv.getSucceedStages().size() + taskRuntimeEnv.getFailedStages().size()) == taskRuntimeEnv.getDispatchedStages().size() &&
-                            taskRuntimeEnv.getRuntimeEnvStatus() != RuntimeEnvStatus.RESCHEDULED) {
-                        // 当前task已经暂停了，可以reschedule了
-                        rescheduleTask(taskRuntimeEnv);
-                    }
-                } finally {
-                    taskExecutionLockManager.unlockAndRemove(taskRuntimeEnv.getTaskExecutionId());
+
+            if (this.workerNodeService.getStatus() == NodeStatus.RUNNABLE) {
+                data.setPausing(false);
+                schedulerTaskProcessClient.failStage(workerNodeService.getRandomSchedulerURI(), workerFailStageReq);
+            } else {
+                // 用于告知scheduler当前节点在暂停中，防止stage被重试（而是等待重新调度）
+                data.setPausing(true);
+                schedulerTaskProcessClient.failStage(workerNodeService.getRandomSchedulerURI(), workerFailStageReq);
+                // 告知scheduler可以重新调度了。即使这个task已经超过重试次数了，scheduler重调度的时候会判断这个task是否已经失败，避免一个失败的taskStartup被重新调度
+                if ((taskRuntimeEnv.getSucceedStages().size() + taskRuntimeEnv.getFailedStages().size()) == taskRuntimeEnv.getDispatchedStages().size() &&
+                        taskRuntimeEnv.getRuntimeEnvStatus() == RuntimeEnvStatus.RUNNING) {
+                    // 既然失败了，就不可能有task整体成功的场景了，一定需要重新调度
+                    rescheduleTask(taskRuntimeEnv);
                 }
             }
+        } finally {
+            taskExecutionLockManager.unlockAndRemove(taskRuntimeEnv.getTaskExecutionId());
         }
     }
 
     private void rescheduleTask(TaskRuntimeEnv<?> taskRuntimeEnv) {
-        RescheduleTaskReq rescheduleTaskReq = new RescheduleTaskReq();
-        RescheduleTaskReq.Data data = new RescheduleTaskReq.Data();
-        data.setTaskExecutionId(taskRuntimeEnv.getTaskExecutionId());
-        rescheduleTaskReq.setData(data);
-        HttpBody<String> rescheduleResp = schedulerTaskProcessClient.rescheduleTask(rescheduleTaskReq);
-        if (!rescheduleResp.isSuccess()) {
-            log.error("重新调度任务（taskExeId:{}）失败", taskRuntimeEnv.getTaskExecutionId());
+        if (RuntimeEnvStatus.RUNNING.equals(taskRuntimeEnv.getRuntimeEnvStatus())) {
+            RescheduleTaskReq rescheduleTaskReq = new RescheduleTaskReq();
+            RescheduleTaskReq.Data data = new RescheduleTaskReq.Data();
+            data.setTaskExecutionId(taskRuntimeEnv.getTaskExecutionId());
+            rescheduleTaskReq.setData(data);
+            HttpBody<String> rescheduleResp = schedulerTaskProcessClient.rescheduleTask(rescheduleTaskReq);
+            if (!rescheduleResp.isSuccess()) {
+                log.error("重新调度任务（taskExeId:{}）失败", taskRuntimeEnv.getTaskExecutionId());
+            }
+            taskRuntimeEnv.setRuntimeEnvStatus(RuntimeEnvStatus.RESCHEDULED);
         }
-        taskRuntimeEnv.setRuntimeEnvStatus(RuntimeEnvStatus.RESCHEDULED);
         clearCompletedTaskObject(taskRuntimeEnv.getTaskExecutionId());
-        if (this.taskExecutionIdBeanMap.isEmpty()) {
-            // 没有运行的任务了，可以上报停止了
-            workerNodeService.safeToTerminate();
-        }
     }
 
 
@@ -360,9 +367,12 @@ public class TaskDriverService {
                         PrepareStageResp.PrepareStageRespData prepareStageRespData = prepareStageResp.getData();
                         Long nextStageExecutionId = prepareStageRespData.getStageExecutionId();
                         taskRuntimeService.createStageRuntimeEnv(taskRuntimeEnv, nextStageName, nextStageExecutionId);
+
+
                         executeStage(taskDefinitionBO, taskRuntimeEnv, taskBean, nextStageName);
                     }
-                } catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
+                } catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException |
+                         InterruptedException e) {
                     log.error("无法启动下一个stage", e);
                     // todo: 发生异常
                     throw new RuntimeException(e);
@@ -394,6 +404,11 @@ public class TaskDriverService {
     public void clearCompletedTaskObject(Long taskExecutionId) {
         this.taskExecutionIdBeanMap.remove(taskExecutionId);
         this.taskRuntimeService.remove(taskExecutionId);
+
+        if (this.workerNodeService.getStatus() == NodeStatus.TERMINATING && this.taskExecutionIdBeanMap.isEmpty()) {
+            // 当节点为终止中的时候并且任务对象已经是空的，那么就可以安全终止节点了。原本是分散在各个地方判断的，不好维护，统一在这里维护
+            this.workerNodeService.safeToTerminate();
+        }
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})

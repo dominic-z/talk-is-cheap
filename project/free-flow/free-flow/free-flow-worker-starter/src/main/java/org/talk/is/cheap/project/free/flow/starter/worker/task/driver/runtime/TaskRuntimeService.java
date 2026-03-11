@@ -1,6 +1,7 @@
 package org.talk.is.cheap.project.free.flow.starter.worker.task.driver.runtime;
 
 
+import cn.hutool.core.collection.ConcurrentHashSet;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerStartTaskReq;
@@ -59,6 +60,10 @@ public class TaskRuntimeService {
                 .stageRuntimeEnvs(new ConcurrentHashMap<>()) // 这个可能会并发
                 .taskDefinitionBO(taskDefinitionBO)
                 .taskFailedCount(dto.getTaskFailedCount())
+                .succeedStages(new ConcurrentHashSet<>())
+                .failedStages(new ConcurrentHashSet<>())
+                .dispatchedStages(new ConcurrentHashSet<>())
+                .stageNameFutures(new ConcurrentHashMap<>())
                 .build();
 
         if (dto.getSucceedStageNames() != null && dto.getSucceedStageNames().isEmpty()) {
@@ -94,8 +99,9 @@ public class TaskRuntimeService {
                     .inputCodec(inputCodec)
                     .encodedInput(encodedInput)
                     .startTime(stageStartTime)
-                    .deadline(stageDeadline)
+//                    .deadline(stageDeadline)
                     .taskRuntimeEnv(taskRuntimeEnv)
+                    .stageDefinitionBO(stageDefinitionBO)
                     .inputClass(stageDefinitionBO.getInputClass())
                     .stageExecutionBizLogService(stageExecutionBizLogService)
                     .stageFailedCount(dto.getStageFailedCount() != null ? dto.getStageFailedCount().getOrDefault(stageName, 0) : 0)
@@ -131,6 +137,7 @@ public class TaskRuntimeService {
                 .inputCodec(inputCodec)
                 .encodedInput(taskRuntimeEnv.getStageEncodedInputs().get(stageName))
                 .taskRuntimeEnv(taskRuntimeEnv)
+                .stageDefinitionBO(stageDefinitionBO)
                 .inputClass(stageDefinitionBO.getInputClass())
                 .stageExecutionBizLogService(stageExecutionBizLogService)
                 .stageFailedCount(0)
@@ -152,8 +159,12 @@ public class TaskRuntimeService {
 
         taskRuntimeEnv.getStageEncodedInputs().put(retryStageName, encodedInput);
 
+        StageDefinitionBO stageDefinitionBO =
+                localTaskDefinitionService.getTaskDefinitionBO(taskRuntimeEnv.getTaskName()).getStageDefinitionMap().get(retryStageName);
+
         final StageRuntimeEnv retryStageRuntimeEnv = StageRuntimeEnv.builder()
                 .taskRuntimeEnv(taskRuntimeEnv)
+                .stageDefinitionBO(stageDefinitionBO)
                 .inputClass(failedStageRuntimeEnv.getInputClass())
                 .inputCodec(failedStageRuntimeEnv.getInputCodec())
                 .encodedInput(encodedInput)

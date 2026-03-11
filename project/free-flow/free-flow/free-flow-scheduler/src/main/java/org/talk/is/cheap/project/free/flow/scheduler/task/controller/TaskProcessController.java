@@ -21,6 +21,8 @@ import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.StartTa
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerCompleteStageResultReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerFailStageReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerFailStageResp;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerFailTaskReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerFailTaskResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerStartStageReportReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerStartTaskReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerStartTaskResp;
@@ -207,12 +209,29 @@ public class TaskProcessController {
 
         WorkerFailStageReq.WorkerFailStageReqData data = req.getData();
         try {
-            workerTaskDriverService.failStageAndRetry(data.getTaskExecutionId(), data.getStageExecutionId(),data.getErrorCode(), data.getErrorMsg(),
+            workerTaskDriverService.failStageAndRetry(data.getTaskExecutionId(), data.getStageExecutionId(), data.getErrorCode(),
+                    data.getErrorMsg(),
                     data.isPausing());
             WorkerFailStageResp.WorkerFailStageReqData respData = new WorkerFailStageResp.WorkerFailStageReqData();
             resp.success(respData);
         } catch (Exception e) {
             log.error("stage:{}，无法正常失败", req, e);
+            resp.fail(ResultCode.FAIL, e.getMessage());
+        }
+        return resp;
+    }
+
+    @RequestMapping(path = URIs.SchedulerTaskProcessURIs.TASK_FAIL, method = RequestMethod.POST,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public WorkerFailTaskResp failTask(@RequestBody WorkerFailTaskReq req) {
+        WorkerFailTaskResp resp = new WorkerFailTaskResp();
+        try {
+            WorkerFailTaskReq.WorkerFailTaskReqData data = req.getData();
+            VerifyUtil.requireNotNull(data, "请求体为空");
+            workerTaskDriverService.failTaskAndRetry(data.getTaskExecutionId(), data.getErrorCode(), data.getErrorMsg());
+            resp.success();
+        } catch (Exception e) {
             resp.fail(ResultCode.FAIL, e.getMessage());
         }
         return resp;

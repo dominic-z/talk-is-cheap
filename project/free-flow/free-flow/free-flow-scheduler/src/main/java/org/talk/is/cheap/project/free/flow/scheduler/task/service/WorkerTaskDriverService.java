@@ -471,14 +471,14 @@ public class WorkerTaskDriverService {
                 TaskStageStatus.RUNNING.getStatus());
         VerifyUtil.requireTrue(stageStartup != null,
                 "The startup record for the stage with ID %d does not exist.".formatted(stageExecution.getStageStartupId()));
-        Integer taskStageStatus = stageResult.getSucceeded() ? TaskStageStatus.SUCCEEDED.getStatus() :
+        Integer stageStatus = stageResult.getSucceeded() ? TaskStageStatus.SUCCEEDED.getStatus() :
                 TaskStageStatus.FAILED.getStatus();
 
         VerifyUtil.requireTrue(stageExecutionServiceWrapper.updateSelectiveById(
-                        stageExecutionId, new StageExecution().withStatus(taskStageStatus), stageExecution.getRevision()) > 0,
+                        stageExecutionId, new StageExecution().withStatus(stageStatus), stageExecution.getRevision()) > 0,
                 String.format("更新stageExecution:%d成功状态失败", stageExecutionId));
         VerifyUtil.requireTrue(stageStartupServiceWrapper.updateSelectiveById(stageStartup.getId(),
-                        new StageStartup().withStatus(taskStageStatus).withCompletionTime(stageResult.getCompletionTime()),
+                        new StageStartup().withStatus(stageStatus).withCompletionTime(stageResult.getCompletionTime()),
                         stageStartup.getRevision()) > 0,
                 String.format("更新stageStartup:%d成功状态失败", stageStartup.getId()));
 
@@ -492,6 +492,10 @@ public class WorkerTaskDriverService {
 
         // 记录sharedContext
         ESPojoDTO<StageStartupParam> esPojoDTO = stageStartupParamService.getByStageStartupIds(stageStartup.getId());
+        if(esPojoDTO==null){
+            log.info("{}",stageStartup);
+            log.info("{}",stageStartupParamService.getByStageStartupIds(stageStartup.getId()));
+        }
         StageStartupParam stageStartupParam = esPojoDTO.getData();
         stageStartupParam.setEncodedSharedContextSnapshotAtCompletion(stageResult.getEncodedSharedContextAtCompletion());
         stageStartupParam.setUpdateTime(new Date());
@@ -540,16 +544,9 @@ public class WorkerTaskDriverService {
             // 一个可能希望重试，另一个可能希望直接失败掉任务，这可能会创建重复的taskExe，这种情况下revision控制不住，比如通过锁控制
             rLock.lock(5, TimeUnit.SECONDS);
 
-            Runnable retryRunnable = null;
             // 拆分为两个方法，确保db操作完成提交之后，再提交runAsync方法去跑真正的retry任务。
-            if (TaskExecutionErrorCode.TASK_TIME_OUT.getCode().equals(errorCode)) {
-                // 如果是任务超时，那不需要对stage做任何判断，直接对task做失败处理
-                retryRunnable = failTaskAndPrepareRetryRunnable(taskExecutionId, errorCode);
-            } else {
-                retryRunnable = failStageAndPrepareRetryRunnable(taskExecutionId, stageExecutionId, errorCode, errorMsg,
-                        workerPausing);
-            }
-
+            Runnable retryRunnable = failStageAndPrepareRetryRunnable(taskExecutionId, stageExecutionId, errorCode, errorMsg,
+                    workerPausing);
 
             if (retryRunnable != null) {
                 CompletableFuture.runAsync(retryRunnable, threadPoolExecutor)
@@ -622,12 +619,18 @@ public class WorkerTaskDriverService {
                             .withFailCount(stageStartup.getFailCount())
                             .withStatus(stageStatus.getStatus())
                             .withRevision(stageStartup.getRevision()), null);
-
+            // 随之task也要失败
             return failTaskAndPrepareRetryRunnable(taskExecutionId, errorCode);
 
         } else {
             // stage还可以重试
             log.info("stage(startupId:{})重试了{}次，还可以重试", stageStartup.getId(), stageStartup.getFailCount());
+            stageStartupServiceWrapper.updateSelectiveById(stageStartup.getId(),
+                    new StageStartup()
+                            .withFailCount(stageStartup.getFailCount())
+                            .withStatus(TaskStageStatus.PENDING.getStatus())
+                            .withRevision(stageStartup.getRevision()), null);
+
             StageExecution retryStageExecution = new StageExecution()
                     .withStageStartupId(stageStartup.getId())
                     .withStatus(TaskStageStatus.PENDING.getStatus())
@@ -688,6 +691,8 @@ public class WorkerTaskDriverService {
     @Transactional(rollbackFor = Exception.class, transactionManager = RepositoryAutoConfig.TRANSACTION_MANAGER_BEAN_NAME)
     private Runnable failTaskAndPrepareRetryRunnable(long taskExecutionId, Integer errorCode) {
         TaskExecution taskExecution = taskExecutionServiceWrapper.selectById(taskExecutionId);
+        VerifyUtil.requireTrue(TaskStageStatus.RUNNING.getStatus().equals(taskExecution.getStatus()),
+                String.format("任务(taskExecutionId:%d)已经不是运行状态，可能已经启动了重试", taskExecutionId));
         Integer status = TaskExecutionErrorCode.TASK_TIME_OUT.getCode().equals(errorCode) ?
                 TaskStageStatus.TIME_OUT.getStatus() : TaskStageStatus.FAILED.getStatus();
         if (taskExecutionServiceWrapper.updateSelectiveById(taskExecutionId, new TaskExecution()
@@ -735,6 +740,39 @@ public class WorkerTaskDriverService {
         }
     }
 
+
+    public void failTaskAndRetry(long taskExecutionId, Integer errorCode, String errorMsg) {
+        log.info("任务失败：taskExeId:{}", taskExecutionId);
+        RLock rLock = redissonClient.getLock(RedissonService.getTaskExecutionLockKey(taskExecutionId));
+        try {
+            // 判断重试，这块需要考虑发起任务和更新db的并发问题，
+            // 一个是同一台机器之间不同线程的并发，db更新没完成，就在另一个线程里尝试读取并操作，那可能是读取不到的db里的信息的。这个需要本地锁解决
+            // 另一个是不同机器操作同一个taskStartup或者重复创建taskExecution的并发，这个需要通过revision锁或者redis锁
+            // 另一个是不同机器之间的并发，比如一个阶段失败了，另一个阶段也失败了，他们如果请求到不同的scheduler，
+            // 一个可能希望重试，另一个可能希望直接失败掉任务，这可能会创建重复的taskExe，这种情况下revision控制不住，比如通过锁控制
+            rLock.lock(5, TimeUnit.SECONDS);
+
+            // 拆分为两个方法，确保db操作完成提交之后，再提交runAsync方法去跑真正的retry任务。
+            Runnable retryRunnable = failTaskAndPrepareRetryRunnable(taskExecutionId, errorCode);
+
+            if (retryRunnable != null) {
+                CompletableFuture.runAsync(retryRunnable, threadPoolExecutor)
+                        .exceptionally(e -> {
+                            log.error("重试task异常", e);
+                            return null;
+                        });
+            }
+        } finally {
+//            坑：如果这个锁没有被占用，执行unlock会报错的，所以需要判断一下。否则如果这里执行报错了，上面业务执行的异常会变成finally的异常
+            try {
+                if (rLock.isLocked()) {
+                    rLock.unlock();
+                }
+            } catch (Exception e) {
+                log.error("解锁异常", e);
+            }
+        }
+    }
 
     private void retryTask(long taskStartupId, long failedTaskExecutionId) {
 
