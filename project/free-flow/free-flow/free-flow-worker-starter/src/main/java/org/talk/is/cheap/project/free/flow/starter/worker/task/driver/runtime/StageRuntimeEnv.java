@@ -7,8 +7,10 @@ import lombok.Setter;
 import lombok.ToString;
 import org.apache.commons.lang3.StringUtils;
 import org.talk.is.cheap.project.free.flow.common.task.codec.InputCodec;
+import org.talk.is.cheap.project.free.flow.common.task.definition.bo.StageDefinitionBO;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.es.StageExecutionBizLogService;
 
+import java.util.Calendar;
 import java.util.Date;
 
 @Builder
@@ -20,15 +22,18 @@ public class StageRuntimeEnv<T> {
     private final InputCodec<T> inputCodec;
     private final Class<T> inputClass;
     private final String encodedInput;
-    private final Date startTime;
-    private final Date deadline;
+    @Setter
+    private Date startTime;
     private final Integer stageFailedCount;
     private final StageExecutionBizLogService stageExecutionBizLogService;
     @Getter(AccessLevel.NONE)
     private T input;
     // 当前stage所在的task的runtime
     @Getter(AccessLevel.NONE)
-    private TaskRuntimeEnv<?> taskRuntimeEnv;
+    private final TaskRuntimeEnv<?> taskRuntimeEnv;
+
+    @Getter(AccessLevel.NONE)
+    private final StageDefinitionBO stageDefinitionBO;
 
     public T getInput() {
         if (StringUtils.isBlank(encodedInput)) {
@@ -49,5 +54,15 @@ public class StageRuntimeEnv<T> {
 
     public void log(String s) {
         stageExecutionBizLogService.logAsync(stageExecutionId, s);
+    }
+
+    public Date getDeadline() {
+        if (stageDefinitionBO.getTimeout() <= 0) {
+            return null;
+        }
+        Calendar instance = Calendar.getInstance();
+        instance.setTime(this.startTime);
+        instance.add(Calendar.SECOND, stageDefinitionBO.getTimeout());
+        return instance.getTime();
     }
 }

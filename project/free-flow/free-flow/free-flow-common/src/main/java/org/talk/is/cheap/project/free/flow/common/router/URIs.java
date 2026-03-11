@@ -40,6 +40,7 @@ public class URIs {
         public static final String STAGE_PREPARE = PREFIX + "/stage/prepare";
         public static final String STAGE_FAIL = PREFIX + "/stage/fail";
         public static final String STAGE_START_REPORT = PREFIX + "/stage/start/notify";
+        public static final String TASK_FAIL = PREFIX + "/task/fail";
         public static final String RE_SCHEDULE = PREFIX + "/reschedule";
 
     }

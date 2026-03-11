@@ -13,6 +13,8 @@ import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.Resched
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerCompleteStageResultReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerFailStageReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerFailStageResp;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerFailTaskReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerFailTaskResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.WorkerStartStageReportReq;
 import org.talk.is.cheap.project.free.flow.common.router.URIs;
 import org.talk.is.cheap.project.free.flow.starter.worker.config.ClusterAutoConfig;
@@ -50,6 +52,11 @@ public interface SchedulerTaskProcessClient {
     @ResponseBody
     WorkerFailStageResp failStage(URI host, @RequestBody WorkerFailStageReq req);
 
+
+    @RequestMapping(path = URIs.SchedulerTaskProcessURIs.TASK_FAIL, method = RequestMethod.POST,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    WorkerFailTaskResp failTask(URI host, @RequestBody WorkerFailTaskReq req);
 
     @RequestMapping(path = URIs.SchedulerTaskProcessURIs.RE_SCHEDULE, method = RequestMethod.POST,
             produces = MediaType.APPLICATION_JSON_VALUE)

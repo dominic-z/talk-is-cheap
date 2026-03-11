@@ -147,7 +147,7 @@ public class LocalTaskDefinitionService {
                 Class<? extends InputCodec<?>> inputCodecClass = runnableStageAnno.inputCodecClass();
                 String[] toStageNames = runnableStageAnno.toStageName();
                 int maxRetryCount = runnableStageAnno.maxRetryCount();
-                int timeout = runnableStageAnno.timeout();
+                int timeout = runnableStageAnno.timeoutInSecond();
                 String methodName = method.getName();
 
                 Parameter[] parameters = method.getParameters();

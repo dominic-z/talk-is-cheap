@@ -45,12 +45,12 @@ public class TaskRuntimeEnv<T> {
     private Map<String, StageRuntimeEnv<?>> stageRuntimeEnvs;
 
     // 已经完成运行的stage
-    private Set<String> succeedStages = new ConcurrentHashSet<>();
+    private Set<String> succeedStages;
     // 已经失败的stage
-    private Set<String> failedStages = new ConcurrentHashSet<>();
+    private Set<String> failedStages;
     // 存储那些已经要执行或者正在执行中的stage
-    private Set<String> dispatchedStages = new ConcurrentHashSet<>();
-    private Map<String, CompletableFuture<?>> stageNameFutures = new ConcurrentHashMap<>();
+    private Set<String> dispatchedStages;
+    private Map<String, CompletableFuture<?>> stageNameFutures;
 
     @Getter(AccessLevel.NONE)
     private TaskDefinitionBO taskDefinitionBO;
