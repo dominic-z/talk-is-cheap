@@ -1,8 +1,10 @@
 package example.task;
 
 
+import example.repository.DemoDao;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.talk.is.cheap.project.free.flow.common.task.codec.JsonInputCodec;
 import org.talk.is.cheap.project.free.flow.starter.worker.task.definition.annotaion.stage.RunnableStage;
 import org.talk.is.cheap.project.free.flow.starter.worker.task.definition.annotaion.task.Task;
@@ -10,8 +12,8 @@ import org.talk.is.cheap.project.free.flow.starter.worker.task.driver.runtime.St
 
 import java.util.Random;
 
-@Task(name = "stage-timeout-task2", version = 1, sharedContextCodecClass =
-        StageTimeoutTask2.TTSharedContext.TTSharedContextInputClass.class,timeout = 20)
+@Task(name = "stage-timeout-task2", version = 2, sharedContextCodecClass =
+        StageTimeoutTask2.TTSharedContext.TTSharedContextInputClass.class, timeout = 25)
 @Slf4j
 public class StageTimeoutTask2 {
 
@@ -93,7 +95,7 @@ public class StageTimeoutTask2 {
         log.info("method1 input: {}", stageRuntimeEnv.getInput());
 
         try {
-            Thread.sleep(3000);
+            Thread.sleep(1000);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -106,12 +108,18 @@ public class StageTimeoutTask2 {
     @RunnableStage(name = "method2", toStageName = {"method3"}, version = 1, timeoutInSecond = 3)
     public void method2(StageRuntimeEnv<?> stageRuntimeEnv) {
         log.info("method2");
+        TTSharedContext ttSharedContext = stageRuntimeEnv.getSharedContext();
+        log.info("ttSharedContext: {}", ttSharedContext);
         try {
-            Thread.sleep(3000);
+            if (ttSharedContext.getNum() < 1) {
+                ttSharedContext.setNum(ttSharedContext.getNum() + 1);
+                Thread.sleep(5000);
+            } else {
+                Thread.sleep(2000);
+            }
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        TTSharedContext ttSharedContext = stageRuntimeEnv.getSharedContext();
         ttSharedContext.getTtSharedContextInnerData().setCache("cache in method2");
         stageRuntimeEnv.log("method2_1");
         stageRuntimeEnv.log("method2_2");
@@ -150,17 +158,26 @@ public class StageTimeoutTask2 {
         ttSharedContext.setName("method4");
     }
 
-    @RunnableStage(name = "method4_2", version = 1, toStageName = "method5", timeoutInSecond = 3)
+    @RunnableStage(name = "method4_2", version = 1, toStageName = "method5")
     public void method4_2() {
-        log.info("method42");
+        log.info("method42, getQuantity: {}", demoDao.getQuantity());
         try {
-//            Thread.sleep((new Random(10).nextInt(3)) * 1000);
-            Thread.sleep(10);
+            //        用来测试task第一次失败第二次执行成功
+            if (demoDao.getQuantity() < 1) {
+                demoDao.addQuantity(1);
+                Thread.sleep(20000);
+            } else {
+                demoDao.addQuantity(1);
+                Thread.sleep(300);
+            }
 
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
     }
+
+    @Autowired
+    private DemoDao demoDao;
 
     @RunnableStage(name = "method5", version = 1,
             inputCodecClass = TTMethod5Input.TTMethod5InputCodec.class, timeoutInSecond = 3)
@@ -168,7 +185,8 @@ public class StageTimeoutTask2 {
 
         log.info("method5, input :{}", stageRuntimeEnv.getInput());
         try {
-            Thread.sleep((new Random(10).nextInt(3) ) * 1000);
+            // 测试最后一个stage超时不干扰task是否超时
+            Thread.sleep(20000);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }

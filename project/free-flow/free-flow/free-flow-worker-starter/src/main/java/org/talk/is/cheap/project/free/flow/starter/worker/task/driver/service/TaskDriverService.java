@@ -170,7 +170,11 @@ public class TaskDriverService {
                         .stageExecutionId(stageExecutionId)
                         .build()));
                 schedulerTaskProcessClient.stageStartReport(workerNodeService.getRandomSchedulerURI(), req);
-                stageRuntimeEnv.setStartTime(new Date());
+                Date startTime = new Date();
+                stageRuntimeEnv.setStartTime(startTime);
+                if(taskRuntimeEnv.getStartTime()==null){
+                    taskRuntimeEnv.setStartTime(startTime);
+                }
                 if (stageDefinitionBO.getParameters().length == 0) {
                     stageMethod.invoke(taskBean, new Object[0]);
                 } else {
@@ -283,7 +287,8 @@ public class TaskDriverService {
             WorkerFailStageReq.WorkerFailStageReqData data = new WorkerFailStageReq.WorkerFailStageReqData();
             data.setTaskExecutionId(taskRuntimeEnv.getTaskExecutionId());
             data.setStageExecutionId(stageExecutionId);
-            if (e instanceof TaskExecutionException bizE) {
+            Throwable cause = e.getCause(); // e为包装类，java.util.concurrent.CompletionException
+            if (cause instanceof TaskExecutionException bizE) {
                 data.setErrorCode(bizE.getErrorCode());
             }
             data.setErrorMsg(e.getMessage());
@@ -413,50 +418,54 @@ public class TaskDriverService {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     public void retryStage(long taskExecutionId, String stageName, long stageExecutionId, String encodedInput, Integer stageFailedCount) throws
-            NoSuchMethodException {
+            NoSuchMethodException, InterruptedException {
 
         StageRuntimeEnv retryStageRuntimeEnv = taskRuntimeService.updateRetryStageRuntimeEnv(taskExecutionId, stageExecutionId,
                 stageName, encodedInput, stageFailedCount);
-
         TaskRuntimeEnv<?> taskRuntimeEnv = this.taskRuntimeService.get(taskExecutionId);
-        VerifyUtil.requireNotNull(taskRuntimeEnv, String.format("taskExeId:%d的任务运行环境变量已经丢失", taskExecutionId));
-        taskRuntimeEnv.getDispatchedStages().add(stageName);
-        final Object taskBean = this.taskExecutionIdBeanMap.get(taskExecutionId);
-
         TaskDefinitionBO taskDefinitionBO = localTaskDefinitionService.getTaskDefinitionBO(taskRuntimeEnv.getTaskName());
-        StageDefinitionBO stageDefinitionBO = taskDefinitionBO.getStageDefinitionMap().get(stageName);
-        Class<?> taskClass = taskDefinitionBO.getTaskClass();
-        Method stageMethod = taskClass.getDeclaredMethod(stageDefinitionBO.getMethodName(),
-                Arrays.stream(stageDefinitionBO.getParameters()).map(Parameter::getType).toArray(Class[]::new));
-        CompletableFuture<Void> stageFuture = CompletableFuture.supplyAsync(() -> {
-                    try {
-                        // 告知scheduler某个stage已经排到要执行了
-                        WorkerStartStageReportReq req = new WorkerStartStageReportReq();
-                        req.setData(List.of(WorkerStartStageReportReq.WorkerStartToExecuteStageReqDatum.builder()
-                                .taskExecutionId(taskExecutionId)
-                                .stageExecutionId(stageExecutionId)
-                                .build()));
-                        schedulerTaskProcessClient.stageStartReport(workerNodeService.getRandomSchedulerURI(), req);
-                        if (stageDefinitionBO.getParameters().length == 0) {
-                            stageMethod.invoke(taskBean, new Object[0]);
-                        } else {
-                            stageMethod.invoke(taskBean, retryStageRuntimeEnv);
-                        }
+        final Object taskBean = this.taskExecutionIdBeanMap.get(taskExecutionId);
+        executeStage(taskDefinitionBO, taskRuntimeEnv, taskBean, stageName);
 
-                        return stageExecutionId;
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                }, threadPoolExecutor)
-                .thenAccept((v) -> {
-                    completeStageAndTryNext(taskDefinitionBO, taskRuntimeEnv, taskBean, stageName, stageExecutionId);
-                })
-                .exceptionally((e) -> {
-                    // 这有点问题，因为thenAccept的异常也会被抛到这里
-                    failStage(taskRuntimeEnv, stageName, stageExecutionId, e);
-                    return null;
-                });
-        taskRuntimeEnv.getStageNameFutures().put(stageName, stageFuture);
+//        TaskRuntimeEnv<?> taskRuntimeEnv = this.taskRuntimeService.get(taskExecutionId);
+//        VerifyUtil.requireNotNull(taskRuntimeEnv, String.format("taskExeId:%d的任务运行环境变量已经丢失", taskExecutionId));
+//        taskRuntimeEnv.getDispatchedStages().add(stageName);
+//        final Object taskBean = this.taskExecutionIdBeanMap.get(taskExecutionId);
+//
+//        TaskDefinitionBO taskDefinitionBO = localTaskDefinitionService.getTaskDefinitionBO(taskRuntimeEnv.getTaskName());
+//        StageDefinitionBO stageDefinitionBO = taskDefinitionBO.getStageDefinitionMap().get(stageName);
+//        Class<?> taskClass = taskDefinitionBO.getTaskClass();
+//        Method stageMethod = taskClass.getDeclaredMethod(stageDefinitionBO.getMethodName(),
+//                Arrays.stream(stageDefinitionBO.getParameters()).map(Parameter::getType).toArray(Class[]::new));
+//        CompletableFuture<Void> stageFuture = CompletableFuture.supplyAsync(() -> {
+//                    try {
+//                        // 告知scheduler某个stage已经排到要执行了
+//                        WorkerStartStageReportReq req = new WorkerStartStageReportReq();
+//                        req.setData(List.of(WorkerStartStageReportReq.WorkerStartToExecuteStageReqDatum.builder()
+//                                .taskExecutionId(taskExecutionId)
+//                                .stageExecutionId(stageExecutionId)
+//                                .build()));
+//                        schedulerTaskProcessClient.stageStartReport(workerNodeService.getRandomSchedulerURI(), req);
+//                        if (stageDefinitionBO.getParameters().length == 0) {
+//                            stageMethod.invoke(taskBean, new Object[0]);
+//                        } else {
+//                            stageMethod.invoke(taskBean, retryStageRuntimeEnv);
+//                        }
+//
+//                        return stageExecutionId;
+//                    } catch (Exception e) {
+//                        throw new RuntimeException(e);
+//                    }
+//                }, threadPoolExecutor)
+//                .thenAccept((v) -> {
+//                    completeStageAndTryNext(taskDefinitionBO, taskRuntimeEnv, taskBean, stageName, stageExecutionId);
+//                })
+//                .exceptionally((e) -> {
+//                    // 这有点问题，因为thenAccept的异常也会被抛到这里
+//                    failStage(taskRuntimeEnv, stageName, stageExecutionId, e);
+//                    return null;
+//                });
+//        taskRuntimeEnv.getStageNameFutures().put(stageName, stageFuture);
 
     }
 

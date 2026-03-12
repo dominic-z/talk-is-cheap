@@ -11,6 +11,7 @@ import org.talk.is.cheap.project.free.flow.common.task.codec.InputCodec;
 import org.talk.is.cheap.project.free.flow.common.task.codec.JsonInputCodec;
 import org.talk.is.cheap.project.free.flow.common.task.definition.bo.TaskDefinitionBO;
 
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Map;
 import java.util.Set;
@@ -31,8 +32,9 @@ public class TaskRuntimeEnv<T> {
     private final InputCodec<T> sharedContextCodec;
     private final Class<T> sharedContextClass;
     private final String encodedSharedContext;
-    private final Date startTime;
-    private final Date deadline;// 超时截止时间
+    @Setter
+    private Date startTime;
+//    private final Date deadline;// 超时截止时间
     private final Integer taskFailedCount;
     @Getter(AccessLevel.NONE)
     private T sharedContext;
@@ -79,6 +81,16 @@ public class TaskRuntimeEnv<T> {
 
     public void updateStageRuntimeEnv(String stageName, StageRuntimeEnv<?> stageRuntimeEnv) {
         this.stageRuntimeEnvs.put(stageName, stageRuntimeEnv);
+    }
+
+    public Date getDeadline() {
+        if (taskDefinitionBO.getTimeoutInSecond() <= 0) {
+            return null;
+        }
+        Calendar instance = Calendar.getInstance();
+        instance.setTime(this.startTime);
+        instance.add(Calendar.SECOND, taskDefinitionBO.getTimeoutInSecond());
+        return instance.getTime();
     }
 
     @Data
