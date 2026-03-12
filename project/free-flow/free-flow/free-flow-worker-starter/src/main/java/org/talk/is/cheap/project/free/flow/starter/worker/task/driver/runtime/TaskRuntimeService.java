@@ -41,20 +41,13 @@ public class TaskRuntimeService {
         InputCodec codec = (InputCodec) taskDefinitionBO.getSharedContextCodecClass().getDeclaredConstructor().newInstance();
         Map<String, String> stageEncodedInputs = dto.getStageEncodedInputs();
 
-        Date deadline = null;
         Calendar cal = Calendar.getInstance();
         Date current = cal.getTime();
-        if (taskDefinitionBO.getTimeoutInSecond() > 0) {
-            cal.add(Calendar.SECOND, taskDefinitionBO.getTimeoutInSecond());
-            deadline = cal.getTime();
-        }
         TaskRuntimeEnv taskRuntimeEnv = TaskRuntimeEnv.builder()
                 .taskExecutionId(dto.getTaskExecutionId())
                 .sharedContextCodec(codec)
                 .sharedContextClass(taskDefinitionBO.getSharedContextClass())
                 .encodedSharedContext(dto.getInitialEncodedSharedContext())
-                .startTime(current)
-                .deadline(deadline)
                 .runtimeEnvStatus(RuntimeEnvStatus.RUNNING)
                 .stageEncodedInputs(stageEncodedInputs) // 初始情况选这个属性会存储所有的stage的入参
                 .stageRuntimeEnvs(new ConcurrentHashMap<>()) // 这个可能会并发
@@ -88,18 +81,10 @@ public class TaskRuntimeService {
                 encodedInput = stageEncodedInputs.get(stageName);
             }
             Calendar stageCal = Calendar.getInstance();
-            Date stageStartTime = stageCal.getTime();
-            Date stageDeadline = null;
-            if (stageDefinitionBO.getTimeout() > 0) {
-                cal.add(Calendar.SECOND, stageDefinitionBO.getTimeout());
-                stageDeadline = stageCal.getTime();
-            }
             StageRuntimeEnv stageRuntimeEnv = StageRuntimeEnv.builder()
                     .stageExecutionId(stageExecutionId)
                     .inputCodec(inputCodec)
                     .encodedInput(encodedInput)
-                    .startTime(stageStartTime)
-//                    .deadline(stageDeadline)
                     .taskRuntimeEnv(taskRuntimeEnv)
                     .stageDefinitionBO(stageDefinitionBO)
                     .inputClass(stageDefinitionBO.getInputClass())
@@ -132,6 +117,8 @@ public class TaskRuntimeService {
         StageDefinitionBO stageDefinitionBO =
                 localTaskDefinitionService.getTaskDefinitionBO(taskRuntimeEnv.getTaskName()).getStageDefinitionMap().get(stageName);
         InputCodec inputCodec = stageDefinitionBO.getInputCodecClass().getDeclaredConstructor().newInstance();
+
+
         StageRuntimeEnv stageRuntimeEnv = StageRuntimeEnv.builder()
                 .stageExecutionId(stageExecutionId)
                 .inputCodec(inputCodec)
@@ -163,12 +150,13 @@ public class TaskRuntimeService {
                 localTaskDefinitionService.getTaskDefinitionBO(taskRuntimeEnv.getTaskName()).getStageDefinitionMap().get(retryStageName);
 
         final StageRuntimeEnv retryStageRuntimeEnv = StageRuntimeEnv.builder()
+                .stageExecutionId(retryStageExecutionId)
+                .inputCodec(failedStageRuntimeEnv.getInputCodec())
+                .encodedInput(encodedInput)
                 .taskRuntimeEnv(taskRuntimeEnv)
                 .stageDefinitionBO(stageDefinitionBO)
                 .inputClass(failedStageRuntimeEnv.getInputClass())
-                .inputCodec(failedStageRuntimeEnv.getInputCodec())
-                .encodedInput(encodedInput)
-                .stageExecutionId(retryStageExecutionId)
+                .stageExecutionBizLogService(stageExecutionBizLogService)
                 .stageFailedCount(failedStageRuntimeEnv.getStageFailedCount() + 1) // 重试stage，失败次数+1
                 .build();
 

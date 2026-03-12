@@ -593,12 +593,8 @@ public class WorkerTaskDriverService {
         }
         stageExecution.setRevision(stageExecution.getRevision() + 1);
         stageExecutionServiceWrapper.updateSelectiveById(stageExecutionId,
-                new StageExecution().withStatus(stageExecution.getStatus()).withRevision(stageExecution.getRevision()),
+                new StageExecution().withStatus(stageStatus.getStatus()).withRevision(stageExecution.getRevision()),
                 null);
-
-        StageStartup stageStartup = stageStartupServiceWrapper.selectById(stageExecution.getStageStartupId());
-        stageStartup.setFailCount(stageStartup.getFailCount() + 1);
-        stageStartup.setRevision(stageStartup.getRevision() + 1);
 
         // 记录结果信息
         if (StringUtils.isNotBlank(errorMsg)) {
@@ -607,7 +603,9 @@ public class WorkerTaskDriverService {
                     .msg(errorMsg)
                     .createTime(new Date()).build());
         }
-
+        StageStartup stageStartup = stageStartupServiceWrapper.selectById(stageExecution.getStageStartupId());
+        stageStartup.setFailCount(stageStartup.getFailCount() + 1);
+        stageStartup.setRevision(stageStartup.getRevision() + 1);
         StageDefinition stageDefinition = stageDefinitionServiceWrapper.selectById(stageStartup.getStageId());
 
 
