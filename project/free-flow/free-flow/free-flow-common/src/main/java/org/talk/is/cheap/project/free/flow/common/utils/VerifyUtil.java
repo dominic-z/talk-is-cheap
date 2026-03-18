@@ -32,6 +32,10 @@ public class VerifyUtil {
         }
     }
 
+    public static void requireEqual(String s1, String s2, String errorMsg) {
+        requireTrue(StringUtils.equals(s1, s2), errorMsg);
+    }
+
     public static void requireNotBlank(String s, String errorMsg) {
         requireTrue(StringUtils.isNotBlank(s), errorMsg);
     }

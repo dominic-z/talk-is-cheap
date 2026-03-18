@@ -88,6 +88,7 @@ public class ClusterManageControllerImpl implements ClusterManageController {
         HttpBody<String> resp = new HttpBody<>();
         try{
             workerClusterManager.tryTerminate(workerAddress);
+            resp.success();
         }catch (Exception e){
             resp.fail(ResultCode.FAIL,e.getMessage());
         }

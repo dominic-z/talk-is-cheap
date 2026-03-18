@@ -1,4 +1,4 @@
-package example;
+package org.talk.is.cheap.project.free.example;
 
 
 import org.springframework.beans.factory.annotation.Autowired;

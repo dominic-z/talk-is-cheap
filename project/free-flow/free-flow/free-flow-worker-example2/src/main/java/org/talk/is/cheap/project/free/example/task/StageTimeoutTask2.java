@@ -1,7 +1,7 @@
-package example.task;
+package org.talk.is.cheap.project.free.example.task;
 
 
-import example.repository.DemoDao;
+import org.talk.is.cheap.project.free.example.repository.DemoDao;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,9 +10,7 @@ import org.talk.is.cheap.project.free.flow.starter.worker.task.definition.annota
 import org.talk.is.cheap.project.free.flow.starter.worker.task.definition.annotaion.task.Task;
 import org.talk.is.cheap.project.free.flow.starter.worker.task.driver.runtime.StageRuntimeEnv;
 
-import java.util.Random;
-
-@Task(name = "stage-timeout-task2", version = 2, sharedContextCodecClass =
+@Task(name = "stage-timeout-task2", version = 3, sharedContextCodecClass =
         StageTimeoutTask2.TTSharedContext.TTSharedContextInputClass.class, timeout = 25)
 @Slf4j
 public class StageTimeoutTask2 {

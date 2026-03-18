@@ -59,7 +59,7 @@ public class TaskRuntimeService {
                 .stageNameFutures(new ConcurrentHashMap<>())
                 .build();
 
-        if (dto.getSucceedStageNames() != null && dto.getSucceedStageNames().isEmpty()) {
+        if (dto.getSucceedStageNames() != null && !dto.getSucceedStageNames().isEmpty()) {
             taskRuntimeEnv.getSucceedStages().addAll(dto.getSucceedStageNames());
             taskRuntimeEnv.getDispatchedStages().addAll(dto.getSucceedStageNames());
         }

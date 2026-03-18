@@ -21,90 +21,134 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class FieldAwareLockManager<K> {
 
-    private final Map<K, Lock> lockMap = new ConcurrentHashMap<>();
+    private final Map<K, LockWrapper> lockMap = new ConcurrentHashMap<>();
     private final Map<K, AtomicInteger> referrencCountMap = new ConcurrentHashMap<>();
 
-
-    /*
-     * 版本1
-     * 加锁：向map中创建锁对象->加锁
-     * 解锁：释放锁->删除锁对象
-     *
-     * 但这有并发问题啊shit
-     * 线程A:  释放锁                            删除锁对象
-     * 线程B:             获取锁并尝试加锁
-     * 最终结果就是这个锁不在map中了。
-     *
-     * 版本2：
-     * 加锁：向map中创建锁对象->加锁->再次尝试放入map中
-     * 解锁：释放锁->删除锁对象
-     *
-     * 还是有问题
-     * 线程A:  释放锁                                                删除锁对象
-     * 线程B:             获取锁并尝试加锁   次尝试放入map中
-     * 最终结果就是这个锁不在map中了。
-     *
-     *
-     * 版本3是下面的代码，我希望利用reentrantlock的可重入特性解锁，但还是有问题，并发测试仍然不通过，unlock方法会抛出空指针异常和IllegalMonitorStateException异常
-     * 这说明unlock的时候，lockMap中某个key对应lock被删除或者替换过，是这样造成的，想了一上午，很难发现
-     *
-     * 线程A： 执行完lock(1)方法 --->                   --> 执行完lockMap.remove(1);
-     * 线程B：                 --->  执行到lock.lock();这个lock对象与线程A的lock对象是同一个对象，记作lockA
-     * 线程C :                 --->                    -->                          --> 执行到lock(1)的computeIfAbsent，这是一个全新的lock对象lockB
-     *
-     * 随后
-     * 线程A：  释放lockA
-     * 线程B：                                                 lockA加锁，但不会被put至lockMap中 -->  unlock(1)就报错了，因为此时1->lockB
-     * 线程C : 成功完成lock(1)方法，此时lockMap中1->lockB   --->                                 -->
-     *
-     *
-     * 线程C :        nihao nihao mouse mouse is coming hahahahahahah
-     *
-     */
-
-//    public void lock(K key) {
-//        // lockMap.computeIfAbsent(key, (n) -> new ReentrantLock())是原子操作，多个线程同时执行这个操作，返回的值一定是同一个value
-//        Lock lock = lockMap.computeIfAbsent(key, (k) -> new ReentrantLock());
-//        lock.lock();
-//        // 这一步的作用是确保上锁的lock存在在map里
-//
-//        lockMap.putIfAbsent(key, lock);
-//    }
-//
-//    public void unlockAndRemove(K k) {
-//        Lock lock = lockMap.get(k);
-//        lockMap.remove(k);
-//        lock.unlock();
-//    }
-
+    // 锁包装器：包含锁实例 + 引用计数（用于安全清理）
+    private static class LockWrapper {
+        final ReentrantLock lock = new ReentrantLock();
+        final AtomicInteger refCount = new AtomicInteger(1); // 创建即计数=1
+    }
 
     /**
-     * 终极解决方法，基于上述问题，借鉴单例模式的两次校验来优化
+     * 加锁（可中断）
      *
-     * @param key
+     * @param key 锁标识（非空）
+     * @throws InterruptedException     线程在等待锁时被中断
+     * @throws IllegalArgumentException key 为空
      */
-    public void lock(K key) {
-        // lockMap.computeIfAbsent(key, (n) -> new ReentrantLock())是原子操作，多个线程同时执行这个操作，返回的值一定是同一个value
-        Lock lock = lockMap.computeIfAbsent(key, (k) -> new ReentrantLock());
-        lock.lock();
-        // 加锁后二次校验，确保lock对象在map中，
-        // 只有lock在map中，就能确保其余key相同的lock(k)方法中使用的锁是同一把锁，从而确保lock.lock能够被成功阻塞
-        if (lock != lockMap.get(key)) {
-            // 如果到这里，说明lockMap中的k对应的lock已经不是lock这个对象了，也就是说lock.lock的加锁是无效的，因此重新加锁
-            lock.unlock();
-            lock(key);
+    public void lock(K key) throws InterruptedException {
+        validateKey(key);
+        LockWrapper wrapper = getOrCreateWrapper(key);
+        try {
+            wrapper.lock.lockInterruptibly(); // 支持响应中断
+        } catch (InterruptedException e) {
+            releaseWrapper(key, wrapper); // 加锁失败需释放引用
+            throw e;
         }
     }
 
     /**
-     * 解掉的锁需要remove掉，否则map会越来越大，也正是因为需要remove，所以lock才需要二次判断。
-     * @param k
+     * 尝试加锁（带超时）
+     *
+     * @return true=获取成功，false=超时
      */
-    public void unlockAndRemove(K k) {
-        Lock lock = lockMap.remove(k);// 其实这一步就相当于解锁了
-        if(lock!=null){
-            lock.unlock();
+    public boolean tryLock(K key, long timeout, TimeUnit unit) throws InterruptedException {
+        validateKey(key);
+        LockWrapper wrapper = getOrCreateWrapper(key);
+        boolean acquired = false;
+        try {
+            acquired = wrapper.lock.tryLock(timeout, unit);
+            if (!acquired) releaseWrapper(key, wrapper);
+            return acquired;
+        } catch (InterruptedException e) {
+            releaseWrapper(key, wrapper);
+            throw e;
         }
+    }
+
+    /**
+     * 解锁
+     *
+     * @throws IllegalStateException    未持有锁 / key 未加锁 / 跨线程解锁
+     * @throws IllegalArgumentException key 为空
+     */
+    public void unlock(K key) {
+        validateKey(key);
+        LockWrapper wrapper = lockMap.get(key);
+        if (wrapper == null) {
+            throw new IllegalStateException("非法操作：对未加锁的 key [" + key + "] 调用 unlock");
+        }
+        // 严格校验：必须由持有锁的线程调用
+        if (!wrapper.lock.isHeldByCurrentThread()) {
+            throw new IllegalStateException(
+                    "安全拒绝：当前线程未持有 key [" + key + "] 的锁，禁止跨线程解锁");
+        }
+        try {
+            wrapper.lock.unlock();
+        } finally {
+            releaseWrapper(key, wrapper); // 释放后自动清理
+        }
+    }
+
+    /**
+     * 尝试解锁
+     * @param key
+     * @return
+     */
+    public boolean tryUnlock(K key) {
+        validateKey(key);
+        if (!lockMap.containsKey(key) || !lockMap.get(key).lock.isLocked() || !lockMap.get(key).lock.isHeldByCurrentThread()) {
+            return false;
+        }
+        unlock(key);
+        return true;
+    }
+
+    // ========== 内部工具方法 ==========
+
+    private void validateKey(K key) {
+        if (key == null) {
+            throw new IllegalArgumentException("锁 key 不能为空");
+        }
+    }
+
+    // 原子获取或创建锁包装器（引用计数+1）
+    private LockWrapper getOrCreateWrapper(K key) {
+        return lockMap.compute(key, (k, existing) -> {
+            if (existing != null) {
+                existing.refCount.incrementAndGet(); // 复用时计数+1
+                return existing;
+            }
+            return new LockWrapper(); // 新建时 refCount=1
+        });
+    }
+
+    // 释放引用：解锁后调用，计数归零时安全移除
+    private void releaseWrapper(K key, LockWrapper wrapper) {
+        if (wrapper.refCount.decrementAndGet() == 0) {
+            // CAS 移除：防止其他线程刚增加引用
+            lockMap.computeIfPresent(key, (k, current) ->
+                    current == wrapper && current.refCount.get() == 0 ? null : current
+            );
+        }
+    }
+
+    // ========== 监控方法（可选）==========
+
+    /**
+     * 获取当前活跃锁数量（用于监控）
+     */
+    public int getActiveLockCount() {
+        return lockMap.size();
+    }
+
+    /**
+     * 检查当前线程是否持有指定 key 的锁
+     */
+    public boolean isHeldByCurrentThread(K key) {
+        LockWrapper wrapper = lockMap.get(key);
+        return wrapper != null && wrapper.lock.isHeldByCurrentThread();
     }
 
 
@@ -113,16 +157,20 @@ public class FieldAwareLockManager<K> {
         final FieldAwareLockManager<Integer> lockManager = new FieldAwareLockManager<>();
         Map<Integer, Integer> count = new ConcurrentHashMap<>();
         Random random = new Random();
-        for (int i = 0; i < 10000000; i++) {
-
-            int finalI = i / 100000; // 加大竞争
+        int max = 10000;
+        int fieldNum = 1000;
+        for (int i = 0; i < max; i++) {
+            int finalI = i / fieldNum; // 加大竞争
             threadPoolExecutor.submit(() -> {
 
                 try {
 
                     lockManager.lock(finalI);
+                    lockManager.lock(finalI);
+                    Thread.sleep(1);
                     count.put(finalI, count.computeIfAbsent(finalI, (k) -> 0) + 1);
-                    lockManager.unlockAndRemove(finalI);
+                    lockManager.tryUnlock(finalI);
+                    lockManager.tryUnlock(finalI);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -135,8 +183,8 @@ public class FieldAwareLockManager<K> {
 
             }
             count.forEach((k, v) -> {
-                if (v != 100000) {
-                    System.out.println(k);
+                if (v != fieldNum) {
+                    System.out.println(k + ":" + v);
                 }
             });
         } catch (InterruptedException e) {

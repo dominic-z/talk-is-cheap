@@ -61,5 +61,5 @@ public interface SchedulerTaskProcessClient {
     @RequestMapping(path = URIs.SchedulerTaskProcessURIs.RE_SCHEDULE, method = RequestMethod.POST,
             produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
-    HttpBody<String> rescheduleTask(@RequestBody RescheduleTaskReq req);
+    HttpBody<String> rescheduleTask(URI host, @RequestBody RescheduleTaskReq req);
 }

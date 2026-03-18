@@ -4,6 +4,7 @@ import io.vavr.Tuple2;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.CuratorCache;
@@ -35,6 +36,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -208,13 +210,12 @@ public class WorkerClusterManager implements ApplicationContextAware {
         }
 
 //            // 避免网络问题导致的更新为Terminated操作先于更新为TERMINATING状态
-//            ClusterNodeExample example = new ClusterNodeExample();
-//            example.createCriteria().andNodeAddressEqualTo(workerNodeAddress)
-//                    .andStatusIn(List.of(NodeStatus.RUNNABLE.getStatus(), NodeStatus.INITIALIZING.getStatus()));
-//            clusterNodeService.updateByExampleSelective(
-//                    new ClusterNode()
-//                            .withNodeAddress(workerNodeAddress)
-//                            .withStatus(NodeStatus.TERMINATING.getStatus()), example);
+        ClusterNodeExample example = new ClusterNodeExample();
+        example.createCriteria().andNodeAddressEqualTo(workerNodeAddress);
+        clusterNodeService.updateByExampleSelective(
+                new ClusterNode()
+                        .withNodeAddress(workerNodeAddress)
+                        .withStatus(NodeStatus.TERMINATED.getStatus()), example);
 //        } else if (StringUtils.equals(parentPath, zkPathProperty.getWorker().getTerminating())) {
 //            // 如果是terminating下的节点被移除了，那就是真下线了
 //            log.info("remove terminating worker, path: {}, workerNodeAddress: {}", zkPath, workerNodeAddress);
@@ -410,21 +411,36 @@ public class WorkerClusterManager implements ApplicationContextAware {
 
 
     public void tryTerminate(String workerAddress) {
-        VerifyUtil.requireTrue(this.onlineWorkerPathAddress.containsKey(workerAddress),
-                String.format("不存在地址为%s的worker节点", workerAddress));
+        ClusterNode clusterNode = clusterNodeServiceWrapper.selectByAddress(workerAddress, NodeStatus.RUNNABLE.getStatus());
+        VerifyUtil.requireNotNull(clusterNode, String.format("不存在地址为%s的worker节点", workerAddress));
+
+//        VerifyUtil.requireTrue(this.onlineWorkerPathAddress.containsKey(clusterNode.getNodeZkPath())
+//                        && StringUtils.equals(workerAddress,this.onlineWorkerPathAddress.get(clusterNode.getNodeZkPath())),
+//                String.format("不存在地址为%s的worker节点", workerAddress));
+
+        try {
+            String workerAddressInZK = new String(curatorZKClient.getData().forPath(clusterNode.getNodeZkPath()));
+            VerifyUtil.requireEqual(workerAddress, workerAddressInZK,
+                    String.format("%s在数据库中记录的zookeeper路径的节点地址为%s", workerAddress, workerAddressInZK));
+        } catch (Exception e) {
+            log.error("向zookeeper查询{}的数据错误", workerAddress, e);
+            throw new RuntimeException(e);
+        }
 
         HttpBody<String> terminateResp = workerNodeClient.tryTerminate(getWorkerURI(workerAddress));
         VerifyUtil.requireTrue(terminateResp.isSuccess(), terminateResp.getMsg());
 
         ClusterNodeExample clusterNodeExample = new ClusterNodeExample();
         clusterNodeExample.createCriteria().andNodeAddressEqualTo(workerAddress);
+
         clusterNodeService.updateByExampleSelective(new ClusterNode().withStatus(NodeStatus.TERMINATING.getStatus()), clusterNodeExample);
     }
 
-    public void safeToTerminate(String workerAddress){
+    public void safeToTerminate(String workerAddress) {
         ClusterNodeExample clusterNodeExample = new ClusterNodeExample();
         clusterNodeExample.createCriteria().andNodeAddressEqualTo(workerAddress);
-        clusterNodeService.updateByExampleSelective(new ClusterNode().withStatus(NodeStatus.SAFE_TO_TERMINATE.getStatus()), clusterNodeExample);
+        clusterNodeService.updateByExampleSelective(new ClusterNode().withStatus(NodeStatus.SAFE_TO_TERMINATE.getStatus()),
+                clusterNodeExample);
     }
 
 }

@@ -1,4 +1,4 @@
-package example.repository;
+package org.talk.is.cheap.project.free.example.repository;
 
 import org.springframework.stereotype.Repository;
 

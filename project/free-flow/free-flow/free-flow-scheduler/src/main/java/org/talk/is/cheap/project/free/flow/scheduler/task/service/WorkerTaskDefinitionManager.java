@@ -264,8 +264,11 @@ public class WorkerTaskDefinitionManager {
 
                 }
                 return taskDefinitionDTOList.size();
+            } catch (InterruptedException e) {
+                log.error("加锁失败", e);
+                throw new RuntimeException(e);
             } finally {
-                lockManagerByWorkerAddress.unlockAndRemove(workerAddress);
+                lockManagerByWorkerAddress.tryUnlock(workerAddress);
             }
 
 
@@ -296,8 +299,11 @@ public class WorkerTaskDefinitionManager {
                     stringRedisTemplate.opsForSet().remove(taskWorkerAddrMapKey, nodeAddress);
                     redisService.deleteEmptySet(taskWorkerAddrMapKey);
                 }
+            } catch (InterruptedException e) {
+                log.error("加锁失败", e);
+                throw new RuntimeException(e);
             } finally {
-                lockManagerByWorkerAddress.unlockAndRemove(nodeAddress);
+                lockManagerByWorkerAddress.tryUnlock(nodeAddress);
             }
             return true;
         };

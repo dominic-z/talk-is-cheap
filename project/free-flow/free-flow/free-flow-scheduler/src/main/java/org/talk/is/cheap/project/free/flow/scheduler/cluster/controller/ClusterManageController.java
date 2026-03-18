@@ -29,7 +29,7 @@ public interface ClusterManageController {
      * @param workerAddress
      * @return
      */
-    @RequestMapping(path = URIs.ClusterManageURIs.TERMINATE_WORKER, method = RequestMethod.POST)
+    @RequestMapping(path = URIs.ClusterManageURIs.TERMINATE_WORKER, method = RequestMethod.GET)
     @ResponseBody
     HttpBody<String> tryTerminateWorker(@RequestParam("workerAddress") String workerAddress);
 

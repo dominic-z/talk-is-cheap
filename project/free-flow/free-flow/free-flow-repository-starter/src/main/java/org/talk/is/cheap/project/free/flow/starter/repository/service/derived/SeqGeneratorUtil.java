@@ -3,6 +3,8 @@ package org.talk.is.cheap.project.free.flow.starter.repository.service.derived;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.SeqGenerator;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.SeqGeneratorExample;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.SeqGeneratorService;
@@ -72,6 +74,9 @@ public class SeqGeneratorUtil {
      * 根据数据库记录的id信息，申请编号，更新next和boundary
      * @param name
      */
+    // 小坑，传递模式应该Propagation.REQUIRES_NEW，避免外层业务事务回滚把申请的id也给回滚了
+    @Transactional(rollbackFor = Exception.class, transactionManager = "repositoryStarterTransactionManager",
+            propagation = Propagation.REQUIRES_NEW)
     private void acquire(String name) {
 
         synchronized (getLock(name)) {
