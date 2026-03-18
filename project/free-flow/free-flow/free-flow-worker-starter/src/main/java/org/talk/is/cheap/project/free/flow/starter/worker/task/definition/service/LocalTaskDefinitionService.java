@@ -289,10 +289,17 @@ public class LocalTaskDefinitionService {
 
         VerifyUtil.requireTrue(StringUtils.equals(localBO.getSharedContextClass().getName(),
                         remoteDTO.getSharedContextFullyQualifiedClassName()),
-                String.format("本地与远端同一个版本（任务：%s，版本：%s）的任务定义的共享上下文全限定名不一致，如任务更新需升级版本号", localBO.getName(), localBO.getVersion()));
+                String.format("本地与远端同一个版本（任务：%s，版本：%s）的任务定义的共享上下文全限定名不一致（%s，%s），如任务更新需升级版本号",
+                        localBO.getName(), localBO.getVersion(),
+                        localBO.getSharedContextClass().getName(),
+                        remoteDTO.getSharedContextFullyQualifiedClassName()));
         VerifyUtil.requireTrue(StringUtils.equals(localBO.getSharedContextCodecClass().getName(),
                         remoteDTO.getSharedContextCodecFullyQualifiedClassName()),
-                String.format("本地与远端同一个版本（任务：%s，版本：%s）的任务定义的共享上下文的解析类不一致，如任务更新需升级版本号", localBO.getName(), localBO.getVersion()));
+                String.format("本地与远端同一个版本（任务：%s，版本：%s）的任务定义的共享上下文的解析类不一致（%s，%s），如任务更新需升级版本号",
+                        localBO.getName(), localBO.getVersion(),
+                        localBO.getSharedContextCodecClass().getName(),
+                        remoteDTO.getSharedContextCodecFullyQualifiedClassName()
+                        ));
 
 
         // 比较俩包装类型是否相等的稍微简单点的方法

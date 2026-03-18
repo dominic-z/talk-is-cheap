@@ -492,9 +492,9 @@ public class WorkerTaskDriverService {
 
         // 记录sharedContext
         ESPojoDTO<StageStartupParam> esPojoDTO = stageStartupParamService.getByStageStartupIds(stageStartup.getId());
-        if(esPojoDTO==null){
-            log.info("{}",stageStartup);
-            log.info("{}",stageStartupParamService.getByStageStartupIds(stageStartup.getId()));
+        if (esPojoDTO == null) {
+            log.info("{}", stageStartup);
+            log.info("{}", stageStartupParamService.getByStageStartupIds(stageStartup.getId()));
         }
         StageStartupParam stageStartupParam = esPojoDTO.getData();
         stageStartupParam.setEncodedSharedContextSnapshotAtCompletion(stageResult.getEncodedSharedContextAtCompletion());
@@ -893,11 +893,14 @@ public class WorkerTaskDriverService {
             return;
         }
         taskExecutionServiceWrapper.updateSelectiveById(pausedTaskExecutionId,
-                new TaskExecution().withStatus(TaskStageStatus.RESCHEDULING.getStatus()), null);
+                new TaskExecution().withStatus(TaskStageStatus.RESCHEDULED.getStatus()), null);
+
 
         // 先定位任务的基础信息
         TaskStartup pausedTaskStartup = taskStartupServiceWrapper.selectById(pausedTaskExecution.getTaskStartupId());
         VerifyUtil.requireNotNull(pausedTaskStartup, String.format("未找到id为%d的TaskExecution对象", pausedTaskExecution.getTaskStartupId()));
+        taskStartupServiceWrapper.updateByIdSelective(pausedTaskStartup.getId(),
+                new TaskStartup().withStatus(TaskStageStatus.RESCHEDULED.getStatus()), null);
 
         TaskDefinition taskDefinition = taskDefinitionServiceWrapper.selectById(pausedTaskStartup.getTaskId());
         Map<Long, StageDefinition> stageIdDefinition = stageDefinitionServiceWrapper.selectByTaskId(pausedTaskStartup.getTaskId()).stream()
@@ -941,11 +944,11 @@ public class WorkerTaskDriverService {
 
 
         Set<Long> pausedTaskSucceedStageIds = new HashSet<>();
-        Set<Long> pausedTaskSucceedStageStartIds = new HashSet<>();
+//        Set<Long> pausedTaskSucceedStageStartIds = new HashSet<>();
         for (StageStartup stageStartup : pausedTaskStageStartups) {
             if (TaskStageStatus.SUCCEEDED.getStatus().equals(stageStartup.getStatus())) {
                 pausedTaskSucceedStageIds.add(stageStartup.getStageId());
-                pausedTaskSucceedStageStartIds.add(stageStartup.getId());
+//                pausedTaskSucceedStageStartIds.add(stageStartup.getId());
             }
         }
         // 通过bfs找到需要从哪开始执行，其实就是通过bfs并且跳过所有的成功的节点，找到第一个未成功的节点

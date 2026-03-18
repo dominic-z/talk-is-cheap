@@ -172,7 +172,7 @@ public class TaskDriverService {
                 schedulerTaskProcessClient.stageStartReport(workerNodeService.getRandomSchedulerURI(), req);
                 Date startTime = new Date();
                 stageRuntimeEnv.setStartTime(startTime);
-                if(taskRuntimeEnv.getStartTime()==null){
+                if (taskRuntimeEnv.getStartTime() == null) {
                     taskRuntimeEnv.setStartTime(startTime);
                 }
                 if (stageDefinitionBO.getParameters().length == 0) {
@@ -211,8 +211,9 @@ public class TaskDriverService {
     .size()
     所有已经调度的task已经完成，导致这个已经完整完成的task还是会被重新调度。
      */
-        taskExecutionLockManager.lock(taskRuntimeEnv.getTaskExecutionId());
+//        log.info("加锁:{}", stageName);
         try {
+            taskExecutionLockManager.lock(taskRuntimeEnv.getTaskExecutionId());
             taskRuntimeEnv.getFailedStages().remove(stageName);
             taskRuntimeEnv.getSucceedStages().add(stageName);
             StageRuntimeEnv<?> stageRuntimeEnv = taskRuntimeEnv.getStageRuntimeEnvs().get(stageName);
@@ -265,8 +266,12 @@ public class TaskDriverService {
             } else {
                 log.warn("任务(taskExecutionId:{})已经被终止，无法继续执行后续任务", taskRuntimeEnv.getTaskExecutionId());
             }
+        } catch (InterruptedException e) {
+            log.error("加锁失败", e);
+            throw new RuntimeException(e);
         } finally {
-            taskExecutionLockManager.unlockAndRemove(taskRuntimeEnv.getTaskExecutionId());
+//            log.info("解锁:{}", stageName);
+            taskExecutionLockManager.tryUnlock(taskRuntimeEnv.getTaskExecutionId());
         }
     }
 
@@ -316,8 +321,12 @@ public class TaskDriverService {
                     rescheduleTask(taskRuntimeEnv);
                 }
             }
+        } catch (InterruptedException ie) {
+            log.error("执行异常", e);
+            log.error("加锁失败", ie);
+            throw new RuntimeException(ie);
         } finally {
-            taskExecutionLockManager.unlockAndRemove(taskRuntimeEnv.getTaskExecutionId());
+            taskExecutionLockManager.tryUnlock(taskRuntimeEnv.getTaskExecutionId());
         }
     }
 
@@ -327,7 +336,7 @@ public class TaskDriverService {
             RescheduleTaskReq.Data data = new RescheduleTaskReq.Data();
             data.setTaskExecutionId(taskRuntimeEnv.getTaskExecutionId());
             rescheduleTaskReq.setData(data);
-            HttpBody<String> rescheduleResp = schedulerTaskProcessClient.rescheduleTask(rescheduleTaskReq);
+            HttpBody<String> rescheduleResp = schedulerTaskProcessClient.rescheduleTask(workerNodeService.getRandomSchedulerURI(),rescheduleTaskReq);
             if (!rescheduleResp.isSuccess()) {
                 log.error("重新调度任务（taskExeId:{}）失败", taskRuntimeEnv.getTaskExecutionId());
             }
@@ -382,7 +391,7 @@ public class TaskDriverService {
                     // todo: 发生异常
                     throw new RuntimeException(e);
                 } finally {
-                    taskExecutionLockManager.unlockAndRemove(taskRuntimeEnv.getTaskExecutionId());
+                    taskExecutionLockManager.tryUnlock(taskRuntimeEnv.getTaskExecutionId());
                 }
             }
         }
@@ -492,7 +501,7 @@ public class TaskDriverService {
 
         taskExecutionIdBeanMap.put(data.getTaskExecutionId(), taskBean);
 
-        for (String startingStageName : taskDefinitionBO.getStartingStageNames()) {
+        for (String startingStageName : data.getStartingStageExecutionId().keySet()) {
             executeStage(taskDefinitionBO, taskRuntimeEnv, taskBean, startingStageName);
         }
     }

@@ -107,7 +107,7 @@ public class TaskProcessController {
             VerifyUtil.requireTrue(workerStartTaskResp.isSuccess(), String.format("启动task(name:%s,version:%d)错误，原因:%s",
                     data.getTaskName(), data.getTaskVersion(), workerStartTaskResp.getMsg()));
 
-            resp.success("");
+            resp.success(workerAddress);
         } catch (VerifyException e) {
             log.error("启动任务失败", e);
             resp.fail(ResultCode.VERIFY_FAIL, e.getMessage());

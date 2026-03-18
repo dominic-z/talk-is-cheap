@@ -1,7 +1,7 @@
-package example.task;
+package org.talk.is.cheap.project.free.example.task;
 
 
-import example.repository.DemoDao;
+import org.talk.is.cheap.project.free.example.repository.DemoDao;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,7 +12,7 @@ import org.talk.is.cheap.project.free.flow.starter.worker.task.driver.runtime.St
 
 import java.util.Random;
 
-@Task(name = "task1", version = 5, sharedContextCodecClass = Task1.TTSharedContext.TTSharedContextInputClass.class)
+@Task(name = "task1", version = 6, sharedContextCodecClass = Task1.TTSharedContext.TTSharedContextInputClass.class)
 @Slf4j
 public class Task1 {
 
