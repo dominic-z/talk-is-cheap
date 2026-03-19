@@ -264,7 +264,7 @@ public class TaskDriverService {
                     log.debug("仍有未执行完的stage，或者已经被重新调度了");
                 }
             } else {
-                log.warn("任务(taskExecutionId:{})已经被终止，无法继续执行后续任务", taskRuntimeEnv.getTaskExecutionId());
+                log.warn("任务(taskExecutionId:{})已经被终止或者已经失败，无法继续执行后续任务或者重新调度", taskRuntimeEnv.getTaskExecutionId());
             }
         } catch (InterruptedException e) {
             log.error("加锁失败", e);
@@ -314,9 +314,8 @@ public class TaskDriverService {
                 // 用于告知scheduler当前节点在暂停中，防止stage被重试（而是等待重新调度）
                 data.setPausing(true);
                 schedulerTaskProcessClient.failStage(workerNodeService.getRandomSchedulerURI(), workerFailStageReq);
-                // 告知scheduler可以重新调度了。即使这个task已经超过重试次数了，scheduler重调度的时候会判断这个task是否已经失败，避免一个失败的taskStartup被重新调度
-                if ((taskRuntimeEnv.getSucceedStages().size() + taskRuntimeEnv.getFailedStages().size()) == taskRuntimeEnv.getDispatchedStages().size() &&
-                        taskRuntimeEnv.getRuntimeEnvStatus() == RuntimeEnvStatus.RUNNING) {
+                // 告知scheduler可以重新调度了。
+                if ((taskRuntimeEnv.getSucceedStages().size() + taskRuntimeEnv.getFailedStages().size()) == taskRuntimeEnv.getDispatchedStages().size()) {
                     // 既然失败了，就不可能有task整体成功的场景了，一定需要重新调度
                     rescheduleTask(taskRuntimeEnv);
                 }
@@ -332,6 +331,9 @@ public class TaskDriverService {
 
     private void rescheduleTask(TaskRuntimeEnv<?> taskRuntimeEnv) {
         if (RuntimeEnvStatus.RUNNING.equals(taskRuntimeEnv.getRuntimeEnvStatus())) {
+            // 如果当前task执行已经失败了，那么就不需要告诉scheduler重新调度该任务了，因为判断是否重试是在scheduler侧实现的，
+            // scheduler发现这个task执行失败，会自己去判断是否重新发调度，如果重新发起调度，因为本节点已经terminating状态了，一定不会被排到本节点，这就是被reschedule了
+            // scheduler重调度的时候会判断这个task是否已经失败，避免一个失败的taskStartup被重新调度
             RescheduleTaskReq rescheduleTaskReq = new RescheduleTaskReq();
             RescheduleTaskReq.Data data = new RescheduleTaskReq.Data();
             data.setTaskExecutionId(taskRuntimeEnv.getTaskExecutionId());

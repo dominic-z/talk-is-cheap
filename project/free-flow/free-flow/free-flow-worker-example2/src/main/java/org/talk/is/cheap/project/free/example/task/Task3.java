@@ -3,6 +3,8 @@ package org.talk.is.cheap.project.free.example.task;
 
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.talk.is.cheap.project.free.example.repository.DemoDao;
 import org.talk.is.cheap.project.free.flow.common.task.codec.InputCodec;
 import org.talk.is.cheap.project.free.flow.common.task.codec.JsonInputCodec;
 import org.talk.is.cheap.project.free.flow.starter.worker.task.definition.annotaion.stage.RunnableStage;
@@ -12,7 +14,7 @@ import org.talk.is.cheap.project.free.flow.starter.worker.task.driver.runtime.St
 /**
  * 测试优雅关闭
  */
-@Task(name = "task3", version = 2, sharedContextCodecClass = Task3.TTSharedContext.TTSharedContextInputClass.class)
+@Task(name = "task3", version = 3, sharedContextCodecClass = Task3.TTSharedContext.TTSharedContextInputClass.class, maxRetryCount = 2)
 @Slf4j
 public class Task3 {
 
@@ -52,6 +54,9 @@ public class Task3 {
         }
     }
 
+    @Autowired
+    private DemoDao demoDao;
+
 
     @RunnableStage(name = "method1", version = 1, toStageName = "method2", isStartingStage = true,
             inputCodecClass = SimpleIntInputCodec.class)
@@ -59,6 +64,7 @@ public class Task3 {
         TTSharedContext ttSharedContext = stageRuntimeEnv.getSharedContext();
         log.info("method1 input: {}, sharedContext: {}", stageRuntimeEnv.getInput(), ttSharedContext);
         ttSharedContext.setName("method1");
+//        demoDao.reset(0);
         try {
             if (stageRuntimeEnv.getInput() != null) {
                 Thread.sleep(stageRuntimeEnv.getInput() * 1000);
@@ -79,10 +85,6 @@ public class Task3 {
         try {
             if (stageRuntimeEnv.getInput() != null) {
                 Thread.sleep(stageRuntimeEnv.getInput() * 1000);
-            }
-            if (ttSharedContext.getNum() % 2 == 0) {
-                ttSharedContext.setNum(1);
-                throw new RuntimeException("测试异常");
             }
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
@@ -105,7 +107,7 @@ public class Task3 {
         }
     }
 
-    @RunnableStage(name = "method3_2", toStageName = {"method4_1", "method4_2"}, version = 1,
+    @RunnableStage(name = "method3_2", toStageName = {"method4_1", "method4_2"}, version = 1, maxRetryCount = 2,
             inputCodecClass = SimpleIntInputCodec.class)
     public void method3_2(StageRuntimeEnv<Integer> stageRuntimeEnv) {
         TTSharedContext ttSharedContext = stageRuntimeEnv.getSharedContext();
@@ -115,6 +117,12 @@ public class Task3 {
             if (stageRuntimeEnv.getInput() != null) {
                 Thread.sleep(stageRuntimeEnv.getInput() * 1000);
             }
+
+//            if (demoDao.getQuantity() < 3) {
+//                // 测试task整体失败的情况
+//                demoDao.addQuantity(1);
+//                throw new RuntimeException("测试异常");
+//            }
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }

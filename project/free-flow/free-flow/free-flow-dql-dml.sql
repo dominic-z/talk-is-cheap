@@ -29,13 +29,13 @@ SELECT * from task_graph_definition tgd2 where task_id =7;
 SELECT sd1.name ,sd2.name ,tgd.* FROM task_graph_definition tgd join stage_definition sd1 join stage_definition sd2 on tgd.from_stage_id=sd1.id and tgd.to_stage_id=sd2.id WHERE tgd.task_id =6;
 
 SELECT * FROM task_startup ts order by create_time desc;
-SELECT * FROM task_execution te WHERE task_startup_id =164 order by create_time desc;
-SELECT sd.name ,ss.* FROM stage_startup ss join task_execution te join stage_definition sd  on te.task_startup_id=162 and te.id=ss.task_execution_id and  ss.stage_id = sd.id  order by ss.create_time desc;
+SELECT * FROM task_execution te WHERE task_startup_id =183 order by create_time desc;
+SELECT sd.name ,ss.* FROM stage_startup ss join task_execution te join stage_definition sd on te.task_startup_id=183 and te.id=ss.task_execution_id and  ss.stage_id = sd.id  order by ss.create_time desc;
 
 SELECT * from stage_startup ss order by id DESC ;
 
 SELECT sd.name,sd.id ,se.* FROM stage_execution se join stage_startup ss join stage_definition sd  on  ss.task_execution_id=
-(SELECT id FROM task_execution te WHERE task_startup_id =147 order by create_time desc limit 1) and ss.id=se.stage_startup_id and ss.stage_id =sd.id  order by se.create_time desc;
+(SELECT id FROM task_execution te WHERE task_startup_id =174 order by create_time desc limit 1) and ss.id=se.stage_startup_id and ss.stage_id =sd.id  order by se.create_time desc;
 
 
 

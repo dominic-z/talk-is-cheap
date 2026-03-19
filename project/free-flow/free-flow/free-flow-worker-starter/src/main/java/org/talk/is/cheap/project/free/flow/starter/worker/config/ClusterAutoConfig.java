@@ -38,7 +38,7 @@ public class ClusterAutoConfig {
     public static class FeignLogLevelConfig{
         @Bean
         public Logger.Level feignLoggerLevel() {
-            return Logger.Level.FULL;
+            return Logger.Level.NONE;
         }
     }
 }

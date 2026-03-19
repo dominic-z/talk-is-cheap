@@ -10,7 +10,6 @@ public class DemoDao {
     public void reset(int i){
         this.quantity = i;
     }
-
     public void addQuantity(int i) {
         this.quantity = this.quantity + i;
     }
