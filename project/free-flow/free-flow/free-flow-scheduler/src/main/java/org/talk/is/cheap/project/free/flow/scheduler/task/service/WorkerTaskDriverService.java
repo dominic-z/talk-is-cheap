@@ -285,13 +285,14 @@ public class WorkerTaskDriverService {
 
                 }
 
-                if (stageEncodedInputs.containsKey(stageName)) {
-                    // 如果对某个stage有设定输入，需要记录输入信息
+                if (stageEncodedInputs.containsKey(stageName) || stageDefinition.getIsStartingStage()) {
+                    // 如果对某个stage有设定输入，需要记录输入信息，用以后续的恢复任务之类的使用
+                    // 如果是启动节点，也需要创建stageStartupParam，用来承接成功后记录sharedContext，详见completeStage中做的事
                     String encodedInput = stageEncodedInputs.get(stageName);
                     stageStartupParamService.create(
                             StageStartupParam.builder().stageStartupId(stageStartup.getId())
                                     .encodedInput(encodedInput)
-                                    .encodedSharedContextSnapshotAtStartup(initialEncodedSharedContext)
+                                    .encodedSharedContextSnapshotAtStartup(stageDefinition.getIsStartingStage()?initialEncodedSharedContext:null)
                                     .updateTime(new Date())
                                     .build()
                     );
@@ -828,17 +829,21 @@ public class WorkerTaskDriverService {
                 VerifyUtil.requireTrue(stageStartupService.create(retryTaskStageStartup) > 0,
                         String.format("Failed to create stage startup: %s", stageName));
 
-                if (failedTaskStageNameParamMap.containsKey(stageName) && StringUtils.isNotBlank(failedTaskStageNameParamMap.get(stageName).getEncodedInput())) {
+                if (stageDefinition.getIsStartingStage() || failedTaskStageNameParamMap.containsKey(stageName)) {
                     // 从历史执行记录的es中读取上一次任务启动时的入参，包括各个stage的启动参数，以及sharedContext，并es中重建新的taskExecution的stageStartup对象的es对象
                     StageStartupParam failedTaskStageStartupParam = failedTaskStageNameParamMap.get(stageName);
+                    String encodedInput = null;
+                    if(failedTaskStageStartupParam!=null){
+                        retryTaskStageEncodedInputs.put(stageName, failedTaskStageStartupParam.getEncodedInput());
+                        encodedInput = failedTaskStageStartupParam.getEncodedInput();
+                    }
                     stageStartupParamService.create(
                             StageStartupParam.builder().stageStartupId(retryTaskStageStartup.getId())
-                                    .encodedInput(failedTaskStageStartupParam.getEncodedInput())
-                                    .encodedSharedContextSnapshotAtStartup(failedTaskStageStartupParam.getEncodedSharedContextSnapshotAtStartup())
+                                    .encodedInput(encodedInput)
+                                    .encodedSharedContextSnapshotAtStartup(stageDefinition.getIsStartingStage()?taskSharedContext.getEncodedTaskSharedContext():null)
                                     .updateTime(new Date())
                                     .build()
                     );
-                    retryTaskStageEncodedInputs.put(stageName, failedTaskStageStartupParam.getEncodedInput());
                 }
 
                 if (stageDefinition.getIsStartingStage()) {
@@ -1049,8 +1054,8 @@ public class WorkerTaskDriverService {
                 resumeTaskStartingStageNameFailedCount.put(stageD.getName(), stageFailCount);
             }
 
-            if (stageNameEncodedInputs.containsKey(stageD.getName())) {
-                // 同样的，与prepareTask一样，如果有输入，就需要记录
+            if (stageNameEncodedInputs.containsKey(stageD.getName()) || resumeTaskStartingStageIds.contains(stageD.getId())) {
+                // 同样的，与prepareTask一样，如果有输入，就需要记录，如果是启动节点，也要记录
                 String encodedInput = stageNameEncodedInputs.get(stageD.getName());
                 stageStartupParamService.create(
                         StageStartupParam.builder().stageStartupId(stageStartup.getId())

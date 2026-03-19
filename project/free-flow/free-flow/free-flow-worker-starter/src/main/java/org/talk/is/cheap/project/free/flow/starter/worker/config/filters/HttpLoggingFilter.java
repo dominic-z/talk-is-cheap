@@ -45,6 +45,7 @@ public class HttpLoggingFilter implements WebFilter {
                             } else {
                                 requestBodyRef.set(current + chunk);
                             }
+//                            log.info(requestBodyRef.get());
                         })
                         .map(buffer -> buffer); // 透传原 buffer
             }
