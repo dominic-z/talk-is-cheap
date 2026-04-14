@@ -1,5 +1,5 @@
 server:
-  port: 7070
+  port: 7072
 logging:
   level:
     root: INFO
@@ -8,6 +8,9 @@ logging:
     org.talk.is.cheap.project.free.flow.scheduler.task.client.WorkerTaskDriverClient: DEBUG
 #    org.talk.is.cheap.project.free.flow.scheduler.cluster.client.WorkerClusterClient: DEBUG
 spring:
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss  # 设置日期格式
+    time-zone: GMT+8                  # 设置时区 (重要，否则可能差8小时)
   application:
     name: free-flow-scheduler
     env-type: host

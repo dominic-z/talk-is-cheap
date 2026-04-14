@@ -61,6 +61,11 @@ cnpm install @jamescoyle/vue-icon
 cnpm install vue-json-viewer@3
 ```
 
+安装日期处理
+```shell
+cnpm install dayjs
+```
+
 # 功能
 
 ## 节点查询

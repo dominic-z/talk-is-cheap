@@ -11,7 +11,7 @@ const request = axios.create({
 // 请求拦截器
 request.interceptors.request.use(
   req => {
-    console.log("req interceptor", req)
+    console.log("req interceptor, path",req.url, req)
     req.headers['Access-Control-Allow-Origin'] = "*"
     return req
   },
@@ -25,7 +25,7 @@ request.interceptors.request.use(
 // 响应拦截器
 request.interceptors.response.use(
   response => {
-    console.log("resp interceptor",response)
+    console.log("resp interceptor, path",response.request.responseURL,response)
     
     const respBody = response.data
     

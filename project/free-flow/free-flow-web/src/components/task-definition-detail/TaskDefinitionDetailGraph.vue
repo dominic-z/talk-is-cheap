@@ -13,20 +13,20 @@ const nodes = ref([
         id: '1',
         position: { x: 200, y: 100 },
         type: "RunnableStage",
-        data: { label: 'Node 1' },
+        data: { label: 'Node 1',stageId:'1' },
     },
     {
         id: '2',
         position: { x: 50, y: 200 },
         type: "RunnableStage",
-        data: { label: 'myNode 2', hasMenu: true },
+        data: { label: 'myNode 2',stageId:'2', hasMenu: true },
     },
     {
         id: '3',
         position: { x: 350, y: 200 },
         type: "RunnableStage",
 
-        data: { label: 'Node 3', status: 'running' },
+        data: { label: 'Node 3',stageId:'3', status: 'running' },
     }
 ])
 
@@ -60,13 +60,13 @@ const edges = ref([
 function onNodeClick({ event, node }) {
     console.log('Node clicked:', node, event);
     detailNavDraw.value = !detailNavDraw.value;
+    stageId.value = node.data.stageId
     nodes.value[2].data.status = ''
-
-
 }
 
 
 const detailNavDraw = ref(false)
+const stageId = ref(null)
 
 </script>
 
@@ -107,7 +107,7 @@ const detailNavDraw = ref(false)
 
 
 
-        <StageDefinitionDetailNav v-model:draw="detailNavDraw"></StageDefinitionDetailNav>
+        <StageDefinitionDetailNav v-model:draw="detailNavDraw" :stageId="stageId"></StageDefinitionDetailNav>
 
 
     </v-main>

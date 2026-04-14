@@ -32,6 +32,18 @@ public class TaskExecutionServiceWrapper {
         return list.get(0);
     }
 
+    public List<TaskExecution> selectByStartupIds(List<Long> startupIds,Integer taskExecutionStatus) {
+        TaskExecutionExample example = new TaskExecutionExample();
+        TaskExecutionExample.Criteria criteria = example.createCriteria();
+
+        if(taskExecutionStatus!=null){
+            criteria.andStatusEqualTo(taskExecutionStatus);
+        }
+        criteria.andTaskStartupIdIn(startupIds);
+        List<TaskExecution> list = taskExecutionService.selectByExample(example);
+        return list;
+    }
+
 
     public int updateSelectiveById(long id, TaskExecution taskExecution, Long revision) {
         TaskExecutionExample example = new TaskExecutionExample();

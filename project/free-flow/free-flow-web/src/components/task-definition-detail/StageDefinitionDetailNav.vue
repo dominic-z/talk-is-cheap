@@ -10,6 +10,8 @@ const navWidth = ref(600)
 // const emitter = defineEmits(['update:draw'])
 const draw = defineModel('draw')
 
+const props = defineProps(['stageId'])
+
 
 
 
@@ -48,7 +50,7 @@ const paramDetailWidth = ref(600)
                     <tbody>
                         <tr>
                             <td>version</td>
-                            <td>1.1</td>
+                            <td>1.1 {{ props.stageId }}</td>
                         </tr>
                         <tr>
                             <td>Release Time</td>

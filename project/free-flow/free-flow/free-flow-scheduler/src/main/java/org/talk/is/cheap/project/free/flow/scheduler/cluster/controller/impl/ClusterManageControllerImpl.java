@@ -17,6 +17,7 @@ import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.exam
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNode;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.ClusterNodeService;
 
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -47,7 +48,12 @@ public class ClusterManageControllerImpl implements ClusterManageController {
             ClusterNodeExample example = new ClusterNodeExample();
             ClusterNodeExample.Criteria criteria =
                     example.createCriteria().andStatusEqualTo(NodeStatus.RUNNABLE.getStatus());
-            criteria.andNodeTypeEqualTo(reqData.getNodeType());
+            ArrayList<Integer> nodeTypeCond = new ArrayList<>();
+            nodeTypeCond.add(reqData.getNodeType());
+            if(NodeType.SCHEDULER.getType().equals(reqData.getNodeType())){
+                nodeTypeCond.add(NodeType.SCHEDULER_LEADER.getType());
+            }
+            criteria.andNodeTypeIn(nodeTypeCond);
             long total = clusterNodeService.countByExample(example);
 
 
@@ -63,6 +69,7 @@ public class ClusterManageControllerImpl implements ClusterManageController {
                             .nodeType(n.getNodeType())
                             .nodeStatus(schedulerClusterManager.isValid(n.getNodeZkPath()) ? NodeStatus.RUNNABLE.getStatus() :
                                     NodeStatus.TERMINATED.getStatus())
+                            .launchTime(n.getUpdateTime())
                             .isLeader(schedulerClusterManager.isLeader(n.getNodeAddress()))
                             .build()).toList();
 

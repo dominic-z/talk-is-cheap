@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Data;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 
+import java.util.Date;
 import java.util.List;
 
 public class QueryClusterInfoResp extends HttpBody<QueryClusterInfoResp.QueryClusterNodeRespData> {
@@ -22,8 +23,9 @@ public class QueryClusterInfoResp extends HttpBody<QueryClusterInfoResp.QueryClu
     public static class Node {
         private String nodeAddress;
         private Integer nodeType;
-        private boolean isLeader;
+        private Boolean isLeader;
         private Integer nodeStatus;
+        private Date launchTime;
     }
 
 

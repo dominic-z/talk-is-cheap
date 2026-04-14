@@ -30,14 +30,14 @@ export const namedRoutes = {
 
   taskDefinitionDetail:{
     name: 'taskDefinitionDetail',
-    path: '/task-definition/:taskId',
+    path: '/task-definition-detail/:taskId',
     component: TaskDefinitionDetailView,
     props: true,
   },
 
   taskStartupDetail:{
     name: 'taskStartupDetail',
-    path: '/task-startup/:startupId',
+    path: '/task-startup/:taskStartupId',
     component: TaskStarupDetailView,
     props: true,
   },

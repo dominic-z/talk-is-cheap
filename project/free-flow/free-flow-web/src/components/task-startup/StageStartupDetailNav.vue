@@ -4,9 +4,9 @@ import { ref } from 'vue'
 import StageExecutionLogTable from './StageExecutionLogTable.vue'
 const emitter = defineEmits(['update:draw'])
 
-const props = defineProps(['draw'])
+const props = defineProps(['draw', 'id'])
 const navWidth = ref(600)
-
+console.log(props)
 
 const executions = ref([
     {
@@ -24,21 +24,24 @@ const executions = ref([
 ])
 
 
-const params =  ref([
+const params = ref([
     {
-        'key':'a',
-        'value':'b',
+        'key': 'a',
+        'value': 'b',
     }
 ])
 
 const paramsJson = ref({
-    'key1':'aa',
-    'list1':[1,2,3],
-    'deepObj':{
-        'key2':'1',
-        'list2':[3,4,5]
+    'key1': 'aa',
+    'list1': [1, 2, 3],
+    'deepObj': {
+        'key2': '1',
+        'list2': [3, 4, 5]
     }
 })
+
+
+const items = ['Foo', 'Bar', 'Fizz', 'Buzz']
 
 </script>
 
@@ -48,11 +51,16 @@ const paramsJson = ref({
         <v-toolbar density="compact">
 
             <v-btn :icon="mdiWindowClose" @click="$emit('update:draw')"></v-btn>
-            <v-toolbar-title text="阶段信息"></v-toolbar-title>
+            <!-- <v-toolbar-title text="阶段信息"></v-toolbar-title> -->
+            <v-select :items="items" density="compact" label="Compact" :hide-details="true"
+            :tile="true" :style="{'border-style':'none'}">
+            </v-select>
+
         </v-toolbar>
 
         <v-card class="border-thin">
-            <v-card-title>基本信息</v-card-title>
+            <v-card-title>基本信息 {{ props.id }}</v-card-title>
+
             <v-card-text>
                 <v-table density="compact" height="100px" striped="even" fixed-header class="border-thin text-break">
                     <!-- 列宽定义区域 -->
@@ -98,7 +106,7 @@ const paramsJson = ref({
 
         <v-divider></v-divider>
 
-        <v-card class="border-thin" >
+        <v-card class="border-thin">
 
 
             <v-card-title>
@@ -114,10 +122,10 @@ const paramsJson = ref({
             </v-select>
 
 
-            <v-card class="border-thin" :style="{'height':'100%'}">
+            <v-card class="border-thin" :style="{ 'height': '100%' }">
                 <v-card-title>日志</v-card-title>
                 <v-card-text>
-                    
+
 
                     <StageExecutionLogTable></StageExecutionLogTable>
                 </v-card-text>

@@ -94,6 +94,10 @@ public class HttpLoggingFilter implements WebFilter {
                 .response(decoratedResponse)
                 .build();
         return chain.filter(mutatedExchange)
+                .doOnError(e -> {
+            //                    得有这个，否则有一些报错会被吞掉，比如如果json转换就有问题报错的话，比如json转requestBody异常，这个异常就吞了
+                                log.error("接口异常", e);
+                            })
                 .doOnTerminate(() -> {
                     String requestBody = truncate(requestBodyRef.get(), MAX_LOG_LENGTH);
                     String responseBody = truncate(responseBodyRef.get(), MAX_LOG_LENGTH);
@@ -105,8 +109,8 @@ public class HttpLoggingFilter implements WebFilter {
                         );
                     }else{
 
-                        log.info("Method: {}, Path: {}, Request Body: {}, Response Status: {}, Response Body: {}",
-                                request.getMethod(),request.getPath(),requestBody,originalResponse.getStatusCode(),responseBody
+                        log.info("Method: {}, Path: {}, Request Body: {}, Request Query Params: {},, Response Status: {}, Response Body: {}",
+                                request.getMethod(),request.getPath(),request.getQueryParams(),requestBody,originalResponse.getStatusCode(),responseBody
                         );
                     }
                 });

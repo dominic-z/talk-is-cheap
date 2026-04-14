@@ -1,11 +1,14 @@
 <template>
+  <!-- :items="serverItems"用来指明这个列表使用什么对象作为items  -->
+   <!-- v-model:items-per-page通过v-model来将itemsPerPage拿出来，同样的v-model:page也可以将这个组件的page捞出来 -->
+    <!-- item-vale的意思是使用item里的name字段作为表格里每个项目的值 -->
     <v-data-table-server
       v-model:items-per-page="itemsPerPage"
       :headers="headers"
-      :items="serverItems"
+      :items="serverItems" 
       :items-length="totalItems"
       :loading="loading"
-      item-value="name"
+      item-value="name" 
       @update:options="loadItems"
     ></v-data-table-server>
   </template>
@@ -110,7 +113,9 @@
     }
     const itemsPerPage = ref(5)
     const headers = ref([
-      { title: 'Car Model', key: 'name', align: 'start', headerProps: {class: 'font-weight-bold'}}, // 传递给默认的header的属性，这些属性会直接挂载表格的header组件属性上} 而key属性代表着使用key指定的字段去items对象里找到对应的属性，例如这一行key是name，那么就要去item里找item.name作为这一列的数据
+      { title: 'Car Model', key: 'name', align: 'start', headerProps: {class: 'font-weight-bold'}}, 
+      // headerProps代表，传递给默认的header的属性，这些属性会直接挂载表格的header组件属性上 ，参考自https://vuetifyjs.com/en/components/data-tables/basics/#keys-and-values “Other options are available for setting width, align, fixed, or pass custom props to the header element with headerProps and row cells with cellProps.”
+      // key属性代表着使用key指定的字段去items对象里找到对应的属性，例如这一行key是name，那么就要去Car Model这一列就需要对每个item里找item.name作为这一列的数据，
       { title: 'Horsepower', key: 'horsepower', align: 'end' },
       { title: 'Fuel Type', key: 'fuel', align: 'start' },
       { title: 'Origin', key: 'origin', align: 'start' },

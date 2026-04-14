@@ -2,11 +2,16 @@
 import { mdiWindowClose } from '@mdi/js';
 import { Background } from '@vue-flow/background';
 import { MarkerType, VueFlow } from '@vue-flow/core';
-import { ref, computed } from 'vue';
+import { ref, computed,onMounted } from 'vue';
 import RunnableStageNode from '../flow/node/RunnableStageNode.vue';
 import { mdiCheck } from '@mdi/js';
 import { mdiCheckCircle } from '@mdi/js';
 import StageStartupDetailNav from './StageStartupDetailNav.vue';
+import request from '@/utils/request';
+import { API_PATHS } from '@/utils/api/paths';
+
+const props = defineProps(['taskStartupId','taskName','taskVersion'])
+
 
 const nodes = ref([
     {
@@ -63,12 +68,36 @@ function onNodeClick({ event, node }) {
         draw.value = !draw.value;
     }
     nodes.value[2].data.status = ''
+    stageDetailId.value = node.id
 
 
 }
 
 
 const draw = ref(false)
+let taskDef = null
+
+
+async function getTaskDefinition(taskName,taskVersion) {
+    return await request.post(API_PATHS.TASK_DEFINITION.DETAILS_QUERY,{
+        data:{
+            query:{
+                taskName:taskName,
+                taskVersion:taskVersion,
+            }
+        }
+    }).then(respBody=>{
+        // console.log(respBody)
+        return respBody.data.taskDefinitionDTOs[0]
+    })
+}
+
+
+
+onMounted(()=>{
+    taskDef = getTaskDefinition(props.taskName,props.taskVersion)
+
+})
 
 </script>
 
@@ -81,16 +110,16 @@ const draw = ref(false)
             <div :style="{ height: '100vh', width: '100wh' }">
                 <VueFlow :nodes="nodes" :edges="edges" @node-click="onNodeClick" fit-view-on-init>
 
-                    <template #node-RunnableStage="runnableStageProps">
-                        <RunnableStageNode v-bind="runnableStageProps">
+                    <template #node-RunnableStage="runnableStageProp">
+                        <RunnableStageNode v-bind="runnableStageProp">
                             <template v-slot:content>
                                 <VFadeTransition :leave-absolute="true">
-                                    <v-progress-circular v-if="runnableStageProps.data.status == 'running'" class="mr-2"
+                                    <v-progress-circular v-if="runnableStageProp.data.status == 'running'" class="mr-2"
                                         color="primary" indeterminate>
                                     </v-progress-circular>
                                     <v-icon v-else :icon="mdiCheckCircle" :style="{ 'color': 'green' }" />
                                 </VFadeTransition>
-                                {{ runnableStageProps.data.label }}
+                                {{ runnableStageProp.data.label }}
                             </template>
 
                         </RunnableStageNode>
@@ -109,7 +138,7 @@ const draw = ref(false)
 
 
 
-        <StageStartupDetailNav :draw="draw" @update:draw="()=>draw = !draw"></StageStartupDetailNav>
+        <StageStartupDetailNav :id="stageDetailId" :draw="draw" @update:draw="() => draw = !draw"></StageStartupDetailNav>
 
 
     </v-main>

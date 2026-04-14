@@ -10,13 +10,16 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.talk.is.cheap.project.free.flow.common.enums.TaskDefinitionStatus;
 import org.talk.is.cheap.project.free.flow.common.message.ResultCode;
-import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.QueryTaskDefinitionReq;
-import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.QueryTaskDefinitionResp;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.QueryTaskDefinitionDetailsReq;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.QueryTaskDefinitionDetailResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.dto.StageDefinitionDTO;
 import org.talk.is.cheap.project.free.flow.common.message.impl.dto.TaskDefinitionDTO;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.TaskDefinitionListResp;
 import org.talk.is.cheap.project.free.flow.common.router.URIs;
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.StageDefinition;
@@ -35,6 +38,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 
 /**
@@ -54,24 +58,23 @@ public class DefinitionController {
     @Autowired
     private TaskGraphDefinitionService taskGraphDefinitionService;
 
-    @RequestMapping(path = URIs.SchedulerDefinitionURIs.QUERY_TASK_DEFINITION, method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(path = URIs.SchedulerTaskDefinitionURIs.DETAILS_QUERY, method = RequestMethod.POST, produces =
+            MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
-    public QueryTaskDefinitionResp queryTaskDefinition(@RequestBody QueryTaskDefinitionReq req) {
-        QueryTaskDefinitionResp queryTaskDefinitionResp = new QueryTaskDefinitionResp();
+    public QueryTaskDefinitionDetailResp queryTaskDefinitionDetail(@RequestBody QueryTaskDefinitionDetailsReq req) {
+        QueryTaskDefinitionDetailResp getTaskDefinitionDetailResp = new QueryTaskDefinitionDetailResp();
         try {
+            QueryTaskDefinitionDetailsReq.QueryTaskDefinitionDetailsReqData reqData = req.getData();
+            VerifyUtil.requireNotNull(reqData, "请求参数为空");
             TaskDefinitionExample example = new TaskDefinitionExample();
 
-
-            QueryTaskDefinitionReq.QueryTaskDefinitionReqData reqData = req.getData();
-
-            if (reqData.getQueries() != null) {
-                for (QueryTaskDefinitionReq.QueryTaskDefinitionReqData.Query query : reqData.getQueries()) {
-                    VerifyUtil.requireNotBlank(query.getTaskName(), "task name in query can not be blank");
-                    TaskDefinitionExample.Criteria criteria = example.or();
-                    criteria.andNameEqualTo(query.getTaskName());
-                    if (query.getVersion() != null) {
-                        criteria.andVersionEqualTo(query.getVersion());
-                    }
+            QueryTaskDefinitionDetailsReq.QueryTaskDefinitionDetailsReqData.Query query = reqData.getQuery();
+            if (query != null) {
+                VerifyUtil.requireNotBlank(query.getTaskName(), "task name in query can not be blank");
+                TaskDefinitionExample.Criteria criteria = example.or();
+                criteria.andNameEqualTo(query.getTaskName());
+                if (query.getTaskVersion() != null) {
+                    criteria.andVersionEqualTo(query.getTaskVersion());
                 }
             }
 
@@ -87,25 +90,22 @@ public class DefinitionController {
             List<TaskDefinitionDTO> taskDefinitionDTOS = getTaskDefinitionDTOs(taskDefinitions);
 
 
-            queryTaskDefinitionResp.setCode(ResultCode.SUCCESS.getCode());
-            queryTaskDefinitionResp.setData(QueryTaskDefinitionResp.QueryTaskDefinitionRespData.builder()
-                    .total(count)
-                    .page(page)
-                    .pageSize(pageSize)
+            getTaskDefinitionDetailResp.setCode(ResultCode.SUCCESS.getCode());
+            getTaskDefinitionDetailResp.setData(QueryTaskDefinitionDetailResp.GetTaskDefinitionDetailRespData.builder()
                     .taskDefinitionDTOs(taskDefinitionDTOS)
                     .build());
-            return queryTaskDefinitionResp;
+            return getTaskDefinitionDetailResp;
 
         } catch (VerifyException e) {
-            log.error("",e);
-            queryTaskDefinitionResp.setCode(ResultCode.VERIFY_FAIL.getCode());
-            queryTaskDefinitionResp.setMsg(e.getMessage());
-            return queryTaskDefinitionResp;
+            log.error("", e);
+            getTaskDefinitionDetailResp.setCode(ResultCode.VERIFY_FAIL.getCode());
+            getTaskDefinitionDetailResp.setMsg(e.getMessage());
+            return getTaskDefinitionDetailResp;
         } catch (Exception e) {
-            log.error("",e);
-            queryTaskDefinitionResp.setCode(ResultCode.FAIL.getCode());
-            queryTaskDefinitionResp.setMsg(e.getMessage());
-            return queryTaskDefinitionResp;
+            log.error("", e);
+            getTaskDefinitionDetailResp.setCode(ResultCode.FAIL.getCode());
+            getTaskDefinitionDetailResp.setMsg(e.getMessage());
+            return getTaskDefinitionDetailResp;
         }
     }
 
@@ -138,7 +138,7 @@ public class DefinitionController {
                 StageDefinitionDTO vo = new StageDefinitionDTO();
                 BeanUtils.copyProperties(stageDefinition, vo);
                 // 确保pointOutGraph中包含了所有的stage，即使这个stage没有pointOut的stage，这个是为了与StageDefinitionBO保持逻辑相同
-                pointOutGraph.putIfAbsent(stageDefinition.getName(),new HashSet<>());
+                pointOutGraph.putIfAbsent(stageDefinition.getName(), new HashSet<>());
                 stageDefinitionVOMap.put(vo.getName(), vo);
                 if (vo.getIsStartingStage()) {
                     roots.add(vo.getName());
@@ -166,5 +166,42 @@ public class DefinitionController {
         return taskDefinitionVOS;
     }
 
+    @RequestMapping(path = URIs.SchedulerTaskDefinitionURIs.TASK_DEFINITION, method = RequestMethod.GET, produces =
+            MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public TaskDefinitionListResp getTaskDefinition(@RequestParam("page") Integer page, @RequestParam("pageSize") Integer pageSize) {
+        TaskDefinitionListResp resp = new TaskDefinitionListResp();
+        try {
+            page = page == null ? 1 : page;
+            pageSize = pageSize == null ? 10 : pageSize;
+            TaskDefinitionExample example = new TaskDefinitionExample();
+            TaskDefinitionExample.Criteria criteria = example.createCriteria();
+            criteria.andStatusEqualTo(TaskDefinitionStatus.HAS_AVAILABLE_WORKER.getType());
+            long count = taskDefinitionService.countByExample(example);
+            int offset = (page - 1) * pageSize;
+            example.setLimit(pageSize);
+            example.setOffset(offset);
 
+            List<TaskDefinition> taskDefinitions = taskDefinitionService.selectByExampleDeepPaging(example);
+
+            TaskDefinitionListResp.Data respData = TaskDefinitionListResp.Data.builder()
+                    .total(count)
+                    .tasks(taskDefinitions.stream().map(d ->
+                            TaskDefinitionListResp.Task.builder()
+                                    .id(d.getId())
+                                    .name(d.getName())
+                                    .version(d.getVersion())
+                                    .releaseTime(d.getUpdateTime())
+                                    .build()
+                    ).collect(Collectors.toList()))
+                    .build();
+
+
+            resp.success(respData);
+        } catch (Exception e) {
+            log.error("获取任务列表失败", e);
+            resp.fail(ResultCode.FAIL, "获取任务列表失败");
+        }
+        return resp;
+    }
 }
