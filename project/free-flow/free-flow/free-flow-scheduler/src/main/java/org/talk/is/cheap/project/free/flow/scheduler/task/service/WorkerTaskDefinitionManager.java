@@ -2,6 +2,7 @@ package org.talk.is.cheap.project.free.flow.scheduler.task.service;
 
 
 import io.vavr.Tuple2;
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +19,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.talk.is.cheap.project.free.flow.common.enums.TaskDefinitionStatus;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.GetWorkerTaskDefinitionResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.dto.TaskDefinitionDTO;
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
@@ -35,6 +37,7 @@ import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskGr
 import org.talk.is.cheap.project.free.flow.starter.repository.service.StageDefinitionService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.TaskDefinitionService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.TaskGraphDefinitionService;
+import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.TaskDefinitionServiceWrapper;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.redis.RedisService;
 
 import java.util.HashSet;
@@ -117,6 +120,9 @@ public class WorkerTaskDefinitionManager {
 
     @Autowired
     private TaskDefinitionService taskDefinitionService;
+
+    @Autowired
+    private TaskDefinitionServiceWrapper taskDefinitionServiceWrapper;
     @Autowired
     private StageDefinitionService stageDefinitionService;
     @Autowired
@@ -156,6 +162,17 @@ public class WorkerTaskDefinitionManager {
             new LinkedBlockingQueue<>());
 
     private CuratorCache curatorCache;
+
+    @PostConstruct
+    public void init() {
+        MODEL_MAPPER
+                .typeMap(TaskDefinitionDTO.class, TaskDefinition.class)
+                .addMappings(mapper -> {
+                    mapper.skip((d, v) -> {
+                        d.setStatus(TaskDefinitionStatus.HAS_AVAILABLE_WORKER.getType());
+                    });
+                });
+    }
 
 
     @EventListener(WorkerTaskDefinitionManagerLeaderStartEvent.class)
@@ -258,6 +275,9 @@ public class WorkerTaskDefinitionManager {
                                     "It is recommended to check whether the task definition is created normally, but this will not affect" +
                                     " the worker's execution of this task.", e);
                         }
+                    } else {
+                        taskDefinitionService.updateByExampleSelective(new TaskDefinition()
+                                .withStatus(TaskDefinitionStatus.HAS_AVAILABLE_WORKER.getType()), example);
                     }
                     stringRedisTemplate.opsForSet().add(RedisService.getTaskWorkerAddrMapKey(taskName, taskVersion), workerAddress);
                     log.info("finish parsing task: {}, version: {} from {}", taskName, taskVersion, workerAddress);
@@ -297,7 +317,10 @@ public class WorkerTaskDefinitionManager {
                     }
                     String taskWorkerAddrMapKey = RedisService.getTaskWorkerAddrMapKey(taskName, taskVersion);
                     stringRedisTemplate.opsForSet().remove(taskWorkerAddrMapKey, nodeAddress);
-                    redisService.deleteEmptySet(taskWorkerAddrMapKey);
+                    if (redisService.deleteEmptySet(taskWorkerAddrMapKey)) {
+                        taskDefinitionServiceWrapper.updateSelectiveByNameVersion(taskName, taskVersion,
+                                new TaskDefinition().withStatus(TaskDefinitionStatus.HAS_NO_AVAILABLE_WORKER.getType()), null);
+                    }
                 }
             } catch (InterruptedException e) {
                 log.error("加锁失败", e);

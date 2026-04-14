@@ -35,6 +35,9 @@ create table if not exists task_definition(
 unique index idx_name_version(name,version)
 )ENGINE = InnoDB default charset = utf8mb4 comment '任务定义主表';
 
+ALTER TABLE task_definition ADD COLUMN status int comment '任务状态' after version;
+
+ALTER TABLE task_definition ADD INDEX idx_status (status);
 
 
 drop table if exists schedule_task_definition;
@@ -160,6 +163,10 @@ index idx_task_execution_id(task_execution_id),
 index idx_stage_id(stage_id)
 )ENGINE = InnoDB default charset = utf8mb4 comment '阶段启动表';
 
+ALTER TABLE stage_startup DROP INDEX idx_task_execution_id;
+ALTER TABLE stage_startup DROP INDEX idx_stage_id;
+ALTER TABLE stage_startup ADD INDEX idx_task_execution_id_status (task_execution_id,status);
+ALTER TABLE stage_startup ADD INDEX idx_stage_id_status (stage_id,status);
 
 drop table if exists stage_source_target_startup_relation;
 create table if not exists stage_source_target_startup_relation(

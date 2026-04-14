@@ -3,6 +3,7 @@ import { Handle, Position } from '@vue-flow/core';
 
 
 const props = defineProps(['data'])
+// console.log(props)
 
 </script>
 

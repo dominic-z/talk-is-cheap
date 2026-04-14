@@ -49,8 +49,8 @@ datasource:
 tables:
 #  - id: 1
 #    name: cluster_node
-#  - id: 2
-#    name: task_definition
+  - id: 2
+    name: task_definition
 #  - id: 3
 #    name: schedule_task_definition
 #  - id: 4
@@ -59,8 +59,8 @@ tables:
 #    name: task_graph_definition
 #  - id: 6
 #    name: task_startup
-  - id: 7
-    name: task_source_target_startup_relation
+#  - id: 7
+#    name: task_source_target_startup_relation
 #  - id: 8
 #    name: task_execution
 #  - id: 9

@@ -7,11 +7,12 @@ import ClusterManageNodeDataTable from '../components/cluster-manage/ClusterMana
 import { useClusterManageStore } from '@/stores/clusterManageStore';
 import { mdiArrowCollapseVertical } from '@mdi/js';
 import { ref } from 'vue';
+import {NodeType} from '@/enums/node'
 
 
 const clusterManageStore = useClusterManageStore()
 
-const nodeType = ref('Scheduler')
+const nodeType = ref(NodeType.WORKER)
 function updateTab(e) {
   console.log(nodeType.value)
 }
@@ -27,8 +28,8 @@ function updateTab(e) {
       <v-card v-if="clusterManageStore.expand">
         <v-toolbar class="text-black">
           <v-tabs v-model="nodeType" @update:modelValue="updateTab">
-            <v-tab value="Scheduler">Scheduler</v-tab>
-            <v-tab value="Worker">Worker</v-tab>
+            <v-tab :value="NodeType.SCHEDULER">Scheduler</v-tab>
+            <v-tab :value="NodeType.WORKER">Worker</v-tab>
           </v-tabs>
 
           <v-btn :icon="mdiArrowCollapseVertical" class="position-absolute right-0"

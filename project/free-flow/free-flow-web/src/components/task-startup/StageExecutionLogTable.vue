@@ -110,7 +110,7 @@ function loadMore(isIntersecting, entries, observer) {
 }
 
 function fetchData(e) {
-    console.log(e)
+    // console.log(e)
     loading.value = true
     setTimeout(() => {
         shownItems.value = cars.slice(0, tablePageInfo.value.itemsPerPage)

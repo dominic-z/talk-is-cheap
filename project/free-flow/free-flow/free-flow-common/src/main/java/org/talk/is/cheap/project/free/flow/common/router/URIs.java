@@ -6,9 +6,10 @@ public class URIs {
      * scheduler开头的就是scheduler提供的uri
      */
 
-    public static class SchedulerDefinitionURIs {
-        private static final String PREFIX = "/scheduler/definition";
-        public static final String QUERY_TASK_DEFINITION = PREFIX + "/query-task-definition";
+    public static class SchedulerTaskDefinitionURIs {
+        private static final String PREFIX = "/scheduler/task-definition";
+        public static final String DETAILS_QUERY = PREFIX + "/details/_query";
+        public static final String TASK_DEFINITION = PREFIX;
 
 
     }
@@ -42,6 +43,14 @@ public class URIs {
         public static final String STAGE_START_REPORT = PREFIX + "/stage/start/notify";
         public static final String TASK_FAIL = PREFIX + "/task/fail";
         public static final String RE_SCHEDULE = PREFIX + "/reschedule";
+
+    }
+
+    public static class SchedulerTaskInfoURIs {
+        private static final String PREFIX = "/scheduler/task-info";
+
+        public static final String TASK_STARTUPS = PREFIX + "/task/startups";
+        public static final String TASK_EXECUTIONS = PREFIX + "/task/executions";
 
     }
 

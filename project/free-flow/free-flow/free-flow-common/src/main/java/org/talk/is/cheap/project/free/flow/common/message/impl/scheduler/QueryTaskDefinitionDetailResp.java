@@ -11,13 +11,13 @@ import java.util.List;
 
 
 
-public class QueryTaskDefinitionResp extends HttpBody<QueryTaskDefinitionResp.QueryTaskDefinitionRespData> {
+public class QueryTaskDefinitionDetailResp extends HttpBody<QueryTaskDefinitionDetailResp.GetTaskDefinitionDetailRespData> {
 
     @Data
     @Builder
     @AllArgsConstructor
     @NoArgsConstructor
-    public static class QueryTaskDefinitionRespData {
+    public static class GetTaskDefinitionDetailRespData {
 
         private Integer page;
         private Integer pageSize;

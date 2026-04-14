@@ -10,9 +10,11 @@ import {ref} from 'vue'
 const props = defineProps(['taskId'])
 
 
-
 const loading = ref(true)
 setTimeout(()=>loading.value = false,1000)
+
+
+
 </script>
 
 <template>

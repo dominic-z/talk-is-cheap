@@ -12,12 +12,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * 参考https://www.doubao.com/thread/we6464b5ffbe59b87
- * 这个答案有问题，我进行了追问，其实豆包的补充回答也还是有问题的，referenceCountMap.remove(fieldValue, currentCount)即使为true，如果随后其他线程又执行了getLock操作，还是会有问题，
- * 借鉴个思路吧
- * <p>
- * <p>
- * 是一个锁管理器，这个锁管理器可以根据字段的不同进行加锁，k相同则将会获取相同的锁
+ * 基于千问的改的，核心在于，利用ConcurrentHashMap的锁机制
  */
 public class FieldAwareLockManager<K> {
 
@@ -129,6 +124,7 @@ public class FieldAwareLockManager<K> {
         if (wrapper.refCount.decrementAndGet() == 0) {
             // CAS 移除：防止其他线程刚增加引用
             lockMap.computeIfPresent(key, (k, current) ->
+//                    这个current == wrapper判断其实没用
                     current == wrapper && current.refCount.get() == 0 ? null : current
             );
         }

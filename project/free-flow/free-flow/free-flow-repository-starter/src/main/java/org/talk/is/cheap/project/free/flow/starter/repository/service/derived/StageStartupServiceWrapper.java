@@ -48,9 +48,8 @@ public class StageStartupServiceWrapper {
 
         List<StageStartup> stageStartups = stageStartupService.selectByExample(example);
         return stageStartups;
-
-
     }
+
 
 
     public int updateSelectiveById(long id, StageStartup stageStartup, Long revision) {

@@ -14,6 +14,9 @@ const routes = [
   //   实验，尝试直接通过props传递对象试试，直接访问/userObjProps?id=ccc
   // 你可以创建一个返回 props 的函数。这允许你将参数转换为其他类型，将静态值与基于路由的值相结合等等。
   { path: '/userObjProps', component: User, props: route => ({ id: route.query.id, obj: { id: 'aaa' } }) },
+
+  // 直接访问/userQueryAndParam/1?obj=ccc，同时传递各种信息
+  { path: '/userQueryAndParam/:id', name:'userQueryAndParam', component: User, props: route => ({ id: route.params.id, obj: route.query.obj }) },
 ]
 
 const passingPropsRouter = createRouter({

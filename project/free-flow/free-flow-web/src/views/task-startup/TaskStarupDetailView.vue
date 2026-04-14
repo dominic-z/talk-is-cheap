@@ -7,13 +7,24 @@ import { mdiPinOutline } from '@mdi/js';
 import { mdiFolder } from '@mdi/js';
 import { mdiDotsVertical } from '@mdi/js';
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
 
-const props = defineProps(['startupId'])
+const props = defineProps(['taskStartupId'])
+const route = useRoute()
+const router = useRouter()
+
+let data = router?.options?.history?.state?.data
+const taskName = data.taskName
+const taskVersion = data.taskVersion
 
 const retryCount = ref([3])
 
 const loading = ref(true)
 setTimeout(()=>loading.value = false,1000)
+
+
+
 
 </script>
 
@@ -32,10 +43,10 @@ setTimeout(()=>loading.value = false,1000)
 
         </v-app-bar>
 
-        <TaskExecutionListNav></TaskExecutionListNav>
+        <TaskExecutionListNav :taskStartupId="props.taskStartupId"></TaskExecutionListNav>
 
 
-        <TaskStartupDetailGraph></TaskStartupDetailGraph>
+        <TaskStartupDetailGraph :taskStartupId="props.taskStartupId" :taskName="taskName" :taskVersion="taskVersion"></TaskStartupDetailGraph>
 
 
     </v-app>

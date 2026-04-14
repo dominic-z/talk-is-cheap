@@ -1,16 +1,11 @@
 package org.talk.is.cheap.project.free.flow.starter.repository.dao.customized;
 
-import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.StageStartup;
 import org.mybatis.spring.SqlSessionTemplate;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Repository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.util.CollectionUtils;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.StageCountGroupByTaskStatus;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -37,5 +32,9 @@ public class StageStartupDao {
     @Autowired
     @Qualifier("repositoryStarterSqlSessionTemplate")
     private SqlSessionTemplate sqlSessionTemplate;
+
+    public List<StageCountGroupByTaskStatus> countGroupByTaskStatus(List<Long> taskExecutionIds){
+        return sqlSessionTemplate.selectList(TABLE+".count_group_by_task_status",Map.of("task_execution_ids",taskExecutionIds));
+    }
 
 }

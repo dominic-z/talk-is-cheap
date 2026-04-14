@@ -82,6 +82,8 @@ import StateStore from './pinia/core-concept/state/StateStore.vue'
 import GetterStore from './pinia/core-concept/getter/GetterStore.vue'
 import ActionStore from './pinia/core-concept/action/ActionStore.vue'
 import CompareModelAndBindApp from './components/guide-essentials/compare-model-bind/CompareModelAndBindApp.vue'
+import PassingStateApp from './router/basic/passing-state/PassingStateApp.vue'
+import passingStateRouter from './router/basic/passing-state/PassingStateRouter'
 
 
 // createApp(App).mount('#app')
@@ -117,7 +119,7 @@ countApp.config.errorHandler = (err) => {
 // createApp(Conditional).mount('#myApp')
 
 // createApp(List).mount('#myApp')
-createApp(EventHandling).mount('#myApp')
+// createApp(EventHandling).mount('#myApp')
 // createApp(Forms).mount('#myApp')
 
 // createApp(Watchers1).mount('#myApp')
@@ -156,6 +158,7 @@ createApp(EventHandling).mount('#myApp')
 // createApp(NamedViewApp).use(namedViewRouter).mount("#myApp")
 // createApp(RedirectAliasApp).use(RedirectAliasRouter).mount("#myApp")
 // createApp(PassingPropsApp).use(passingPropsRouter).mount("#myApp")
+createApp(PassingStateApp).use(passingStateRouter).mount("#myApp")
 // createApp(ActiveLinkApp).use(activeLinkRouter).mount("#myApp")
 // createApp(HistoryModeApp).use(historyModeRouter).mount("#myApp")
 

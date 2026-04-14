@@ -60,7 +60,12 @@ function onTransitionEnd(e) {
             <v-list density="compact" nav>
                 <v-slide-y-transition :group="true" :leave-absolute="true" :hide-on-leave="true">
 
-                    <v-list-item :prepend-icon="mdiFolder" key='1' title="My Files" value="myfiles"></v-list-item>
+                    <v-list-item  key='1' title="My Files" value="myfiles">
+                        <template v-slot:prepend>
+                            <!-- 收起来的时候展示的就是prepend -->
+                            <v-icon :icon="mdiFolder"></v-icon>
+                        </template>
+                    </v-list-item>
                     <v-list-item :prepend-icon="mdiAccountMultiple" key="2" title="Shared with me"
                         value="shared"></v-list-item>
                     <v-list-item :prepend-icon="mdiStar" key="3" title="Starred" value="starred"></v-list-item>
