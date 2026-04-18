@@ -41,6 +41,12 @@ cnpm install @vue-flow/node-resizer
 
 ```
 
+
+自动布局
+```shell
+cnpm install @dagrejs/dagre
+```
+
 # 怎么看vue-flow的api
 
 以“在edge上新增箭头”为需求目标，发现example中的edge有markEnd这个字段，例如

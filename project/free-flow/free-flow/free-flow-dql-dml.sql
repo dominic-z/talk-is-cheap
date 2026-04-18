@@ -32,8 +32,8 @@ SELECT sd1.name ,sd2.name ,tgd.* FROM task_graph_definition tgd join stage_defin
 
 SELECT td.name,td.version,ts.* FROM task_startup ts left join task_definition td on ts.task_id = td.id  order by ts.id;
 
-SELECT * FROM task_startup ts order by create_time desc;
-SELECT * FROM task_execution te WHERE task_startup_id =188 order by create_time desc;
+SELECT * FROM task_startup ts where status =3 order by create_time desc;
+SELECT * FROM task_execution te WHERE task_startup_id =176 order by create_time desc;
 SELECT sd.name ,ss.* FROM stage_startup ss join task_execution te join stage_definition sd on te.task_startup_id=189 and te.id=ss.task_execution_id and  ss.stage_id = sd.id  order by ss.create_time desc;
 
 SELECT * from stage_startup ss order by id DESC ;

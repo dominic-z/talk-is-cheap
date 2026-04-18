@@ -21,6 +21,8 @@ public class TaskDefinitionDTO {
     // stage的链接情况
     private Map<String, Set<String>> pointOutGraph;
 
+    private Map<String, Set<String>> pointInGraph;
+
     // 图的根节点
     private Set<String> roots;
 }

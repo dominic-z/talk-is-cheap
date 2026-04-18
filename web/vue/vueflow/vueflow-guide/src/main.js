@@ -35,6 +35,7 @@ import FlowChangeApp from './guide/controlled-flow/FlowChangeApp.vue'
 import ValidatingChangesApp from './guide/controlled-flow/ValidatingChangesApp.vue'
 import VModelNodesAndEdgesApp from './guide/controlled-flow/VModelNodesAndEdgesApp.vue'
 import EdgesApp from './example/edges/edges/EdgesApp.vue'
+import SimpleLayoutApp from './example/layout/simple-layout/SimpleLayoutApp.vue'
 
 // createApp(App).mount('#app')
 
@@ -42,7 +43,7 @@ import EdgesApp from './example/edges/edges/EdgesApp.vue'
 // createApp(GettingStartedApp).mount("#app")
 // createApp(GettingStartedCustomApp).mount("#app")
 
-createApp(ThemingApp).mount('#app')
+// createApp(ThemingApp).mount('#app')
 // createApp(AddNodeApp).mount('#app')
 // createApp(RemoveNodeApp).mount('#app')
 // createApp(UpdateNodeUseVueFlowApp).mount('#app')
@@ -71,3 +72,6 @@ createApp(ThemingApp).mount('#app')
 
 // examples/edges
 // createApp(EdgesApp).mount('#app')
+
+// examples/layout
+createApp(SimpleLayoutApp).mount('#app')

@@ -11,6 +11,7 @@ import { TaskStageStatus } from '@/enums/task'
 import { mdiClockTimeEightOutline } from '@mdi/js'
 import { mdiMessageAlert } from '@mdi/js'
 import { mdiAlertCircle } from '@mdi/js'
+import { mdiCheckCircleOutline } from '@mdi/js'
 
 const headers = ref([
     { title: 'Task Name', key: 'taskName', align: 'start', headerProps: { class: 'font-weight-bold' } },
@@ -90,7 +91,7 @@ onMounted(getTaskStartupList)
 
         <template v-slot:item="{ item }">
             <tr class="text-no-wrap cursor-pointer"
-                @click="$router.push({ name: namedRoutes.taskStartupDetail.name, params: { 'taskStartupId': item.id }, state: {'data':{'taskName': item.taskName,'taskVerison':item.taskVersion}} })">
+                @click="$router.push({ name: namedRoutes.taskStartupDetail.name, params: { 'taskStartupId': item.id }, state: {'data':{'taskName': item.taskName,'taskVersion':item.taskVersion}} })">
                 <td>{{ item.taskName }}</td>
                 <td class="text-center">{{ item.taskVersion }}</td>
                 <td class=" d-flex justify-center align-center">
@@ -98,9 +99,11 @@ onMounted(getTaskStartupList)
                         <template v-slot:default> {{ item.progress }} </template>
                     </v-progress-circular>
 
+                    <v-icon v-else-if="item.status==TaskStageStatus.SUCCEEDED" :icon="mdiCheckCircleOutline" :style="{color:'green'}" :size="25"/>
+
                     <v-icon v-else-if="item.status==TaskStageStatus.FAILED || item.status==TaskStageStatus.FAILING" :icon="mdiAlertCircle" :style="{color:'red'}" :size="25"/>
 
-                    <v-icon v-else-if="item.status==TaskStageStatus.TIME_OUT" :icon="mdiClockTimeEightOutline" :style="{color:'gray'}" :size="35"/>
+                    <v-icon v-else-if="item.status==TaskStageStatus.TIME_OUT" :icon="mdiClockTimeEightOutline" :style="{color:'gray'}" :size="25"/>
                     <v-icon v-else :icon="mdiMessageAlert" :size="25"/>
                 </td>
                 <td class="text-end">{{ item.startupTime }}</td>
