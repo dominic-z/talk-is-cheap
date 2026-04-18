@@ -66,6 +66,11 @@ cnpm install vue-json-viewer@3
 cnpm install dayjs
 ```
 
+自动布局
+```shell
+cnpm install @dagrejs/dagre
+```
+
 # 功能
 
 ## 节点查询

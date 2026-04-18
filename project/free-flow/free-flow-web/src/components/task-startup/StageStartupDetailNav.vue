@@ -6,7 +6,7 @@ const emitter = defineEmits(['update:draw'])
 
 const props = defineProps(['draw', 'id'])
 const navWidth = ref(600)
-console.log(props)
+// console.log(props)
 
 const executions = ref([
     {

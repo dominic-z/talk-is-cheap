@@ -15,19 +15,20 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.talk.is.cheap.project.free.flow.common.enums.TaskDefinitionStatus;
 import org.talk.is.cheap.project.free.flow.common.message.ResultCode;
-import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.QueryTaskDefinitionDetailsReq;
-import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.QueryTaskDefinitionDetailResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.dto.StageDefinitionDTO;
 import org.talk.is.cheap.project.free.flow.common.message.impl.dto.TaskDefinitionDTO;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.QueryTaskDefinitionDetailResp;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.QueryTaskDefinitionDetailsReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.TaskDefinitionListResp;
 import org.talk.is.cheap.project.free.flow.common.router.URIs;
+import org.talk.is.cheap.project.free.flow.common.utils.DefinitionUtils;
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
-import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.StageDefinition;
-import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskDefinition;
-import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskGraphDefinition;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.StageDefinitionExample;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.TaskDefinitionExample;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.TaskGraphDefinitionExample;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.StageDefinition;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskDefinition;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskGraphDefinition;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.StageDefinitionService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.TaskDefinitionService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.TaskGraphDefinitionService;
@@ -160,6 +161,7 @@ public class DefinitionController {
 
 
             taskDefinitionDTO.setPointOutGraph(pointOutGraph);
+            taskDefinitionDTO.setPointInGraph(DefinitionUtils.pointOutGraphToPointInGraph(pointOutGraph));
 
             taskDefinitionVOS.add(taskDefinitionDTO);
         }

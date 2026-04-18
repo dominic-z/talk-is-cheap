@@ -13,7 +13,8 @@ export const API_PATHS = {
     },
     TASK_INFO:{
         TASK_STARTUPS: "/scheduler/task-info/task/startups",
-        TASK_EXECUTIONS: "/scheduler/task-info/task/executions"
+        TASK_EXECUTIONS: "/scheduler/task-info/task/executions",
+        STAGE_STARTUPS: "/scheduler/task-info/stage/startups",
     },
     // 商品相关
     product: {

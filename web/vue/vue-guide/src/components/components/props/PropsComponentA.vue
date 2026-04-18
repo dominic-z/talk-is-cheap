@@ -1,7 +1,10 @@
 <script setup>
 import { watch, watchEffect } from 'vue'
 
-const props = defineProps(['foo', 'greetingMessage'])
+const props = defineProps(['foo', 'greetingMessage','asyncBar'])
+
+// 这个foo对象会丢失响应式，就和常见的解包一样，父组件变更传参，props.foo有响应式，但是foo没有
+const foo = props.foo 
 watchEffect(() => {
     // 在 3.5 之前只运行一次
     // 在 3.5+ 中在 "foo" prop 变化时重新执行
@@ -31,8 +34,16 @@ console.log('组件加载')
         PropsComponentA
 
         <div>
+            没有响应式 {{ foo }}
+        </div>
+        <div>
             {{ props.foo }}
+        </div>
 
+        <div>
+            <span v-for="value in props.asyncBar">
+                {{ value }},
+            </span>
         </div>
     </div>
 

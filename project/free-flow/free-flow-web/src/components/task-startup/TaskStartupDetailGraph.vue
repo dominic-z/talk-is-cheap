@@ -1,17 +1,18 @@
 <script setup>
 import { mdiWindowClose } from '@mdi/js';
 import { Background } from '@vue-flow/background';
-import { MarkerType, VueFlow } from '@vue-flow/core';
-import { ref, computed,onMounted } from 'vue';
+import { MarkerType, useVueFlow, VueFlow } from '@vue-flow/core';
+import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import RunnableStageNode from '../flow/node/RunnableStageNode.vue';
 import { mdiCheck } from '@mdi/js';
 import { mdiCheckCircle } from '@mdi/js';
 import StageStartupDetailNav from './StageStartupDetailNav.vue';
 import request from '@/utils/request';
 import { API_PATHS } from '@/utils/api/paths';
+import { TaskStageStatus } from '@/enums/task';
+import { useLayout } from '@/utils/useLayout';
 
-const props = defineProps(['taskStartupId','taskName','taskVersion'])
-
+const props = defineProps(['taskStartupId', 'taskName', 'taskVersion', 'taskExecution'])
 
 const nodes = ref([
     {
@@ -68,34 +69,133 @@ function onNodeClick({ event, node }) {
         draw.value = !draw.value;
     }
     nodes.value[2].data.status = ''
-    stageDetailId.value = node.id
+    // stageDetailId.value = node.id
 
 
 }
 
 
 const draw = ref(false)
-let taskDef = null
 
-
-async function getTaskDefinition(taskName,taskVersion) {
-    return await request.post(API_PATHS.TASK_DEFINITION.DETAILS_QUERY,{
-        data:{
-            query:{
-                taskName:taskName,
-                taskVersion:taskVersion,
+async function getTaskDefinition(taskName, taskVersion) {
+    return await request.post(API_PATHS.TASK_DEFINITION.DETAILS_QUERY, {
+        data: {
+            query: {
+                taskName: taskName,
+                taskVersion: taskVersion,
             }
         }
-    }).then(respBody=>{
+    }).then(respBody => {
         // console.log(respBody)
+
         return respBody.data.taskDefinitionDTOs[0]
     })
 }
 
+async function getStageStartups(taskExecutionId) {
+    return await request.get(API_PATHS.TASK_INFO.STAGE_STARTUPS, {
+        params: {
+            taskExecutionId: taskExecutionId
+        }
+    }).then(respBody => {
+        return respBody.data
+    })
+}
 
 
-onMounted(()=>{
-    taskDef = getTaskDefinition(props.taskName,props.taskVersion)
+onMounted(() => {
+})
+
+const stageStartups = ref(null)
+let taskDef = null
+let stageIdStageDefMap = new Map()
+
+
+const { layout } = useLayout()
+
+const { fitView } = useVueFlow()
+// 当taskExecution变更，重新请求
+watch(() => props.taskExecution, async () => {
+    if (taskDef == null) {
+        taskDef = await getTaskDefinition(props.taskName, props.taskVersion)
+        Object.entries(taskDef.stageDefinitionMap).forEach(([stageName, stageDef]) => {
+            stageIdStageDefMap.set(stageDef.id, stageDef)
+        });
+    }
+
+    if (props.taskExecution != null) {
+        stageStartups.value = await getStageStartups(props.taskExecution.id)
+
+        let newNodes = []
+        //     {
+        //     id: '3',
+        //     position: { x: 350, y: 200 },
+        //     type: "RunnableStage",
+
+        //     data: { label: 'Node 3', status: 'running' },
+        // }
+
+        let newEdges = []
+
+        //     {
+        //     id: 'e1->3',
+        //     source: '1',
+        //     target: '3',
+        //     animated: true,
+        //     markerEnd: {
+        //         type: MarkerType.Arrow,
+        //         color: 'gray',
+        //         strokeWidth: 1.5,
+        //     },
+        // }
+        stageStartups.value.forEach((stageStartup) => {
+            const stageDef = stageIdStageDefMap.get(stageStartup.stageId)
+            if (stageDef == null) {
+                return
+            }
+            const node = {
+                id: stageStartup.stageId + '',
+                type: "RunnableStage",
+                position: { x: 350, y: 200 },
+                data: { label: stageDef.name, status: stageStartup.status },
+            }
+            newNodes.push(node)
+            // console.log(taskDef.pointInGraph)
+            const pointInStageNames = taskDef.pointInGraph[stageDef.name]
+            pointInStageNames?.forEach(pointInStageName => {
+                if (!Object.hasOwn(taskDef.stageDefinitionMap, pointInStageName)) {
+                    return
+                }
+                const pointInStageDef = taskDef.stageDefinitionMap[pointInStageName]
+                const edge = {
+                    id: 'e' + pointInStageDef.id + '->' + stageDef.id,
+                    source: pointInStageDef.id + '',
+                    target: stageDef.id + '',
+                    animated: TaskStageStatus.RUNNING == stageStartup.status,
+                    markerEnd: {
+                        type: MarkerType.Arrow,
+                        color: 'gray',
+                        strokeWidth: 1.5,
+                    }
+                }
+                newEdges.push(edge)
+            })
+        })
+
+
+        nodes.value = newNodes
+        edges.value = newEdges
+
+
+        // 确保node第一次更新完成，vue-flow的主图渲染完毕，然后更新layout，因为layout方法里面有一些需要读取当前图的方法，所以需要等待图渲染完毕
+        await nextTick()
+        const nodesAfterLayout = layout(nodes.value, edges.value, 'TB')
+        nodes.value = nodesAfterLayout
+        // console.log()
+        await nextTick()
+        fitView()
+    }
+
 
 })
 
@@ -138,7 +238,7 @@ onMounted(()=>{
 
 
 
-        <StageStartupDetailNav :id="stageDetailId" :draw="draw" @update:draw="() => draw = !draw"></StageStartupDetailNav>
+        <StageStartupDetailNav :id="11" :draw="draw" @update:draw="() => draw = !draw"></StageStartupDetailNav>
 
 
     </v-main>

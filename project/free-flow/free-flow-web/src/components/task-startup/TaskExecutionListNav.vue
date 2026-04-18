@@ -5,6 +5,7 @@ import { TaskStageStatus } from '@/enums/task';
 import { API_PATHS } from '@/utils/api/paths';
 import request from '@/utils/request';
 import { mdiCloseCircleOutline } from '@mdi/js';
+import { mdiCheckCircleOutline } from '@mdi/js';
 import { mdiClockTimeEightOutline } from '@mdi/js';
 import { mdiPinOutline, mdiPinOffOutline, mdiMenuRight, mdiMenuDown } from '@mdi/js';
 import { mdiCheck } from '@mdi/js';
@@ -14,8 +15,8 @@ import { ref, onMounted } from 'vue';
 
 // const a = mdiPinOutline
 
-const props = defineProps(['taskStartupId'])
-console.log(props)
+const props = defineProps(['taskStartupId','taskExecutionInfoList'])
+
 
 const navProps = ref({
     expandOnHover: true,
@@ -30,7 +31,7 @@ function toggleNav(e) {
         // 收起nav触发，需要收起所有card，然后更新状态变量
         navProps.value.isNavExpanded = false
         navProps.value.showExecutionWhenNavExpand = false
-        for (let taskExecution of taskExecutionInfoList.value) {
+        for (let taskExecution of props.taskExecutionInfoList) {
             taskExecution.showDetail = false
             taskExecution.pin = false
         }
@@ -90,28 +91,13 @@ function toggleTaskExecutionDetailPin(taskExecution) {
 }
 
 
-const taskExecutionInfoList = ref(null)
-async function getTaskExecutions(taskStartupId) {
-    return await request.get(API_PATHS.TASK_INFO.TASK_EXECUTIONS, {
-        params: {
-            taskStartupId: taskStartupId
-        }
-    }).then(respBody => {
-        taskExecutionInfoList.value = respBody.data
-    })
-}
-
-onMounted(() => {
-    getTaskExecutions(props.taskStartupId)
-})
 
 </script>
 
 <template>
-
+    
     <v-navigation-drawer :expand-on-hover="navProps.expandOnHover" width="270" permanent :rail="navProps.rail"
         @update:rail="toggleNav">
-
         <v-slide-y-transition :leave-absolute="true">
             <v-toolbar density="compact" v-if="navProps.isNavExpanded">
                 <v-toolbar-title text="任务执行实例"></v-toolbar-title>
@@ -120,7 +106,7 @@ onMounted(() => {
         <v-divider></v-divider>
 
 
-        <v-list density="compact" nav>
+        <v-list density="compact" nav  v-if="props.taskExecutionInfoList && props.taskExecutionInfoList.length">
 
 
             <v-list-item :key="1" title="My Files" value="myfiles" link>
@@ -136,11 +122,12 @@ onMounted(() => {
 
 
             <!-- 见vuetify-guide -->
-            <v-list-item v-for="taskExecution in taskExecutionInfoList" :key="taskExecution.id"
+            <v-list-item v-for="(taskExecution,index) in props.taskExecutionInfoList" :key="taskExecution.id"
                 @mouseenter="(e) => onMouseEnterTaskExecution(taskExecution)"
                 @mouseleave="(e) => onMouseLeaveTaskExecution(taskExecution)"
-                @click="(e) => toggleTaskExecutionDetailPin(taskExecution)" link>
-
+                @click="(e) => toggleTaskExecutionDetailPin(taskExecution)" link
+                :active="index==0"
+                >
                 <!-- <template v-slot:prepend>
                     <v-progress-circular color="primary" :model-value="20" :size="25"
                             class="mr-5"></v-progress-circular>
@@ -155,6 +142,7 @@ onMounted(() => {
                             indeterminate :size="25" class="mr-5"></v-progress-circular>
 
                         <v-icon v-else-if="taskExecution.status == TaskStageStatus.TIME_OUT" :icon="mdiClockTimeEightOutline" size="30"></v-icon>
+                        <v-icon v-else-if="taskExecution.status == TaskStageStatus.SUCCEEDED" :icon="mdiCheckCircleOutline" color="green" size="30"></v-icon>
                         <v-icon v-else
                             :icon="mdiCloseCircleOutline" color="red" size="30"></v-icon>
                         <!-- todo: 这个会跳一下 -->

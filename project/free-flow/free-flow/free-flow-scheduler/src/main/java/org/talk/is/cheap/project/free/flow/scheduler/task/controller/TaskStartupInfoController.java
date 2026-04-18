@@ -12,17 +12,20 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.talk.is.cheap.project.free.flow.common.enums.TaskStageStatus;
 import org.talk.is.cheap.project.free.flow.common.message.ResultCode;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.StageStartupListResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.TaskExecutionListResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.TaskStartupListResp;
 import org.talk.is.cheap.project.free.flow.common.router.URIs;
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.TaskStartupExample;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.StageCountGroupByTaskStatus;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.StageStartup;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskDefinition;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskExecution;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskStartup;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.StageStartupService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.TaskStartupService;
+import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.StageStartupServiceWrapper;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.TaskDefinitionServiceWrapper;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.TaskExecutionServiceWrapper;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.TaskStartupServiceWrapper;
@@ -46,6 +49,8 @@ public class TaskStartupInfoController {
     private TaskStartupServiceWrapper taskStartupServiceWrapper;
     @Autowired
     private TaskExecutionServiceWrapper taskExecutionServiceWrapper;
+    @Autowired
+    private StageStartupServiceWrapper stageStartupServiceWrapper;
 
     @Autowired
     private StageStartupService stageStartupService;
@@ -56,8 +61,8 @@ public class TaskStartupInfoController {
 
 
     @ResponseBody
-    @RequestMapping(value = URIs.SchedulerTaskInfoURIs.TASK_STARTUPS, method = RequestMethod.GET, produces =
-            MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value = URIs.SchedulerTaskInfoURIs.TASK_STARTUPS, method = RequestMethod.GET,
+            produces = MediaType.APPLICATION_JSON_VALUE)
     public TaskStartupListResp getTaskStartupList(@RequestParam("page") Integer page, @RequestParam("pageSize") Integer pageSize) {
         TaskStartupListResp resp = new TaskStartupListResp();
         try {
@@ -114,8 +119,8 @@ public class TaskStartupInfoController {
     }
 
     @ResponseBody
-    @RequestMapping(value = URIs.SchedulerTaskInfoURIs.TASK_EXECUTIONS, method = RequestMethod.GET, produces =
-            MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value = URIs.SchedulerTaskInfoURIs.TASK_EXECUTIONS, method = RequestMethod.GET,
+            produces = MediaType.APPLICATION_JSON_VALUE)
     public TaskExecutionListResp getTaskExecutionByStartupId(@RequestParam("taskStartupId") Long taskStartupId) {
         TaskExecutionListResp resp = new TaskExecutionListResp();
         try {
@@ -123,12 +128,31 @@ public class TaskStartupInfoController {
             List<TaskExecution> taskExecutions = taskExecutionServiceWrapper.selectByStartupIds(List.of(taskStartupId), null);
 
             resp.success(taskExecutions.stream().map(te -> MODEL_MAPPER.map(te, TaskExecutionListResp.TaskExecutionInfo.class)).toList());
-        }catch (Exception e){
-            log.error("发生异常",e);
-            resp.fail(ResultCode.FAIL,e.getMessage());
+        } catch (Exception e) {
+            log.error("发生异常", e);
+            resp.fail(ResultCode.FAIL, e.getMessage());
         }
         return resp;
     }
 
+
+    @ResponseBody
+    @RequestMapping(value = URIs.SchedulerTaskInfoURIs.STAGE_STARTUPS, method = RequestMethod.GET,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public StageStartupListResp getTaskStartupListResp(@RequestParam("taskExecutionId") Long taskExecutionId) {
+        StageStartupListResp resp = new StageStartupListResp();
+        try {
+            VerifyUtil.requireNotNull(taskExecutionId, "任务执行id查询参数为空，数据无法查询");
+            List<StageStartup> stageStartups = stageStartupServiceWrapper.selectByTaskExecutionId(taskExecutionId);
+            StageStartupListResp.StageStartupInfo data = new StageStartupListResp.StageStartupInfo();
+            resp.success(stageStartups.stream().map(s -> {
+                return MODEL_MAPPER.map(s, StageStartupListResp.StageStartupInfo.class);
+            }).collect(Collectors.toList()));
+        } catch (Exception e) {
+            log.error("查询数据为空", e);
+            resp.fail(ResultCode.FAIL, e.getMessage());
+        }
+        return resp;
+    }
 
 }
