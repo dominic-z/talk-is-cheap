@@ -60,7 +60,7 @@ public class AppTest {
 
     @Test
     public void testMapper(){
-        stageExecutionBizLogService.logAsync(20L,"hahah");
+//        stageExecutionBizLogService.logAsync(20L,"hahah");
     }
 
 

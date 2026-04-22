@@ -9,6 +9,7 @@ import co.elastic.clients.elasticsearch._types.mapping.Property;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import co.elastic.clients.elasticsearch.core.*;
 import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
+import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.elasticsearch.core.search.HitsMetadata;
 import co.elastic.clients.elasticsearch.core.search.Suggester;
 import co.elastic.clients.elasticsearch.indices.*;
@@ -597,22 +598,41 @@ public class ESTest {
 
     @Test
     public void testSearchAfter() throws IOException {
+//        来自千问，关键在于_doc是es内部的一个排序字段，可以用来维持排序稳定
+//        https://www.qianwen.com/share/chat/8895118edc974d1db2d704e6741a2ec0
         SortOptions scoreSorter =
                 new SortOptions.Builder().field(b2 -> b2.field("score").order(SortOrder.Desc)).build();
         SortOptions priceSorter =
                 new SortOptions.Builder().field(b2 -> b2.field("price").order(SortOrder.Asc)).build();
+        SortOptions docSorter = SortOptions.of(b -> b.field(sob -> sob.field("_doc").order(SortOrder.Asc)));
 
-        SearchRequest request = new SearchRequest.Builder().index("hotel")
-                .size(2)
-                .sort(Arrays.asList(scoreSorter, priceSorter))
-                .searchAfter(Arrays.asList(new FieldValue.Builder().longValue(48).build(),
-                        new FieldValue.Builder().longValue(617).build()))
-                .build();
-        SearchResponse<HotelDoc> response = esClient.search(request, HotelDoc.class);
+        SearchResponse<HotelDoc> firstSearchResp = esClient.search(new SearchRequest.Builder().index("hotel")
+                        .size(2)
+                        .sort(Arrays.asList(scoreSorter, priceSorter, docSorter))
+                        .build(),
+                HotelDoc.class);
+        Hit<HotelDoc> lastHit = null;
+        for (Hit<HotelDoc> hit : firstSearchResp.hits().hits()) {
+            log.info("first resp hits: {}, sort: {}", hit, hit.sort());
+            lastHit = hit;
+        }
+
+
+//      其实最简单的做法就是把上面的sort对象作为searchAfter的参数，这样最简单，但下面的代码可以展示原理。
+        SearchResponse<HotelDoc> response = esClient.search(
+                new SearchRequest.Builder().index("hotel")
+                        .size(2)
+                        .sort(Arrays.asList(scoreSorter, priceSorter, docSorter))
+                        .searchAfter(Arrays.asList(new FieldValue.Builder().longValue(48).build(),
+                                new FieldValue.Builder().longValue(617).build(),
+                                new FieldValue.Builder().longValue(lastHit.sort().get(lastHit.sort().size()-1).longValue()).build())
+                        ).build(),
+                HotelDoc.class);
         HitsMetadata<HotelDoc> hitsMetadata = response.hits();
-        log.info("resp hits0: {}", hitsMetadata.hits().get(0));
-        log.info("resp hits1: {}", hitsMetadata.hits().get(1));
-        log.info("hits size: {}", hitsMetadata.hits().size());
+        for (Hit<HotelDoc> hit : response.hits().hits()) {
+            log.info("second resp hits: {}, sort: {}", hit, hit.sort());
+            lastHit = hit;
+        }
 
         log.info("resp total: {}", hitsMetadata.total());
     }

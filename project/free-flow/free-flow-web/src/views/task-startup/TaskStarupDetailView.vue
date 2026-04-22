@@ -29,7 +29,8 @@ setTimeout(() => loading.value = false, 1000)
 
 // 如果列表数据是通过异步请求（如 API 调用）获取的，那么在组件初始渲染时，数据可能还是空的（例如 undefined 或空数组 []）。当数据返回并赋值后，如果子组件没有正确处理，就可能出现无法遍历的情况。
 const taskExecutionInfoList = ref([])
-const currentTaskExecution = ref(null)
+const currentTaskExecutionId = ref(null)
+
 function getTaskExecutions(taskStartupId) {
     request.get(API_PATHS.TASK_INFO.TASK_EXECUTIONS, {
         params: {
@@ -38,7 +39,7 @@ function getTaskExecutions(taskStartupId) {
     }).then(respBody => {
         taskExecutionInfoList.value = respBody.data
         if (taskExecutionInfoList.value && taskExecutionInfoList.value.length) {
-            currentTaskExecution.value = taskExecutionInfoList.value[0]
+            currentTaskExecutionId.value = taskExecutionInfoList.value[0].id
         }
     })
 }
@@ -65,12 +66,12 @@ onMounted(() => {
 
         </v-app-bar>
 
-        <TaskExecutionListNav :taskStartupId="props.taskStartupId" :taskExecutionInfoList="taskExecutionInfoList">
+        <TaskExecutionListNav :taskStartupId="props.taskStartupId" :taskExecutionInfoList="taskExecutionInfoList" v-model:activeTaskExecutionId="currentTaskExecutionId">
         </TaskExecutionListNav>
 
 
         <TaskStartupDetailGraph :taskStartupId="props.taskStartupId" :taskName="taskName" :taskVersion="taskVersion"
-            :taskExecution="currentTaskExecution"></TaskStartupDetailGraph>
+            :taskExecutionId="currentTaskExecutionId"></TaskStartupDetailGraph>
 
 
     </v-app>

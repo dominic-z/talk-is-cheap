@@ -29,7 +29,11 @@ const intersector = {
         <v-sheet class="overflow-y-auto" max-height="400">
 
             <v-sheet class="d-flex align-center text-center pa-2" height="200vh">
+                <!-- v-intersect.quiet -->
+                 <!-- 我理解，就是说如果这个监视的对象一开始就已经是可见了，那么不会触发这个handle行为 -->
+                 <!-- Will not invoke the handler function if the element is visible when the IntersectionObserver is created. -->
                 <v-card class="mx-auto" max-width="336" v-intersect="intersector">
+                <!-- <v-card class="mx-auto" max-width="336" v-intersect.quiet="intersector"> -->
                     <v-card-title>Card title</v-card-title>
 
                     <v-card-text>

@@ -69,13 +69,15 @@ public class DefinitionController {
             VerifyUtil.requireNotNull(reqData, "请求参数为空");
             TaskDefinitionExample example = new TaskDefinitionExample();
 
-            QueryTaskDefinitionDetailsReq.QueryTaskDefinitionDetailsReqData.Query query = reqData.getQuery();
-            if (query != null) {
-                VerifyUtil.requireNotBlank(query.getTaskName(), "task name in query can not be blank");
-                TaskDefinitionExample.Criteria criteria = example.or();
-                criteria.andNameEqualTo(query.getTaskName());
-                if (query.getTaskVersion() != null) {
-                    criteria.andVersionEqualTo(query.getTaskVersion());
+            List<QueryTaskDefinitionDetailsReq.QueryTaskDefinitionDetailsReqData.Query> queries = reqData.getQueries();
+            if (queries != null && !queries.isEmpty()) {
+                for (QueryTaskDefinitionDetailsReq.QueryTaskDefinitionDetailsReqData.Query query : queries) {
+                    VerifyUtil.requireNotBlank(query.getTaskName(), "task name in query can not be blank");
+                    TaskDefinitionExample.Criteria criteria = example.or();
+                    criteria.andNameEqualTo(query.getTaskName());
+                    if (query.getTaskVersion() != null) {
+                        criteria.andVersionEqualTo(query.getTaskVersion());
+                    }
                 }
             }
 

@@ -1,12 +1,13 @@
 <script setup>
 import { mdiWindowClose } from '@mdi/js'
-import { ref } from 'vue'
+import { ref, watch,computed } from 'vue'
 import StageExecutionLogTable from './StageExecutionLogTable.vue'
+import request from '@/utils/request'
+import { API_PATHS } from '@/utils/api/paths'
 const emitter = defineEmits(['update:draw'])
 
-const props = defineProps(['draw', 'id'])
+const props = defineProps(['draw', 'stageStartup'])
 const navWidth = ref(600)
-// console.log(props)
 
 const executions = ref([
     {
@@ -40,8 +41,72 @@ const paramsJson = ref({
     }
 })
 
+async function getStageExecutions(stageStartupId) {
+    return
+}
+
 
 const items = ['Foo', 'Bar', 'Fizz', 'Buzz']
+
+const stageExecutions = ref([])
+const stageParams = ref(null)
+const selectedStageExecutionId = ref(null)
+const selectedStageExecution = computed(()=>{
+    if(selectedStageExecutionId.value==null || stageExecutions.value==null || stageExecutions.value.length==0){
+        return null
+    }
+    for(let stageExecution of stageExecutions.value){
+        if(stageExecution.id == selectedStageExecutionId.value){
+            return stageExecution
+        }
+    }
+    return null
+})
+watch(() => props.stageStartup, async () => {
+    selectedStageExecutionId.value = null
+    if (props.stageStartup == null) {
+        return
+    }
+    stageExecutions.value = await request.get(API_PATHS.TASK_INFO.STAGE_EXECUTIONS, {
+        params: {
+            stageStartupId: props.stageStartup.id
+        }
+    })
+        .then(respBody => respBody.data)
+        .catch(e => {
+            console.debug(e)
+            return null
+        })
+
+    stageParams.value = await request.get(API_PATHS.TASK_INFO.STAGE_STARTUP_PARAMS, {
+        params: {
+            stageStartupIds: [props.stageStartup.id]
+        }
+    })
+        .then(respBody => {
+            if (respBody.data!=null && respBody.data.length == 0) {
+                return null
+            } else {
+                const param = respBody.data[0]
+                return {
+                    "input":param.encodedInput.length==0?'':JSON.parse(param.encodedInput),
+                    "sharedContextAtStartup":param.encodedSharedContextAtStartup.length==0?'':JSON.parse(param.encodedSharedContextAtStartup),
+                    "sharedContextAtCompletion":param.encodedSharedContextAtCompletion.length==0?'':JSON.parse(param.encodedSharedContextAtCompletion),
+                }
+            }
+        })
+        .catch(e => {
+            console.debug(e)
+            return null
+        })
+
+})
+
+
+// function selectStageExecution(stageExecution){
+//     console.log(stageExecution)
+//     currentStageExecution.value = stageExecution
+// }
 
 </script>
 
@@ -52,17 +117,17 @@ const items = ['Foo', 'Bar', 'Fizz', 'Buzz']
 
             <v-btn :icon="mdiWindowClose" @click="$emit('update:draw')"></v-btn>
             <!-- <v-toolbar-title text="阶段信息"></v-toolbar-title> -->
-            <v-select :items="items" density="compact" label="Compact" :hide-details="true"
-            :tile="true" :style="{'border-style':'none'}">
-            </v-select>
+            <!-- <v-select :items="items" density="compact" label="Compact" :hide-details="true" :tile="true"
+                :style="{ 'border-style': 'none' }">
+            </v-select> -->
 
         </v-toolbar>
 
         <v-card class="border-thin">
-            <v-card-title>基本信息 {{ props.id }}</v-card-title>
+            <v-card-title>阶段启动信息</v-card-title>
 
             <v-card-text>
-                <v-table density="compact" height="100px" striped="even" fixed-header class="border-thin text-break">
+                <v-table density="compact" striped="even" fixed-header class="border-thin text-break">
                     <!-- 列宽定义区域 -->
                     <colgroup>
                         <col style="width: 25%;"> <!-- 第 1 列宽度 -->
@@ -70,16 +135,16 @@ const items = ['Foo', 'Bar', 'Fizz', 'Buzz']
                     </colgroup>
                     <tbody>
                         <tr>
-                            <td>version</td>
-                            <td>1.1</td>
+                            <td>ID</td>
+                            <td> {{ props.stageStartup?.id }}</td>
                         </tr>
                         <tr>
-                            <td>Startup Time</td>
-                            <td>2021-07-01</td>
+                            <td>完成时间</td>
+                            <td>{{ props.stageStartup?.completionTime }}</td>
                         </tr>
                         <tr>
-                            <td>Retry Times</td>
-                            <td>3</td>
+                            <td>失败次数</td>
+                            <td>{{ props.stageStartup?.failCount }}</td>
                         </tr>
                     </tbody>
                 </v-table>
@@ -92,7 +157,7 @@ const items = ['Foo', 'Bar', 'Fizz', 'Buzz']
         <v-card class=" border-thin">
             <v-card-title>全局参数快照</v-card-title>
             <v-card-text>
-                <json-viewer :value="paramsJson" :expand-depth=5 copyable boxed sort></json-viewer>
+                <json-viewer v-if="stageParams" :value="stageParams?.sharedContextAtStartup" :expand-depth=5 copyable boxed sort></json-viewer>
             </v-card-text>
         </v-card>
 
@@ -100,7 +165,7 @@ const items = ['Foo', 'Bar', 'Fizz', 'Buzz']
         <v-card class=" border-thin">
             <v-card-title>当前阶段启动参数</v-card-title>
             <v-card-text>
-                <json-viewer :value="paramsJson" :expand-depth=5 copyable boxed sort></json-viewer>
+                <json-viewer v-if="stageParams" :value="stageParams?.input" :expand-depth=5 copyable boxed sort></json-viewer>
             </v-card-text>
         </v-card>
 
@@ -114,12 +179,13 @@ const items = ['Foo', 'Bar', 'Fizz', 'Buzz']
             </v-card-title>
 
             <!-- hide-details会隐藏掉一个小尾巴 -->
-            <v-select :items="executions" item-title="stageExecutionId" label="阶段执行实例" :hide-details="true">
+            <v-select :items="stageExecutions" item-title="id" label="阶段执行实例" :hide-details="true" v-model="selectedStageExecutionId">
                 <template v-slot:item="{ props, item }">
-                    <v-list-item v-bind="props" :subtitle="item.raw.launchTime"
-                        @click="() => console.log(props)"></v-list-item>
+                    <v-list-item v-bind="props" :subtitle="item.raw.startTime"
+                        ></v-list-item>
                 </template>
             </v-select>
+            <!-- @click="()=>selectStageExecution(item.raw)" -->
 
 
             <v-card class="border-thin" :style="{ 'height': '100%' }">
@@ -127,7 +193,7 @@ const items = ['Foo', 'Bar', 'Fizz', 'Buzz']
                 <v-card-text>
 
 
-                    <StageExecutionLogTable></StageExecutionLogTable>
+                    <StageExecutionLogTable :stageExecution="selectedStageExecution"></StageExecutionLogTable>
                 </v-card-text>
             </v-card>
         </v-card>

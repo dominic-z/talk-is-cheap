@@ -11,8 +11,11 @@ import request from '@/utils/request';
 import { API_PATHS } from '@/utils/api/paths';
 import { TaskStageStatus } from '@/enums/task';
 import { useLayout } from '@/utils/useLayout';
+import { mdiCloseCircle } from '@mdi/js';
+import { mdiTimerSand } from '@mdi/js';
+import { mdiClockAlert } from '@mdi/js';
 
-const props = defineProps(['taskStartupId', 'taskName', 'taskVersion', 'taskExecution'])
+const props = defineProps(['taskStartupId', 'taskName', 'taskVersion', 'taskExecutionId'])
 
 const nodes = ref([
     {
@@ -62,16 +65,14 @@ const edges = ref([
 ])
 
 
+const currentStageStartup = ref(null)
 // Node click event handler
 function onNodeClick({ event, node }) {
-    console.log('Node clicked:', node, event);
+    // console.log('Node clicked:', node, event);
     if (!draw.value) {
         draw.value = !draw.value;
     }
-    nodes.value[2].data.status = ''
-    // stageDetailId.value = node.id
-
-
+    currentStageStartup.value = node.data.stageStartup
 }
 
 
@@ -80,10 +81,12 @@ const draw = ref(false)
 async function getTaskDefinition(taskName, taskVersion) {
     return await request.post(API_PATHS.TASK_DEFINITION.DETAILS_QUERY, {
         data: {
-            query: {
-                taskName: taskName,
-                taskVersion: taskVersion,
-            }
+            queries: [
+                {
+                    taskName: taskName,
+                    taskVersion: taskVersion,
+                }
+            ]
         }
     }).then(respBody => {
         // console.log(respBody)
@@ -115,7 +118,7 @@ const { layout } = useLayout()
 
 const { fitView } = useVueFlow()
 // 当taskExecution变更，重新请求
-watch(() => props.taskExecution, async () => {
+watch(() => props.taskExecutionId, async () => {
     if (taskDef == null) {
         taskDef = await getTaskDefinition(props.taskName, props.taskVersion)
         Object.entries(taskDef.stageDefinitionMap).forEach(([stageName, stageDef]) => {
@@ -123,8 +126,8 @@ watch(() => props.taskExecution, async () => {
         });
     }
 
-    if (props.taskExecution != null) {
-        stageStartups.value = await getStageStartups(props.taskExecution.id)
+    if (props.taskExecutionId != null) {
+        stageStartups.value = await getStageStartups(props.taskExecutionId)
 
         let newNodes = []
         //     {
@@ -157,7 +160,7 @@ watch(() => props.taskExecution, async () => {
                 id: stageStartup.stageId + '',
                 type: "RunnableStage",
                 position: { x: 350, y: 200 },
-                data: { label: stageDef.name, status: stageStartup.status },
+                data: { label: stageDef.name, status: stageStartup.status, stageStartup:stageStartup },
             }
             newNodes.push(node)
             // console.log(taskDef.pointInGraph)
@@ -214,10 +217,17 @@ watch(() => props.taskExecution, async () => {
                         <RunnableStageNode v-bind="runnableStageProp">
                             <template v-slot:content>
                                 <VFadeTransition :leave-absolute="true">
-                                    <v-progress-circular v-if="runnableStageProp.data.status == 'running'" class="mr-2"
-                                        color="primary" indeterminate>
+                                    <v-progress-circular v-if="runnableStageProp.data.status == TaskStageStatus.RUNNING"
+                                        class="mr-2" color="primary" indeterminate>
                                     </v-progress-circular>
-                                    <v-icon v-else :icon="mdiCheckCircle" :style="{ 'color': 'green' }" />
+                                    <v-icon v-else-if="runnableStageProp.data.status == TaskStageStatus.SUCCEEDED"
+                                        :icon="mdiCheckCircle" :style="{ 'color': 'green' }" />
+                                    <v-icon v-else-if="runnableStageProp.data.status == TaskStageStatus.FAILED"
+                                        :icon="mdiCloseCircle" :style="{ 'color': 'red' }" />
+                                    <v-icon v-else-if="runnableStageProp.data.status == TaskStageStatus.TIME_OUT"
+                                        :icon="mdiClockAlert" :style="{ 'color': 'gray' }" />
+                                    <v-icon v-else-if="runnableStageProp.data.status == TaskStageStatus.PENDING"
+                                        :icon="mdiTimerSand" :style="{ 'color': 'gray' }" />
                                 </VFadeTransition>
                                 {{ runnableStageProp.data.label }}
                             </template>
@@ -237,8 +247,9 @@ watch(() => props.taskExecution, async () => {
 
 
 
-
-        <StageStartupDetailNav :id="11" :draw="draw" @update:draw="() => draw = !draw"></StageStartupDetailNav>
+        <!-- 可以用defineModel替代 -->
+        <StageStartupDetailNav :stageStartup="currentStageStartup" :draw="draw" @update:draw="() => draw = !draw">
+        </StageStartupDetailNav>
 
 
     </v-main>
