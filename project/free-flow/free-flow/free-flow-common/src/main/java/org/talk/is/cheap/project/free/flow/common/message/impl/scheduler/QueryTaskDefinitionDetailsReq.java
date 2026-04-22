@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 import org.talk.is.cheap.project.free.flow.common.enums.TaskType;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 
+import java.util.List;
+
 public class QueryTaskDefinitionDetailsReq extends HttpBody<QueryTaskDefinitionDetailsReq.QueryTaskDefinitionDetailsReqData> {
 
     @Data
@@ -25,7 +27,7 @@ public class QueryTaskDefinitionDetailsReq extends HttpBody<QueryTaskDefinitionD
         }
         private Integer page;
         private Integer pageSize;
-        private Query query;
+        private List<Query> queries;
 
     }
 }

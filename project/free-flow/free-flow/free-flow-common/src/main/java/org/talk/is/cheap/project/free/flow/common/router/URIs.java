@@ -52,6 +52,9 @@ public class URIs {
         public static final String TASK_STARTUPS = PREFIX + "/task/startups";
         public static final String TASK_EXECUTIONS = PREFIX + "/task/executions";
         public static final String STAGE_STARTUPS = PREFIX + "/stage/startups";
+        public static final String STAGE_EXECUTIONS = PREFIX + "/stage/executions";
+        public static final String STAGE_EXECUTION_LOGS = PREFIX + "/stage/execution_logs";
+        public static final String STAGE_STARTUP_PARAMS = PREFIX + "/stage/startups_params";
 
     }
 

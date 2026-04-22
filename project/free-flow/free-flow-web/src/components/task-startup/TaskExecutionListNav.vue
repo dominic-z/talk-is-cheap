@@ -16,7 +16,7 @@ import { ref, onMounted } from 'vue';
 // const a = mdiPinOutline
 
 const props = defineProps(['taskStartupId','taskExecutionInfoList'])
-
+const activeTaskExecutionId = defineModel('activeTaskExecutionId')
 
 const navProps = ref({
     expandOnHover: true,
@@ -88,6 +88,7 @@ function toggleTaskExecutionDetailPin(taskExecution) {
         taskExecution.pin = !taskExecution.pin
     }
     taskExecution.showDetail = true
+    activeTaskExecutionId.value = taskExecution.id
 }
 
 
@@ -109,7 +110,7 @@ function toggleTaskExecutionDetailPin(taskExecution) {
         <v-list density="compact" nav  v-if="props.taskExecutionInfoList && props.taskExecutionInfoList.length">
 
 
-            <v-list-item :key="1" title="My Files" value="myfiles" link>
+            <!-- <v-list-item :key="1" title="My Files" value="myfiles" link>
                 <template v-slot:prepend>
                     <v-progress-circular color="red" :model-value="20" :size="25" class="mr-5"></v-progress-circular>
                 </template>
@@ -117,7 +118,7 @@ function toggleTaskExecutionDetailPin(taskExecution) {
                     sfdafd
                 </template>
 
-            </v-list-item>
+            </v-list-item> -->
 
 
 
@@ -126,7 +127,7 @@ function toggleTaskExecutionDetailPin(taskExecution) {
                 @mouseenter="(e) => onMouseEnterTaskExecution(taskExecution)"
                 @mouseleave="(e) => onMouseLeaveTaskExecution(taskExecution)"
                 @click="(e) => toggleTaskExecutionDetailPin(taskExecution)" link
-                :active="index==0"
+                :active="taskExecution.id==activeTaskExecutionId"
                 >
                 <!-- <template v-slot:prepend>
                     <v-progress-circular color="primary" :model-value="20" :size="25"
@@ -136,15 +137,15 @@ function toggleTaskExecutionDetailPin(taskExecution) {
                 <template v-slot:default>
                     <div class="v-list-item pa-0">
                         <v-icon v-if="taskExecution.status == TaskStageStatus.FAILED"
-                            :icon="mdiCloseCircleOutline"></v-icon>
+                            :icon="mdiCloseCircleOutline" color="red" :size="30"  class="mr-2"></v-icon>
 
-                        <v-progress-circular v-if="taskExecution.status == TaskStageStatus.RUNNING" color="primary"
-                            indeterminate :size="25" class="mr-5"></v-progress-circular>
+                        <v-progress-circular v-else-if="taskExecution.status == TaskStageStatus.RUNNING" color="primary"
+                            indeterminate :size="25" class="ml-1 mr-4"></v-progress-circular>
 
-                        <v-icon v-else-if="taskExecution.status == TaskStageStatus.TIME_OUT" :icon="mdiClockTimeEightOutline" size="30"></v-icon>
-                        <v-icon v-else-if="taskExecution.status == TaskStageStatus.SUCCEEDED" :icon="mdiCheckCircleOutline" color="green" size="30"></v-icon>
+                        <v-icon v-else-if="taskExecution.status == TaskStageStatus.TIME_OUT" :icon="mdiClockTimeEightOutline" size="30" class="mr-2"></v-icon>
+                        <v-icon v-else-if="taskExecution.status == TaskStageStatus.SUCCEEDED" :icon="mdiCheckCircleOutline" color="green" size="30" class="mr-2"></v-icon>
                         <v-icon v-else
-                            :icon="mdiCloseCircleOutline" color="red" size="30"></v-icon>
+                            :icon="mdiCloseCircleOutline" color="red" size="30" class="mr-2"></v-icon>
                         <!-- todo: 这个会跳一下 -->
                         <span v-if="navProps.isNavExpanded" class="ml-3">{{ taskExecution.startTime }}</span>
                         <v-icon v-if="taskExecution.showDetail" :icon="mdiMenuDown"></v-icon>

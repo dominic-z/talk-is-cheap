@@ -4,6 +4,7 @@ package org.talk.is.cheap.project.free.flow.scheduler.task.controller;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -12,24 +13,35 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.talk.is.cheap.project.free.flow.common.enums.TaskStageStatus;
 import org.talk.is.cheap.project.free.flow.common.message.ResultCode;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.StageExecutionListResp;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.StageExecutionLogsResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.StageStartupListResp;
+import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.StageStartupParamsResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.TaskExecutionListResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.scheduler.TaskStartupListResp;
 import org.talk.is.cheap.project.free.flow.common.router.URIs;
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.TaskStartupExample;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.es.pojo.ESPojoDTO;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.es.pojo.StageExecutionBizLog;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.es.pojo.StageStartupParam;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.StageCountGroupByTaskStatus;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.StageExecution;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.StageStartup;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskDefinition;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskExecution;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskStartup;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.StageStartupService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.TaskStartupService;
+import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.StageExecutionServiceWrapper;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.StageStartupServiceWrapper;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.TaskDefinitionServiceWrapper;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.TaskExecutionServiceWrapper;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.TaskStartupServiceWrapper;
+import org.talk.is.cheap.project.free.flow.starter.repository.service.es.StageExecutionBizLogService;
+import org.talk.is.cheap.project.free.flow.starter.repository.service.es.StageStartupParamService;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -56,6 +68,14 @@ public class TaskStartupInfoController {
     private StageStartupService stageStartupService;
     @Autowired
     private TaskDefinitionServiceWrapper taskDefinitionServiceWrapper;
+
+    @Autowired
+    private StageExecutionServiceWrapper stageExecutionServiceWrapper;
+
+    @Autowired
+    private StageStartupParamService stageStartupParamService;
+    @Autowired
+    private StageExecutionBizLogService stageExecutionBizLogService;
 
     private static final ModelMapper MODEL_MAPPER = new ModelMapper();
 
@@ -155,4 +175,83 @@ public class TaskStartupInfoController {
         return resp;
     }
 
+
+    @ResponseBody
+    @RequestMapping(value = URIs.SchedulerTaskInfoURIs.STAGE_STARTUP_PARAMS, method = RequestMethod.GET,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public StageStartupParamsResp getStageStartupParams(@RequestParam("stageStartupIds") List<Long> stageStartupIds) {
+        StageStartupParamsResp resp = new StageStartupParamsResp();
+        try {
+            if (stageStartupIds != null && !stageStartupIds.isEmpty()) {
+                List<ESPojoDTO<StageStartupParam>> params = stageStartupParamService.getByStageStartupIds(stageStartupIds);
+                List<StageStartupParamsResp.StageStartupParam> respData = params.stream().map(paramDTO -> {
+                    StageStartupParamsResp.StageStartupParam p = new StageStartupParamsResp.StageStartupParam();
+                    p.setStageStartupId(paramDTO.getData().getStageStartupId());
+                    p.setEncodedInput(paramDTO.getData().getEncodedInput());
+                    p.setEncodedSharedContextAtStartup(paramDTO.getData().getEncodedSharedContextSnapshotAtStartup());
+                    p.setEncodedSharedContextAtCompletion(paramDTO.getData().getEncodedSharedContextSnapshotAtCompletion());
+                    return p;
+                }).toList();
+
+                resp.success(respData);
+            } else {
+                resp.success();
+            }
+        } catch (Exception e) {
+            resp.fail(ResultCode.FAIL, e.getMessage());
+        }
+        return resp;
+    }
+
+
+    @ResponseBody
+    @RequestMapping(value = URIs.SchedulerTaskInfoURIs.STAGE_EXECUTIONS, method = RequestMethod.GET,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public StageExecutionListResp getStageExecutionListResp(@RequestParam("stageStartupId") Long stageStartupId) {
+        StageExecutionListResp resp = new StageExecutionListResp();
+        try {
+            VerifyUtil.requireNotNull(stageStartupId, "阶段启动id查询参数为空，数据无法查询");
+            List<StageExecution> stageExecutions = stageExecutionServiceWrapper.selectByStartupId(stageStartupId);
+            StageExecutionListResp.StageExecutionDTO data = new StageExecutionListResp.StageExecutionDTO();
+
+            resp.success(stageExecutions.stream().map(s -> {
+                return MODEL_MAPPER.map(s, StageExecutionListResp.StageExecutionDTO.class);
+            }).collect(Collectors.toList()));
+        } catch (Exception e) {
+            log.error("查询数据为空", e);
+            resp.fail(ResultCode.FAIL, e.getMessage());
+        }
+        return resp;
+    }
+
+//    请求demo http://localhost:7072/scheduler/task-info/stage/execution_logs?stageExecutionId=1147&pageSize=2&searchAfter=1776641746000,369
+    @ResponseBody
+    @RequestMapping(value = URIs.SchedulerTaskInfoURIs.STAGE_EXECUTION_LOGS, method = RequestMethod.GET,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public StageExecutionLogsResp getStageExecutionLogsResp(@RequestParam("stageExecutionId") Long stageExecutionId,
+                                                            @RequestParam("pageSize") int pageSize,
+                                                            @RequestParam(value = "searchAfter", required = false)
+                                                            List<Long> searchAfter) {
+        StageExecutionLogsResp resp = new StageExecutionLogsResp();
+        try {
+            VerifyUtil.requireNotNull(stageExecutionId, "阶段执行id查询参数为空，数据无法查询");
+            VerifyUtil.requireTrue(pageSize < 100, "超出最大分页限制");
+            List<ESPojoDTO<StageExecutionBizLog>> stageExecutionBizLogDTOs =
+                    stageExecutionBizLogService.getByStageExecutionId(
+                            stageExecutionId, pageSize, searchAfter);
+
+            resp.success(stageExecutionBizLogDTOs.stream()
+                    .map(bizLog ->
+                            StageExecutionLogsResp.StageExecutionLog.builder()
+                                    .logContent(bizLog.getData().getLog())
+                                    .createTime(bizLog.getData().getCreateTime())
+                                    .sort(bizLog.getSort())
+                                    .build()
+                    ).collect(Collectors.toList()));
+        } catch (Exception e) {
+            log.error("查询数据为空", e);
+            resp.fail(ResultCode.FAIL, e.getMessage());
+        }
+        return resp;
+    }
 }

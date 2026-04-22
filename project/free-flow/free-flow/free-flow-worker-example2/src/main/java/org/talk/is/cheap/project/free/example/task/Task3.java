@@ -64,6 +64,7 @@ public class Task3 {
         TTSharedContext ttSharedContext = stageRuntimeEnv.getSharedContext();
         log.info("method1 input: {}, sharedContext: {}", stageRuntimeEnv.getInput(), ttSharedContext);
         ttSharedContext.setName("method1");
+        stageRuntimeEnv.log(String.format("method1 input: %s, sharedContext: %s",stageRuntimeEnv.getInput(), ttSharedContext));
 //        demoDao.reset(0);
         try {
             if (stageRuntimeEnv.getInput() != null) {
@@ -73,7 +74,8 @@ public class Task3 {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        stageRuntimeEnv.log("method1");
+        stageRuntimeEnv.log(String.format("method1 input: %s, sharedContext: %s",stageRuntimeEnv.getInput(), ttSharedContext));
+
     }
 
     @RunnableStage(name = "method2", toStageName = {"method3_1", "method3_2", "method3_3"}, version = 1,
@@ -82,6 +84,8 @@ public class Task3 {
         TTSharedContext ttSharedContext = stageRuntimeEnv.getSharedContext();
         log.info("method2 input: {}, sharedContext: {}", stageRuntimeEnv.getInput(), ttSharedContext);
         ttSharedContext.setName(ttSharedContext.getName() + ":method2");
+        stageRuntimeEnv.log(String.format("method2 input: %s, sharedContext: %s",stageRuntimeEnv.getInput(), ttSharedContext));
+
         try {
             if (stageRuntimeEnv.getInput() != null) {
                 Thread.sleep(stageRuntimeEnv.getInput() * 1000);
@@ -89,6 +93,9 @@ public class Task3 {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+        stageRuntimeEnv.log(String.format("method2 input: %s, sharedContext: %s",stageRuntimeEnv.getInput(), ttSharedContext));
+
+
     }
 
 
@@ -98,6 +105,8 @@ public class Task3 {
         TTSharedContext ttSharedContext = stageRuntimeEnv.getSharedContext();
         log.info("method3_1 input: {}, sharedContext: {}", stageRuntimeEnv.getInput(), ttSharedContext);
         ttSharedContext.setName(ttSharedContext.getName() + ":method3_1");
+        stageRuntimeEnv.log(String.format("method3_1 input: %s, sharedContext: %s",stageRuntimeEnv.getInput(), ttSharedContext));
+
         try {
             if (stageRuntimeEnv.getInput() != null) {
                 Thread.sleep(stageRuntimeEnv.getInput() * 1000);
@@ -105,6 +114,8 @@ public class Task3 {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+        stageRuntimeEnv.log(String.format("method3_1 input: %s, sharedContext: %s",stageRuntimeEnv.getInput(), ttSharedContext));
+
     }
 
     @RunnableStage(name = "method3_2", toStageName = {"method4_1", "method4_2"}, version = 1, maxRetryCount = 2,

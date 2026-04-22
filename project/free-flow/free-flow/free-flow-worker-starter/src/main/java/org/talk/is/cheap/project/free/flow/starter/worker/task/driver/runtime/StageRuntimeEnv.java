@@ -53,7 +53,8 @@ public class StageRuntimeEnv<T> {
 
 
     public void log(String s) {
-        stageExecutionBizLogService.logAsync(stageExecutionId, s);
+        stageExecutionBizLogService.logAsync(taskRuntimeEnv.getTaskExecutionId(), stageExecutionId,
+                String.format("[%s]-[%s]-%s", taskRuntimeEnv.getTaskExecutionId(), stageExecutionId, s));
     }
 
     public Date getDeadline() {

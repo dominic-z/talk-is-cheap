@@ -17,6 +17,8 @@ import HelloDataTable from './component/data-table/HelloDataTable.vue'
 import VListApp from './component/list/VListApp.vue'
 import AlignTabs from './component/navigation/tabs/AlignTabs.vue'
 import BreadcrumbsTitleSlot from './component/navigation/breadcrumbs/BreadcrumbsTitleSlot.vue'
+import SelectDensity from './component/form-inputs-controls/select/SelectDensity.vue'
+import SelectModel from './component/form-inputs-controls/select/SelectModel.vue'
 
 // const app = createApp(HelloVuetifyMdiFont)
 // const app = createApp(HelloVuetifyMdiJS)
@@ -29,7 +31,9 @@ import BreadcrumbsTitleSlot from './component/navigation/breadcrumbs/Breadcrumbs
 // const app = createApp(ManualExpansionRailNavApp)
 // const app = createApp(VListApp)
 // const app = createApp(AlignTabs)
-const app = createApp(BreadcrumbsTitleSlot)
+// const app = createApp(BreadcrumbsTitleSlot)
+// const app = createApp(SelectDensity)
+const app = createApp(SelectModel)
 
 
 

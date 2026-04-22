@@ -17,6 +17,7 @@ public class StageStartupListResp extends HttpBody<List<StageStartupListResp.Sta
         private Integer stageId;
         private Integer status;
         private Integer failCount;
+        private Date startTime;
         private Date completionTime;
     }
 }

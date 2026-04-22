@@ -84,8 +84,7 @@ PUT /task_shared_context
   "mappings": {
     "properties": {
       "task_startup_id":{
-        "type":"keyword",
-        "unique": true
+        "type":"keyword"
       },
       "encoded_task_shared_context_snapshot": {
         "type": "text",
@@ -107,8 +106,7 @@ PUT /stage_startup_param
   "mappings": {
     "properties": {
       "stage_startup_id":{
-        "type":"keyword",
-        "unique": true
+        "type":"keyword"
       },
       "encoded_input": {
         "type": "text",
@@ -141,8 +139,7 @@ PUT /stage_execution_biz_log
   "mappings": {
     "properties": {
       "stage_execution_id":{
-        "type":"keyword",
-        "unique": true
+        "type":"keyword"
       },
       "log":{
         "type":"text",
@@ -156,6 +153,14 @@ PUT /stage_execution_biz_log
   }
 }
 
+PUT /stage_execution_biz_log/_mapping
+{
+  "properties": {
+    "task_execution_id": {
+      "type": "keyword"
+    }
+  }
+}
 
 DELETE /stage_execution_result_msg
 PUT /stage_execution_result_msg
@@ -163,8 +168,7 @@ PUT /stage_execution_result_msg
   "mappings": {
     "properties": {
       "stage_execution_id":{
-        "type":"keyword",
-        "unique": true
+        "type":"keyword"
       },
       "msg":{
         "type":"text",
@@ -182,32 +186,23 @@ PUT /stage_execution_result_msg
 
 
 ```json
-GET /task_shared_context/_doc/3
-
+GET /stage_startup_param/_doc/1041
 GET /task_shared_context/_search
 {
   "query": {
     "term": {
-      "task_startup_id":1
+      "task_startup_id":59
     }
   },
   "size": 10  
 }
 
-
-
-GET /stage_startup_param/_search
-{
-  "query": {
-    "match_all": {}
-  }
-}
-
+GET /stage_startup_param/_doc/37
 GET /stage_startup_param/_search
 {
   "query": {
     "terms": {
-      "stage_startup_id":[59,60,61]
+      "stage_startup_id":[1239]
     }
   },
   "size": 10
@@ -215,19 +210,50 @@ GET /stage_startup_param/_search
 
 
 
+DELETE /stage_execution_biz_log/_doc/17
+
+GET /stage_execution_biz_log/_mapping
+
 GET /stage_execution_biz_log/_search
 {
   "query": {
     "match_all": {}
-  }
+  },
+  "sort": [           // 排序配置（对应 ORDER BY）
+    {
+      "create_time": {         // 排序字段1：id（自增字段）
+        "order": "desc" // 排序方式：asc（正序）/ desc（倒序）
+      }
+    }
+  ],
+  "size": 10
 }
 
+GET /stage_execution_biz_log/_search
+{
+  "query": {
+    "exists": {
+      "field": "create_time"
+    }
+  },
+  "sort": [           // 排序配置（对应 ORDER BY）
+    {
+      "create_time": {         // 排序字段1：id（自增字段）
+        "order": "desc" // 排序方式：asc（正序）/ desc（倒序）
+      },
+      "_doc":{
+        "order": "desc"
+      }
+    }
+  ],
+  "size": 10
+}
 
 GET /stage_execution_biz_log/_search
 {
   "query": {
     "term": {
-      "stage_execution_id":1
+      "stage_execution_id":1147
     }
   },
   "sort": [           // 排序配置（对应 ORDER BY）
@@ -245,11 +271,12 @@ GET /stage_execution_result_msg/_search
 {
   "query": {
     "term": {
-      "stage_execution_id":1
+      "stage_execution_id":215
     }
   },
   "size": 10
 }
+
 
 ```
 
