@@ -108,10 +108,10 @@ const intersector = {
 }
 
 const loading = ref(false)
-const showLoadMore = ref(true)
+const showLoadMore = ref(false)
 function loadMore(isIntersecting, entries, observer) {
     // 仅仅修改page信息，具体触发fetch操作通过@update:options
-    // console.log("aaa",isIntersecting, entries, observer)
+    console.log("aaa",isIntersecting, entries, observer)
     if (isIntersecting) {
         fetchData()
     }
@@ -119,10 +119,10 @@ function loadMore(isIntersecting, entries, observer) {
 
 async function fetchData() {
     loading.value = true
-    showLoadMore.value = true
+    // showLoadMore.value = true
     if (props.stageExecution == null) {
         loading.value = false
-        showLoadMore.value = false
+        // showLoadMore.value = false
         return
     }
     const respBody = await request.get(API_PATHS.TASK_INFO.STAGE_EXECUTION_LOGS, {
@@ -147,7 +147,12 @@ watch(() => props.stageExecution, () => {
     shownItems.value = []
     tablePageInfo.value.total = 10
     tablePageInfo.value.searchAfter = null
-    fetchData()
+    if(props.stageExecution!=null){
+        showLoadMore.value = true
+    }else{
+        showLoadMore.value = false
+    }
+    //fetchData()
 })
 </script>
 
@@ -168,9 +173,11 @@ watch(() => props.stageExecution, () => {
 
         <template v-slot:body.append v-if="showLoadMore">
             <!-- 清空背景色https://www.doubao.com/thread/w8ba1a5ea0b54decf -->
-            <tr v-intersect.quiet="intersector" :style="{ 'background-image': 'initial' }">
+             <!-- v-intersect放在tr上不行，如果只有10条数据，那么响应没法触发，我试了一下，原因应该是，tr要漏出90%，可能这个阈值达不到 -->
+            <tr :style="{ 'background-image': 'initial' }">
                 <td :colspan="headers.length">
-                    <v-skeleton-loader max-width="200" type="list-item"
+                    <!-- 此处不能用quiet -->
+                    <v-skeleton-loader v-intersect="intersector"  max-width="200" type="list-item"
                         :style="{ 'left': '50%', 'transform': 'translate(-50%,0)' }" />
                 </td>
             </tr>

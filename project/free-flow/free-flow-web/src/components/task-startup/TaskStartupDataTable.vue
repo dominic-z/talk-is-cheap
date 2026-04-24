@@ -12,9 +12,11 @@ import { mdiClockTimeEightOutline } from '@mdi/js'
 import { mdiMessageAlert } from '@mdi/js'
 import { mdiAlertCircle } from '@mdi/js'
 import { mdiCheckCircleOutline } from '@mdi/js'
+import { mdiSwapHorizontal } from '@mdi/js'
 
 const headers = ref([
-    { title: 'Task Name', key: 'taskName', align: 'start', headerProps: { class: 'font-weight-bold' } },
+    { title: 'id', key: 'taskName', align: 'start', headerProps: { class: 'font-weight-bold' } },
+    { title: 'Task Name', key: 'taskName', align: 'center', headerProps: { class: 'font-weight-bold' } },
     { title: 'Task Version', key: 'taskVersion', align:'center',headerProps: { class: 'font-weight-bold' } },
     { title: 'Progress', key: 'progress', align:'center',headerProps: { class: 'font-weight-bold' } },
     { title: 'Startup Time', key: 'startupTime',align: 'end', headerProps: { class: 'font-weight-bold' } },
@@ -92,7 +94,8 @@ onMounted(getTaskStartupList)
         <template v-slot:item="{ item }">
             <tr class="text-no-wrap cursor-pointer"
                 @click="$router.push({ name: namedRoutes.taskStartupDetail.name, params: { 'taskStartupId': item.id }, state: {'data':{'taskName': item.taskName,'taskVersion':item.taskVersion}} })">
-                <td>{{ item.taskName }}</td>
+                <td>{{ item.id }}</td>
+                <td class="text-center">{{ item.taskName }}</td>
                 <td class="text-center">{{ item.taskVersion }}</td>
                 <td class=" d-flex justify-center align-center">
                     <v-progress-circular v-if="item.status==TaskStageStatus.RUNNING"  :model-value="item.progress" color="primary" class="text-body-2" :size="25">
@@ -104,6 +107,9 @@ onMounted(getTaskStartupList)
                     <v-icon v-else-if="item.status==TaskStageStatus.FAILED || item.status==TaskStageStatus.FAILING" :icon="mdiAlertCircle" :style="{color:'red'}" :size="25"/>
 
                     <v-icon v-else-if="item.status==TaskStageStatus.TIME_OUT" :icon="mdiClockTimeEightOutline" :style="{color:'gray'}" :size="25"/>
+
+                    <v-icon v-else-if="item.status=TaskStageStatus.RESCHEDULED" :icon="mdiSwapHorizontal"
+                    :style="{color:'gray'}" :size="25"></v-icon>
                     <v-icon v-else :icon="mdiMessageAlert" :size="25"/>
                 </td>
                 <td class="text-end">{{ item.startupTime }}</td>
