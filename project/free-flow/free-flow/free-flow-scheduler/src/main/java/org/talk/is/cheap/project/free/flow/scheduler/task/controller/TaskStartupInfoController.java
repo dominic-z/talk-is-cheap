@@ -234,6 +234,7 @@ public class TaskStartupInfoController {
                                                             List<Long> searchAfter) {
         StageExecutionLogsResp resp = new StageExecutionLogsResp();
         try {
+            Thread.sleep(2000);
             VerifyUtil.requireNotNull(stageExecutionId, "阶段执行id查询参数为空，数据无法查询");
             VerifyUtil.requireTrue(pageSize < 100, "超出最大分页限制");
             List<ESPojoDTO<StageExecutionBizLog>> stageExecutionBizLogDTOs =
