@@ -84,6 +84,9 @@ import ActionStore from './pinia/core-concept/action/ActionStore.vue'
 import CompareModelAndBindApp from './components/guide-essentials/compare-model-bind/CompareModelAndBindApp.vue'
 import PassingStateApp from './router/basic/passing-state/PassingStateApp.vue'
 import passingStateRouter from './router/basic/passing-state/PassingStateRouter'
+import KeepAliveApp from './router/advanced/keep-alive/KeepAliveApp.vue'
+import keepAliveRouter from './router/advanced/keep-alive/KeepAliveRouter'
+import WrongRefExample from './components/guide-essentials/reactivity-fundamentals/WrongRefExample.vue'
 
 
 // createApp(App).mount('#app')
@@ -109,6 +112,7 @@ countApp.config.errorHandler = (err) => {
 // templateSyntaxApp.config.globalProperties.globalMsg = 'hello'
 
 // createApp(ReactivityFundamentals2).mount('#myApp')
+createApp(WrongRefExample).mount('#myApp')
 // createApp(CompareModelAndBindApp).mount('#myApp')
 
 
@@ -130,7 +134,7 @@ countApp.config.errorHandler = (err) => {
 // createApp(Lifecycle).mount('#myApp')
 
 // createApp(Registration).mount('#myApp')
-createApp(Props).mount('#myApp')
+// createApp(Props).mount('#myApp')
 // createApp(EventBlogPost).mount('#myApp')
 // createApp(VModelParent).mount('#myApp')
 
@@ -161,6 +165,7 @@ createApp(Props).mount('#myApp')
 // createApp(PassingStateApp).use(passingStateRouter).mount("#myApp")
 // createApp(ActiveLinkApp).use(activeLinkRouter).mount("#myApp")
 // createApp(HistoryModeApp).use(historyModeRouter).mount("#myApp")
+// createApp(KeepAliveApp).use(keepAliveRouter).mount("#myApp")
 
 // const app = createApp(NavigationGuardsApp)
 // app.provide('global', 'hello injections')

@@ -37,7 +37,6 @@ async function loadItems() {
         })
             .then(resp => {
                 const respData = resp.data
-                console.log(respData)
                 itemLength.value = respData.total
 
                 serverItems.value = respData.nodes.map(n => {
@@ -50,7 +49,6 @@ async function loadItems() {
                     }
 
                 })
-                console.log(serverItems.value)
                 loading.value = false;
             })
             .catch(e => {

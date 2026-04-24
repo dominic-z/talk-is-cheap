@@ -13,12 +13,12 @@ const menus = ref([
     title: '节点查询',
     routeName: namedRoutes.index.clusterNodeList.name
   },
-  {
-    id: '2',
-    title: '任务定义查询',
-    routeName: namedRoutes.index.taskDefinitionList.name
+  // {
+  //   id: '2',
+  //   title: '任务定义查询',
+  //   routeName: namedRoutes.index.taskDefinitionList.name
     
-  },
+  // },
   {
     id: '3',
     title: '任务启动查询',

@@ -93,7 +93,9 @@ public class Task3 {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        stageRuntimeEnv.log(String.format("method2 input: %s, sharedContext: %s",stageRuntimeEnv.getInput(), ttSharedContext));
+        for (int i = 0; i < 20; i++) {
+            stageRuntimeEnv.log(String.format("i:%d, method2 input: %s, sharedContext: %s",i,stageRuntimeEnv.getInput(), ttSharedContext));
+        }
 
 
     }
@@ -105,8 +107,9 @@ public class Task3 {
         TTSharedContext ttSharedContext = stageRuntimeEnv.getSharedContext();
         log.info("method3_1 input: {}, sharedContext: {}", stageRuntimeEnv.getInput(), ttSharedContext);
         ttSharedContext.setName(ttSharedContext.getName() + ":method3_1");
-        stageRuntimeEnv.log(String.format("method3_1 input: %s, sharedContext: %s",stageRuntimeEnv.getInput(), ttSharedContext));
-
+        for (int i = 0; i < 20; i++) {
+            stageRuntimeEnv.log(String.format("i:%d, method3_1 input: %s, sharedContext: %s",i,stageRuntimeEnv.getInput(), ttSharedContext));
+        }
         try {
             if (stageRuntimeEnv.getInput() != null) {
                 Thread.sleep(stageRuntimeEnv.getInput() * 1000);
@@ -152,6 +155,9 @@ public class Task3 {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+        for (int i = 0; i < 10; i++) {
+            stageRuntimeEnv.log(String.format("i:%d, method3_3 input: %s, sharedContext: %s",i,stageRuntimeEnv.getInput(), ttSharedContext));
+        }
     }
 
     @RunnableStage(name = "method4_1", toStageName = {"method5"}, version = 1,
@@ -182,6 +188,9 @@ public class Task3 {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+        for (int i = 0; i < 20; i++) {
+            stageRuntimeEnv.log(String.format("i:%d, method4_2 input: %s, sharedContext: %s",i,stageRuntimeEnv.getInput(), ttSharedContext));
+        }
     }
 
     @RunnableStage(name = "method5", version = 1,
@@ -196,6 +205,9 @@ public class Task3 {
             }
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
+        }
+        for (int i = 0; i < 30; i++) {
+            stageRuntimeEnv.log(String.format("i:%d, method5 input: %s, sharedContext: %s",i,stageRuntimeEnv.getInput(), ttSharedContext));
         }
     }
 }

@@ -127,7 +127,7 @@ const intersector = {
 
 
         <template v-slot:body.append>
-            <!-- 加了quiet就不会在元素挂载的时候触发handler函数 -->
+            <!-- 加了quiet就不会在元素创建的时候触发handler函数，也就是说创建不会被认为是一次响应 -->
             <!-- Will not invoke the handler function if the element is visible when the IntersectionObserver is created. -->
             <tr v-intersect.quiet="intersector">
                 <td :colspan="headers.length">

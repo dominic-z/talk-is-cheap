@@ -16,54 +16,58 @@ import { mdiTimerSand } from '@mdi/js';
 import { mdiClockAlert } from '@mdi/js';
 
 const props = defineProps(['taskStartupId', 'taskName', 'taskVersion', 'taskExecutionId'])
+const loadFinished = defineModel('loadFinished')
 
-const nodes = ref([
-    {
-        id: '1',
-        position: { x: 200, y: 100 },
-        type: "RunnableStage",
-        data: { label: 'Node 1' },
-    },
-    {
-        id: '2',
-        position: { x: 50, y: 200 },
-        type: "RunnableStage",
-        data: { label: 'myNode 2', hasMenu: true },
-    },
-    {
-        id: '3',
-        position: { x: 350, y: 200 },
-        type: "RunnableStage",
 
-        data: { label: 'Node 3', status: 'running' },
-    }
-])
+// const nodes = ref([
+//     {
+//         id: '1',
+//         position: { x: 200, y: 100 },
+//         type: "RunnableStage",
+//         data: { label: 'Node 1' },
+//     },
+//     {
+//         id: '2',
+//         position: { x: 50, y: 200 },
+//         type: "RunnableStage",
+//         data: { label: 'myNode 2', hasMenu: true },
+//     },
+//     {
+//         id: '3',
+//         position: { x: 350, y: 200 },
+//         type: "RunnableStage",
 
-const edges = ref([
-    {
-        id: 'e1->2',
-        source: '1',
-        target: '2',
-        markerEnd: {
-            type: MarkerType.Arrow,
-            color: 'gray',
-            strokeWidth: 1.5,
-        },
-    },
+//         data: { label: 'Node 3', status: 'running' },
+//     }
+// ])
 
-    {
-        id: 'e1->3',
-        source: '1',
-        target: '3',
-        animated: true,
-        markerEnd: {
-            type: MarkerType.Arrow,
-            color: 'gray',
-            strokeWidth: 1.5,
-        },
-    }
-])
+// const edges = ref([
+//     {
+//         id: 'e1->2',
+//         source: '1',
+//         target: '2',
+//         markerEnd: {
+//             type: MarkerType.Arrow,
+//             color: 'gray',
+//             strokeWidth: 1.5,
+//         },
+//     },
 
+//     {
+//         id: 'e1->3',
+//         source: '1',
+//         target: '3',
+//         animated: true,
+//         markerEnd: {
+//             type: MarkerType.Arrow,
+//             color: 'gray',
+//             strokeWidth: 1.5,
+//         },
+//     }
+// ])
+
+const nodes = ref([])
+const edges = ref([])
 
 const currentStageStartup = ref(null)
 // Node click event handler
@@ -89,8 +93,6 @@ async function getTaskDefinition(taskName, taskVersion) {
             ]
         }
     }).then(respBody => {
-        // console.log(respBody)
-
         return respBody.data.taskDefinitionDTOs[0]
     })
 }
@@ -106,8 +108,6 @@ async function getStageStartups(taskExecutionId) {
 }
 
 
-onMounted(() => {
-})
 
 const stageStartups = ref(null)
 let taskDef = null
@@ -130,27 +130,7 @@ watch(() => props.taskExecutionId, async () => {
         stageStartups.value = await getStageStartups(props.taskExecutionId)
 
         let newNodes = []
-        //     {
-        //     id: '3',
-        //     position: { x: 350, y: 200 },
-        //     type: "RunnableStage",
-
-        //     data: { label: 'Node 3', status: 'running' },
-        // }
-
         let newEdges = []
-
-        //     {
-        //     id: 'e1->3',
-        //     source: '1',
-        //     target: '3',
-        //     animated: true,
-        //     markerEnd: {
-        //         type: MarkerType.Arrow,
-        //         color: 'gray',
-        //         strokeWidth: 1.5,
-        //     },
-        // }
         stageStartups.value.forEach((stageStartup) => {
             const stageDef = stageIdStageDefMap.get(stageStartup.stageId)
             if (stageDef == null) {
@@ -197,8 +177,8 @@ watch(() => props.taskExecutionId, async () => {
         // console.log()
         await nextTick()
         fitView()
+        loadFinished.value = true
     }
-
 
 })
 
