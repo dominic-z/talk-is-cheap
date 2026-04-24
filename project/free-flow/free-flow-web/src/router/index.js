@@ -28,14 +28,14 @@ export const namedRoutes = {
     }
   },
 
-  taskDefinitionDetail:{
+  taskDefinitionDetail: {
     name: 'taskDefinitionDetail',
     path: '/task-definition-detail/:taskId',
     component: TaskDefinitionDetailView,
     props: true,
   },
 
-  taskStartupDetail:{
+  taskStartupDetail: {
     name: 'taskStartupDetail',
     path: '/task-startup/:taskStartupId',
     component: TaskStarupDetailView,
@@ -70,6 +70,7 @@ const router = createRouter({
           path: namedRoutes.index.taskStartupList.path,
           name: namedRoutes.index.taskStartupList.name,
           component: namedRoutes.index.taskStartupList.component,
+          meta: { keepAlive: true }
         },
       ]
     },
@@ -77,7 +78,7 @@ const router = createRouter({
       name: namedRoutes.taskDefinitionDetail.name,
       path: namedRoutes.taskDefinitionDetail.path,
       component: namedRoutes.taskDefinitionDetail.component,
-      props: namedRoutes.taskDefinitionDetail.props
+      props: namedRoutes.taskDefinitionDetail.props,
     },
     {
       name: namedRoutes.taskStartupDetail.name,

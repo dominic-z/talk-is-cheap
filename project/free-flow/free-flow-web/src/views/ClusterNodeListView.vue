@@ -14,7 +14,7 @@ const clusterManageStore = useClusterManageStore()
 
 const nodeType = ref(NodeType.WORKER)
 function updateTab(e) {
-  console.log(nodeType.value)
+  // console.log(nodeType.value)
 }
 
 

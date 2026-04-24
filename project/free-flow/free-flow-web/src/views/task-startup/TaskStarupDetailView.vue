@@ -23,8 +23,6 @@ const taskVersion = data.taskVersion
 
 const retryCount = ref([3])
 
-const loading = ref(true)
-setTimeout(() => loading.value = false, 1000)
 
 
 // 如果列表数据是通过异步请求（如 API 调用）获取的，那么在组件初始渲染时，数据可能还是空的（例如 undefined 或空数组 []）。当数据返回并赋值后，如果子组件没有正确处理，就可能出现无法遍历的情况。
@@ -48,13 +46,14 @@ onMounted(() => {
     getTaskExecutions(props.taskStartupId)
 })
 
+const graphLoadFinished = ref(false)
 
 </script>
 
 <template>
 
     <v-app>
-        <Loader :overlay="loading"></Loader>
+        <Loader :overlay="graphLoadFinished"></Loader>
 
         <v-app-bar color="primary" density="compact" flat class="border-thin">
 
@@ -71,7 +70,7 @@ onMounted(() => {
 
 
         <TaskStartupDetailGraph :taskStartupId="props.taskStartupId" :taskName="taskName" :taskVersion="taskVersion"
-            :taskExecutionId="currentTaskExecutionId"></TaskStartupDetailGraph>
+            :taskExecutionId="currentTaskExecutionId" v-model="graphLoadFinished"></TaskStartupDetailGraph>
 
 
     </v-app>
