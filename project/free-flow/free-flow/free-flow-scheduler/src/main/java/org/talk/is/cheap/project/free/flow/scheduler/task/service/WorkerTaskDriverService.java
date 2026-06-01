@@ -539,10 +539,7 @@ public class WorkerTaskDriverService {
         RLock rLock = redissonClient.getLock(RedissonService.getTaskExecutionLockKey(taskExecutionId));
         try {
             // 判断重试，这块需要考虑发起任务和更新db的并发问题，
-            // 一个是同一台机器之间不同线程的并发，db更新没完成，就在另一个线程里尝试读取并操作，那可能是读取不到的db里的信息的。这个需要本地锁解决
-            // 另一个是不同机器操作同一个taskStartup或者重复创建taskExecution的并发，这个需要通过revision锁或者redis锁
-            // 另一个是不同机器之间的并发，比如一个阶段失败了，另一个阶段也失败了，他们如果请求到不同的scheduler，
-            // 一个可能希望重试，另一个可能希望直接失败掉任务，这可能会创建重复的taskExe，这种情况下revision控制不住，比如通过锁控制
+            // 一个是不同机器之间的并发，比如一个阶段失败了，另一个阶段也失败了，他们如果请求到不同的scheduler，这可能会重复重试，这种情况下revision控制不住，需要分布式锁(其实数据库锁也行)
             rLock.lock(5, TimeUnit.SECONDS);
 
             // 拆分为两个方法，确保db操作完成提交之后，再提交runAsync方法去跑真正的retry任务。
@@ -745,10 +742,10 @@ public class WorkerTaskDriverService {
         RLock rLock = redissonClient.getLock(RedissonService.getTaskExecutionLockKey(taskExecutionId));
         try {
             // 判断重试，这块需要考虑发起任务和更新db的并发问题，
-            // 一个是同一台机器之间不同线程的并发，db更新没完成，就在另一个线程里尝试读取并操作，那可能是读取不到的db里的信息的。这个需要本地锁解决
-            // 另一个是不同机器操作同一个taskStartup或者重复创建taskExecution的并发，这个需要通过revision锁或者redis锁
-            // 另一个是不同机器之间的并发，比如一个阶段失败了，另一个阶段也失败了，他们如果请求到不同的scheduler，
-            // 一个可能希望重试，另一个可能希望直接失败掉任务，这可能会创建重复的taskExe，这种情况下revision控制不住，比如通过锁控制
+            // 1. 同一台机器之间不同线程的并发，db更新没完成，就在另一个线程里尝试读取并操作，那可能是读取不到的db里的信息的。这个需要本地锁解决
+            // 2. 不同机器操作同一个taskStartup或者重复创建taskExecution的并发，这个需要通过revision锁或者redis锁
+            // 3. 不同机器之间的并发，比如一个阶段失败了，另一个阶段也失败了，他们如果请求到不同的scheduler，
+            // 一个可能希望重试stage，另一个可能希望直接失败掉任务，这可能会创建重复的taskExe，这种情况下revision控制不住，比如通过锁控制
             rLock.lock(5, TimeUnit.SECONDS);
 
             // 拆分为两个方法，确保db操作完成提交之后，再提交runAsync方法去跑真正的retry任务。

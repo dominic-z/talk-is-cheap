@@ -1,5 +1,7 @@
 package org.talk.is.cheap.project.free.flow.scheduler.cluster.service;
 
+import cn.hutool.core.collection.ConcurrentHashSet;
+import com.google.common.hash.Hashing;
 import io.vavr.Tuple2;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -25,6 +27,7 @@ import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.client.WorkerNodeClient;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.WorkerTaskDefinitionManagerLeaderStartEvent;
 import org.talk.is.cheap.project.free.flow.scheduler.config.property.ZKPathProperty;
+import org.talk.is.cheap.project.free.flow.scheduler.utils.VNConsistentHash;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.ClusterNodeExample;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNode;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.ClusterNodeService;
@@ -34,11 +37,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -108,6 +107,13 @@ public class WorkerClusterManager implements ApplicationContextAware {
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
+    }
+
+    public SchedulerClusterManager getSchedulerClusterManager(){
+        if(this.applicationContext==null){
+            return null;
+        }
+        return this.applicationContext.getBean(SchedulerClusterManager.class);
     }
 
     /**
@@ -443,4 +449,78 @@ public class WorkerClusterManager implements ApplicationContextAware {
                 clusterNodeExample);
     }
 
+
+
+    private final ConcurrentHashMap<String,Set<String>> schedulerDispatchedWorkers = new ConcurrentHashMap<>();
+    private final VNConsistentHash vnConsistentHash = new VNConsistentHash(200);
+    private void initVnConsistentHash(){
+        // 执行过程中，不能与Scheduler的上下线并发
+        SchedulerClusterManager sc = getSchedulerClusterManager();
+        for (String schedulerAddress : sc.getSchedulerAddresses()) {
+            vnConsistentHash.addNode(schedulerAddress);
+        }
+    }
+
+    private void onAddOnlineWorker(String workerAddr){
+        // 执行过程中，不能与Scheduler的上下线并发
+        String schedulerAddr = getAssignedScheduler(workerAddr);
+        schedulerDispatchedWorkers.compute(schedulerAddr,(k,v)->{
+            if(v==null){
+                Set<String> dispatchedWorkers = new ConcurrentHashSet<>();
+                dispatchedWorkers.add(workerAddr);
+                return dispatchedWorkers;
+            }
+            v.add(workerAddr);
+            return v;
+        });
+    }
+
+    private String getAssignedScheduler(String workerAddr) {
+        long hash = Hashing.murmur3_32_fixed().hashString(workerAddr, StandardCharsets.UTF_8).asLong();
+        String schedulerAddr = vnConsistentHash.getNode(hash);
+        return schedulerAddr;
+    }
+
+    private void onRemoveOnlineWorker(String workerAddr){
+        // 执行过程中，不能与Scheduler的上下线并发
+        String schedulerAddr = getAssignedScheduler(workerAddr);
+        schedulerDispatchedWorkers.compute(schedulerAddr,(k,v)->{
+            if(v!=null){
+                v.remove(workerAddr);
+                if(v.isEmpty()){
+                    return null;
+                }
+            }
+            return v;
+        });
+    }
+
+    private void onAddScheduler(String schedulerAddr){
+        // 执行过程中，不能与Worker的上下线并发，也不能与scheduler节点的上下线并发，但是zk的监听是串行的，也不用考虑这个
+        this.vnConsistentHash.addNode(schedulerAddr);
+
+        HashMap<String, String> workerOldAssignedScheduler = new HashMap<>();
+        this.schedulerDispatchedWorkers.forEach((k,v)->{
+            for (String workerAddr : v) {
+                String newAssignedScheduler = getAssignedScheduler(workerAddr);
+                if(!StringUtils.equals(k,newAssignedScheduler)){
+                    workerOldAssignedScheduler.put(workerAddr,k);
+                }
+            }
+        });
+
+        workerOldAssignedScheduler.forEach((workerAddr,oldSchedulerAddr)->{
+            this.schedulerDispatchedWorkers.get(oldSchedulerAddr).remove(workerAddr);
+            this.onAddOnlineWorker(workerAddr);
+        });
+
+    }
+
+    private void onRemoveScheduler(String schedulerAddr){
+        // 执行过程中，不能与Worker的上下线并发
+        this.vnConsistentHash.deleteNode(schedulerAddr);
+        for (String workerAddr : this.schedulerDispatchedWorkers.get(schedulerAddr)) {
+            this.onAddOnlineWorker(workerAddr);
+        }
+    }
 }
