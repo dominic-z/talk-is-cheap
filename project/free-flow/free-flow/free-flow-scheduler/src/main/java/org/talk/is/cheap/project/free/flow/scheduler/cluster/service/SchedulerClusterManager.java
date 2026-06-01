@@ -28,8 +28,10 @@ import org.talk.is.cheap.project.free.flow.starter.repository.service.ClusterNod
 import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.ClusterNodeServiceWrapper;
 
 import java.nio.file.Paths;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -40,7 +42,7 @@ import java.util.concurrent.Executors;
  * SchedulerClusterManager会触发WorkerClusterManager的相关动作
  *
  * leader负责一切worker节点的管理，例如上下线
- * leader负责一切worker节点相关数据相关的操作。例如写入任务db，写入redis
+ * leader负责一切worker节点相关数据相关的操作。例如读取任务定义，写入redis（
  */
 @Component
 @Slf4j
@@ -322,6 +324,10 @@ public class SchedulerClusterManager {
             log.error("检查zkPath:{}是否存在出错", zkPath, e);
             return false;
         }
+    }
+
+    public Set<String> getSchedulerAddresses(){
+        return new HashSet<>(this.addressZKPath.keySet());
     }
 
 }
