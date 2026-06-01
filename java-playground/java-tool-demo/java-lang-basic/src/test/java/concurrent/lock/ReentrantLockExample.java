@@ -16,8 +16,8 @@ public class ReentrantLockExample {
         Thread thread = new Thread(() -> {
             System.out.printf("%s try get lock\n", Thread.currentThread());
             try {
-//                lock.lock(); // 不会收到线程中断的影响
-                lock.lockInterruptibly();
+                lock.lock(); // 不会收到线程中断的影响
+//                lock.lockInterruptibly();
                 System.out.printf("%s get lock\n", Thread.currentThread());
                 lock.unlock();
             } catch (Exception e) {
