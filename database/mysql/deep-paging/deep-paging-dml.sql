@@ -20,6 +20,11 @@ select * from t_test_data ttd order by user_id limit 900000,10;
 -- 使用子查询进行优化
 select * from t_test_data ttd WHERE id in (SELECT sub.id from (select id from t_test_data order by user_id limit 900000,10) as sub);
 
+-- search after翻页优化deep-page，除了排序字段，还需要带上主键索引维持排序稳定
+select * from t_test_data ttd order by user_id,id limit 900000,10;
+select * from t_test_data ttd WHERE (user_id='U301989' and id>=239013) or user_id>'U301989' order by user_id,id limit 10;
+explain select * from t_test_data ttd WHERE (user_id='U301989' and id>=239013) or user_id>'U301989' order by user_id,id limit 10;
+
 /*
  * 网上说，深度分页的问题在于limit m,n需要找到m+n条然后丢弃前m条，所以很慢，只要不让他查前m+n条就快了；还有说法是说找到m+n条需要回表m+n次，所以很慢，只要不回表就不会慢了；
  * 那我的问题是，对于上面未优化的sql，究竟是查了m+n条->丢弃前m条->回表n次，还是先查了m+n条->回表m+n次->丢弃前m条。究竟是丢弃m条慢，还是回表m+n次慢？
