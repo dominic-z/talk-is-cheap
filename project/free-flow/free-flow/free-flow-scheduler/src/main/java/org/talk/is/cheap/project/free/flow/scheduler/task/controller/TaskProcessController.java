@@ -77,7 +77,6 @@ public class TaskProcessController {
     public HttpBody<String> startTask(@RequestBody StartTaskReq req) {
         HttpBody<String> resp = HttpBody.<String>builder().build();
         try {
-            VerifyUtil.requireTrue(schedulerClusterManager.isLeader(), "当前节点不是leader，无法执行");
             StartTaskReq.Data data = req.getData();
             VerifyUtil.requireNotNull(data, "要执行的任务信息缺失，无法执行任务");
             Tuple3<String, Long, Map<String, Long>> prepareForTaskStartDTO = workerTaskDriverService.prepareForTask(data.getTaskName(),

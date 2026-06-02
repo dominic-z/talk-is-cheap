@@ -12,14 +12,12 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * 基于千问的改的，核心在于，利用ConcurrentHashMap的锁机制
+ * 核心在于，利用ConcurrentHashMap的锁机制，compute机制是原子的
  */
 public class FieldAwareLockManager<K> {
 
     private final Map<K, LockWrapper> lockMap = new ConcurrentHashMap<>();
-    private final Map<K, AtomicInteger> referrencCountMap = new ConcurrentHashMap<>();
 
-    // 锁包装器：包含锁实例 + 引用计数（用于安全清理）
     private static class LockWrapper {
         final ReentrantLock lock = new ReentrantLock();
         final AtomicInteger refCount = new AtomicInteger(1); // 创建即计数=1
@@ -100,8 +98,6 @@ public class FieldAwareLockManager<K> {
         return true;
     }
 
-    // ========== 内部工具方法 ==========
-
     private void validateKey(K key) {
         if (key == null) {
             throw new IllegalArgumentException("锁 key 不能为空");
@@ -122,15 +118,13 @@ public class FieldAwareLockManager<K> {
     // 释放引用：解锁后调用，计数归零时安全移除
     private void releaseWrapper(K key, LockWrapper wrapper) {
         if (wrapper.refCount.decrementAndGet() == 0) {
-            // CAS 移除：防止其他线程刚增加引用
+            // CAS 移除：防止其他线程刚增加引用，但是实际有用的下面的compute
             lockMap.computeIfPresent(key, (k, current) ->
-//                    这个current == wrapper判断其实没用
-                    current == wrapper && current.refCount.get() == 0 ? null : current
+                    current.refCount.get() == 0 ? null : current
             );
         }
     }
 
-    // ========== 监控方法（可选）==========
 
     /**
      * 获取当前活跃锁数量（用于监控）

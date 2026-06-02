@@ -3,7 +3,6 @@ package org.talk.is.cheap.project.free.flow.scheduler.cluster.service;
 import cn.hutool.core.collection.ConcurrentHashSet;
 import com.google.common.hash.Hashing;
 import io.vavr.Tuple2;
-import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -13,11 +12,9 @@ import org.apache.curator.framework.recipes.cache.CuratorCache;
 import org.apache.curator.framework.recipes.cache.CuratorCacheListener;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
-import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.talk.is.cheap.project.free.flow.common.enums.NodeStatus;
@@ -25,6 +22,7 @@ import org.talk.is.cheap.project.free.flow.common.enums.NodeType;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.client.WorkerNodeClient;
+import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.SchedulerLifecycleEvent;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.WorkerTaskDefinitionManagerLeaderStartEvent;
 import org.talk.is.cheap.project.free.flow.scheduler.config.property.ZKPathProperty;
 import org.talk.is.cheap.project.free.flow.scheduler.utils.VNConsistentHash;
@@ -35,11 +33,15 @@ import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.Cl
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -62,10 +64,14 @@ import java.util.concurrent.TimeUnit;
  */
 @Service
 @Slf4j
-public class WorkerClusterManager implements ApplicationContextAware {
+public class WorkerClusterManager {
 
     @Autowired
     private ApplicationEventPublisher publisher;
+
+    @Autowired
+    private SchedulerClusterManager schedulerClusterManager;
+
     @Autowired
     private CuratorFramework curatorZKClient;
 
@@ -80,8 +86,6 @@ public class WorkerClusterManager implements ApplicationContextAware {
     @Autowired
     private WorkerNodeClient workerNodeClient;
 
-//    @Autowired
-//    private WorkerTaskDefinitionManager workerTaskDefinitionManager;
 
     private CuratorCache onlineWorkerCuratorCache;
     private CuratorCache runnableWorkerCuratorCache;
@@ -90,10 +94,8 @@ public class WorkerClusterManager implements ApplicationContextAware {
     private final Map<String, String> onlineWorkerPathAddress = new ConcurrentHashMap<>();
     private final Map<String, String> runnableWorkerPathAddress = new ConcurrentHashMap<>();
     private final Map<String, String> runnableWorkerAddressPath = new ConcurrentHashMap<>();
-    private final Map<String, Integer> pingFailedPathCounter = new ConcurrentHashMap<>();
-    private final Map<String, Integer> pingSucceedPathCounter = new ConcurrentHashMap<>();
-    // 终止中的节点
-    private final Map<String, String> terminatingWorkerPathAddress = new ConcurrentHashMap<>();
+    private final Map<String, Integer> pingFailedAddrCounter = new ConcurrentHashMap<>();
+    private final Map<String, Integer> pingSucceedAddrCounter = new ConcurrentHashMap<>();
 
     // 当监听的worker的路径发生变化时，这个线程池负责实际执行监听回调，线程池设置为4，因为每个任务其实都不大，实际要参考集群的情况来控制
     private final ThreadPoolExecutor handleWorkerEventThreadPool = new ThreadPoolExecutor(4, 4, 1000, TimeUnit.MILLISECONDS,
@@ -102,34 +104,22 @@ public class WorkerClusterManager implements ApplicationContextAware {
     // 确保ping是串行的，后续在ping的时候并行
     private final ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(1);
 
-    private ApplicationContext applicationContext;
-
-    @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        this.applicationContext = applicationContext;
-    }
-
-    public SchedulerClusterManager getSchedulerClusterManager(){
-        if(this.applicationContext==null){
-            return null;
-        }
-        return this.applicationContext.getBean(SchedulerClusterManager.class);
-    }
-
     /**
      * 管理worker节点
      */
-    public void leaderStart() {
+    @EventListener(SchedulerLifecycleEvent.class)
+    public void start(SchedulerLifecycleEvent event) {
+        if (SchedulerLifecycleEvent.Source.MYSELF == event.getSource()) {
+            this.onlineWorkerPathAddress.clear();
 
-        this.onlineWorkerPathAddress.clear();
-        this.terminatingWorkerPathAddress.clear();
-
-        watchOnlineWorkers();
-        pingWorkers();
+            initVnConsistentHash();
+            watchOnlineWorkers();
+            watchRunnableWorkers();
+            pingWorkers();
 
 //        使用事件，避免循环依赖
-        publisher.publishEvent(new WorkerTaskDefinitionManagerLeaderStartEvent(true));
-//        workerTaskDefinitionManager.leaderStart();
+            publisher.publishEvent(new WorkerTaskDefinitionManagerLeaderStartEvent(true));
+        }
     }
 
     private void watchOnlineWorkers() {
@@ -175,18 +165,18 @@ public class WorkerClusterManager implements ApplicationContextAware {
         log.info("new online worker, path: {}, workerNodeAddress: {}", zkPath, workerNodeAddress);
         onlineWorkerPathAddress.put(zkPath, workerNodeAddress);
 
-        clusterNodeService.createOnDuplicateKey(
-                new ClusterNode()
-                        .withStatus(NodeStatus.INITIALIZING.getStatus())
-                        .withNodeZkPath(zkPath)
-                        .withNodeAddress(workerNodeAddress)
-                        .withNodeType(NodeType.WORKER.getType())
-        );
+        if (schedulerClusterManager.isLeader()) {
+            // leader操作数据库
+            clusterNodeService.createOnDuplicateKey(
+                    new ClusterNode()
+                            .withStatus(NodeStatus.INITIALIZING.getStatus())
+                            .withNodeZkPath(zkPath)
+                            .withNodeAddress(workerNodeAddress)
+                            .withNodeType(NodeType.WORKER.getType())
+            );
+        }
 
-
-        // 如果是terminating下的节点
-//            log.info("add terminating worker, path: {}, workerNodeAddress: {}", zkPath, workerNodeAddress);
-//            terminatingWorkerPathAddress.put(zkPath, workerNodeAddress);
+        this.assignWorkerToScheduler(workerNodeAddress);
     }
 
     // 如果online下线，那么说明这个节点真的已经下线而来
@@ -204,35 +194,22 @@ public class WorkerClusterManager implements ApplicationContextAware {
         // 如果是online下的节点被移除了
         // 因为监听事件并不是串行的，即使发送是串行的，到达也可能不是串行的。因此需要考虑一些节点反复上下线导致的并发异常，例如一个节点上线->下线->上线，如果下线事件反而最后处理，那么这个节点可能就丢了。
         // 可以借鉴“延迟双删”的策略，加一个延迟事件处理队列，在x秒之后再读取一下这个节点，如果在线的话，就尝试put，如果不在线就删除，当然无法完全解决问题，但是能够降低概率。
+        // 更新，zk的事件监听是严格按照顺序的
         log.info("remove online worker, path: {}, workerNodeAddress: {}", zkPath, workerNodeAddress);
         onlineWorkerPathAddress.remove(zkPath);
-        pingSucceedPathCounter.remove(zkPath);
-        pingFailedPathCounter.remove(zkPath);
-        try {
-            curatorZKClient.delete()
-                    .forPath(Paths.get(zkPathProperty.getWorker().getRunnable(), Paths.get(zkPath).getFileName().toString()).toString());
-        } catch (Exception e) {
-            log.error("error when delete runnable node", e); // 此时这个节点可能还没到runnable路径里呢，或者worker节点直接下线了，runnable路径的临时文件会自动清除
+        pingSucceedAddrCounter.remove(workerNodeAddress);
+        pingFailedAddrCounter.remove(workerNodeAddress);
+
+        if (schedulerClusterManager.isLeader()) {
+            ClusterNodeExample example = new ClusterNodeExample();
+            example.createCriteria().andNodeAddressEqualTo(workerNodeAddress);
+            clusterNodeService.updateByExampleSelective(
+                    new ClusterNode()
+                            .withNodeAddress(workerNodeAddress)
+                            .withStatus(NodeStatus.TERMINATED.getStatus()), example);
         }
 
-//            // 避免网络问题导致的更新为Terminated操作先于更新为TERMINATING状态
-        ClusterNodeExample example = new ClusterNodeExample();
-        example.createCriteria().andNodeAddressEqualTo(workerNodeAddress);
-        clusterNodeService.updateByExampleSelective(
-                new ClusterNode()
-                        .withNodeAddress(workerNodeAddress)
-                        .withStatus(NodeStatus.TERMINATED.getStatus()), example);
-//        } else if (StringUtils.equals(parentPath, zkPathProperty.getWorker().getTerminating())) {
-//            // 如果是terminating下的节点被移除了，那就是真下线了
-//            log.info("remove terminating worker, path: {}, workerNodeAddress: {}", zkPath, workerNodeAddress);
-//            terminatingWorkerPathAddress.remove(zkPath);
-//            publisher.publishEvent(new WorkerTerminatedEvent(workerNodeAddress));
-//            clusterNodeServiceWrapper.updateByNodeAddressSelective(
-//                    workerNodeAddress,
-//                    new ClusterNode()
-//                            .withNodeAddress(workerNodeAddress)
-//                            .withStatus(NodeStatus.TERMINATED.getStatus()));
-//        }
+        this.removeOnlineWorkerFromScheduler(workerNodeAddress);
 
     }
 
@@ -262,65 +239,62 @@ public class WorkerClusterManager implements ApplicationContextAware {
             public void run() {
 
                 log.debug("ping runnable");
-                Tuple2<Map<String, String>, Map<String, String>> pingOnlineWorkersResults = ping(onlineWorkerPathAddress);
-                // ping失败的
-                pingOnlineWorkersResults._2.forEach((path, address) -> {
-                    pingSucceedPathCounter.remove(path);
-                    if (pingFailedPathCounter.getOrDefault(path, 0) < threshold) {
-                        // 当且仅当第一次大于threshold的时候执行delete避免多次执行delete，当且仅当小于threshold的时候，计数+1
-                        if (pingFailedPathCounter.getOrDefault(path, 0) + 1 >= threshold) {
-                            // 连续x次ping失败
-                            try {
-                                curatorZKClient.delete()
-                                        .forPath(Paths.get(zkPathProperty.getWorker().getRunnable(),
-                                                Paths.get(path).getFileName().toString()).toString());
-                            } catch (Exception e) {
-                                log.error("error when delete connected node", e);
+                try {
+                    Set<String> managedWorkerAddrs = getManagedWorkerAddrs();
+                    if (managedWorkerAddrs != null) {
+                        Tuple2<Set<String>, Set<String>> pingOnlineWorkersResults = ping(managedWorkerAddrs); // 只ping自己的
+                        // ping失败的
+                        pingOnlineWorkersResults._2.forEach((address) -> {
+                            pingSucceedAddrCounter.remove(address);
+                            if (pingFailedAddrCounter.getOrDefault(address, 0) < threshold) {
+                                // 当且仅当第一次大于threshold的时候执行delete避免多次执行delete，当且仅当小于threshold的时候，计数+1
+                                if (pingFailedAddrCounter.getOrDefault(address, 0) + 1 >= threshold) {
+                                    // 连续x次ping失败
+                                    try {
+                                        String runnablePath = runnableWorkerAddressPath.get(address);
+                                        if (runnablePath != null) {
+                                            curatorZKClient.delete()
+                                                    .forPath(Paths.get(zkPathProperty.getWorker().getRunnable(),
+                                                            Paths.get(runnablePath).getFileName().toString()).toString());
+                                        }
+                                    } catch (Exception e) {
+                                        log.error("error when delete connected node", e);
+                                    }
+                                }
+                                pingFailedAddrCounter.put(address, pingFailedAddrCounter.getOrDefault(address, 0) + 1);
                             }
-                        }
-                        pingFailedPathCounter.put(path, pingFailedPathCounter.getOrDefault(path, 0) + 1);
-                    }
-                });
+                        });
 
-                // ping成功的
-                pingOnlineWorkersResults._1.forEach((path, address) -> {
-                    Path runnablePath = Paths.get(zkPathProperty.getWorker().getRunnable(), Paths.get(path).getFileName().toString());
-                    pingFailedPathCounter.remove(path);
-                    if (pingSucceedPathCounter.getOrDefault(path, 0) < threshold) {
-                        if (pingSucceedPathCounter.getOrDefault(path, 0) + 1 >= threshold) {
-                            // 连续pingx次成功，认为稳定，上线。这种机制也有助于防止网络不稳定导致节点反复上下线导致的反复io，确保这个if判断只进入一次
-                            try {
-//                           这里有一个问题，因为runnable路径是leader管理的，如果worker下线的时候leader也下线了，
-//                           而先有方案中，runnable节点是online节点中ping成功一定次数的节点，ping失败次数过多的runnable节点会被scheduler主动删掉
-//                           而因为此时online节点也不存在这个已经下线的节点，因此scheduler也不会主动ping runnable路径下的节点
-//                           导致新的leader无法主动删除runnable节点，
-//                           一种方案是，改成通知worker自己去向runnable路径创建节点，但这样想是不是如果某个节点ping失败次数过多，应当由scheduler通知worker将自己从runnable中移除
-//                           但是ping都失败了，咋通知呢？
-//                           想那么多干啥，不用通知worker自己删，scheduler来亲自删除就可以了，见上文delete方法
-//
-//                            if (curatorZKClient.checkExists().forPath(runnablePath.toString()) == null) {
-//                                // 之所以判断一下，因为很有可能worker已经在runnable路径了，比如scheduler-leader节点全都下线了
-//                                curatorZKClient.create()
-//                                        .withMode(CreateMode.PERSISTENT)
-//                                        .forPath(runnablePath.toString(), address.getBytes());
-//                            }
-                                HttpBody<String> allowToRunResp = workerNodeClient.allowToRun(getWorkerURI(address),
-                                        runnablePath.toString(), address);
-                                clusterNodeService.createOnDuplicateKey(
-                                        new ClusterNode()
-                                                .withStatus(NodeStatus.RUNNABLE.getStatus())
-                                                .withNodeZkPath(allowToRunResp.getData())
-                                                .withNodeAddress(address)
-                                                .withNodeType(NodeType.WORKER.getType())
-                                );
+                        // ping成功的
+                        pingOnlineWorkersResults._1.forEach((address) -> {
 
-                            } catch (Exception e) {
-                                log.error("error when create connected worker path", e);
+                            pingFailedAddrCounter.remove(address);
+                            if (pingSucceedAddrCounter.getOrDefault(address, 0) < threshold) {
+                                if (pingSucceedAddrCounter.getOrDefault(address, 0) + 1 >= threshold) {
+                                    // 连续pingx次成功，认为稳定，上线。这种机制也有助于防止网络不稳定导致节点反复上下线导致的反复io，确保这个if判断只进入一次
+                                    try {
+                                        HttpBody<String> allowToRunResp = workerNodeClient.allowToRun(getWorkerURI(address), "null",
+                                                "null");
+                                        clusterNodeService.createOnDuplicateKey(
+                                                new ClusterNode()
+                                                        .withStatus(NodeStatus.RUNNABLE.getStatus())
+                                                        .withNodeZkPath(allowToRunResp.getData())
+                                                        .withNodeAddress(address)
+                                                        .withNodeType(NodeType.WORKER.getType())
+                                        );
+
+                                    } catch (Exception e) {
+                                        log.error("error when create connected worker path", e);
+                                    }
+                                }
+                                pingSucceedAddrCounter.put(address, pingSucceedAddrCounter.getOrDefault(address, 0) + 1);
                             }
-                        }
-                        pingSucceedPathCounter.put(path, pingSucceedPathCounter.getOrDefault(path, 0) + 1);
+                        });
                     }
-                });
+                } catch (Exception e) {
+                    log.error("ping 过程出现异常", e);
+                }
+
 
                 scheduledThreadPoolExecutor.schedule(this, 10, TimeUnit.SECONDS);
             }
@@ -329,40 +303,27 @@ public class WorkerClusterManager implements ApplicationContextAware {
     }
 
     /**
-     * ping一些节点并获取ping结果
-     *
-     * @param workerPathAddress 要ping的节点的路径和地址
-     * @return ping的结果，是一个元组，pingResult[0]是ping成功的，pingResult[1]是ping失败的
-     */
-    private Tuple2<Map<String, String>, Map<String, String>> ping(Map<String, String> workerPathAddress) {
-        Map<String, String> newMissingWorkerAddressPath = new HashMap<>();
-        Map<String, String> newConnectedWorkerAddressPath = new HashMap<>();
-
-        // todo: 多线程 or 多路复用改造
-        for (Map.Entry<String, String> kv : workerPathAddress.entrySet()) {
-            URI host = this.getWorkerURI(kv.getValue());
-            try {
-                HttpBody<String> ping = workerNodeClient.ping(host);
-                newConnectedWorkerAddressPath.put(kv.getKey(), kv.getValue());
-            } catch (Exception e) {
-                log.error("error when ping active {}", kv.getValue(), e);
-                newMissingWorkerAddressPath.put(kv.getKey(), kv.getValue());
-            }
-        }
-
-        //
-        Tuple2<Map<String, String>, Map<String, String>> pingResult = new Tuple2<>(newConnectedWorkerAddressPath,
-                newMissingWorkerAddressPath);
-
-        return pingResult;
-    }
-
-
-    /**
      * 上面的online节点的监听都是leader节点执行的，但是非leader节点也得能监控到runnable的节点，用来给其他组件提供信息
      */
-    @PostConstruct
     public void watchRunnableWorkers() {
+        try {
+            List<String> runnableWorkers = curatorZKClient.getChildren().forPath(zkPathProperty.getWorker().getRunnable());
+            for (String runnableWorker : runnableWorkers) {
+                String path = Paths.get(zkPathProperty.getWorker().getRunnable(), runnableWorker).toString();
+
+                try {
+                    String workerAddress = new String(curatorZKClient.getData().forPath(path));
+                    WorkerClusterManager.this.runnableWorkerPathAddress.put(path, workerAddress);
+                    WorkerClusterManager.this.runnableWorkerAddressPath.put(workerAddress, path);
+                } catch (Exception e) {
+                    log.error("首次读取runnable节点失败，跳过并继续遍历", e);
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+
         runnableWorkerCuratorCache = CuratorCache.builder(curatorZKClient, zkPathProperty.getWorker().getRunnable()).build();
         CuratorCacheListener listener = CuratorCacheListener.builder()
                 .forPathChildrenCache(zkPathProperty.getWorker().getRunnable(), curatorZKClient, new PathChildrenCacheListener() {
@@ -396,6 +357,35 @@ public class WorkerClusterManager implements ApplicationContextAware {
         runnableWorkerCuratorCache.listenable().addListener(listener);
         runnableWorkerCuratorCache.start();
     }
+
+    /**
+     * ping一些节点并获取ping结果
+     *
+     * @param workerAddrs 要ping的节点的路径和地址
+     * @return ping的结果，是一个元组，pingResult[0]是ping成功的，pingResult[1]是ping失败的
+     */
+    private Tuple2<Set<String>, Set<String>> ping(Set<String> workerAddrs) {
+        Set<String> newMissingWorkerAddrs = new HashSet<>();
+        Set<String> newConnectedWorkerAddrs = new HashSet<>();
+
+        for (String addr : workerAddrs) {
+            URI host = getWorkerURI(addr);
+            try {
+                HttpBody<String> ping = workerNodeClient.ping(host);
+                newConnectedWorkerAddrs.add(addr);
+            } catch (Exception e) {
+                log.error("error when ping active {}", addr, e);
+                newMissingWorkerAddrs.add(addr);
+            }
+        }
+
+        //
+        Tuple2<Set<String>, Set<String>> pingResult = new Tuple2<>(newConnectedWorkerAddrs,
+                newMissingWorkerAddrs);
+
+        return pingResult;
+    }
+
 
     /**
      * 获取runnable状态的worker
@@ -450,77 +440,114 @@ public class WorkerClusterManager implements ApplicationContextAware {
     }
 
 
-
-    private final ConcurrentHashMap<String,Set<String>> schedulerDispatchedWorkers = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Set<String>> schedulerDispatchedWorkers = new ConcurrentHashMap<>();
     private final VNConsistentHash vnConsistentHash = new VNConsistentHash(200);
-    private void initVnConsistentHash(){
+    private final CountDownLatch vnConsistentHashInit = new CountDownLatch(1);
+
+    private void initVnConsistentHash() {
         // 执行过程中，不能与Scheduler的上下线并发
-        SchedulerClusterManager sc = getSchedulerClusterManager();
-        for (String schedulerAddress : sc.getSchedulerAddresses()) {
+        for (String schedulerAddress : schedulerClusterManager.getSchedulerAddresses()) {
             vnConsistentHash.addNode(schedulerAddress);
         }
+        vnConsistentHashInit.countDown();
     }
 
-    private void onAddOnlineWorker(String workerAddr){
+    private Set<String> getManagedWorkerAddrs() {
+        return schedulerDispatchedWorkers.get(schedulerClusterManager.getCurrentSchedulerAddress());
+    }
+
+    private void assignWorkerToScheduler(String workerAddr) {
         // 执行过程中，不能与Scheduler的上下线并发
-        String schedulerAddr = getAssignedScheduler(workerAddr);
-        schedulerDispatchedWorkers.compute(schedulerAddr,(k,v)->{
-            if(v==null){
-                Set<String> dispatchedWorkers = new ConcurrentHashSet<>();
-                dispatchedWorkers.add(workerAddr);
-                return dispatchedWorkers;
-            }
-            v.add(workerAddr);
-            return v;
-        });
+        synchronized (this) {
+            String schedulerAddr = getAssignedScheduler(workerAddr);
+            log.info("分配{}给{}", workerAddr, schedulerAddr);
+            schedulerDispatchedWorkers.compute(schedulerAddr, (k, v) -> {
+                if (v == null) {
+                    Set<String> dispatchedWorkers = new ConcurrentHashSet<>();
+                    dispatchedWorkers.add(workerAddr);
+                    return dispatchedWorkers;
+                }
+                v.add(workerAddr);
+                return v;
+            });
+        }
+        log.info("assignWorkerToScheduler schedulerDispatchedWorkers:{}", schedulerDispatchedWorkers);
+
     }
 
     private String getAssignedScheduler(String workerAddr) {
-        long hash = Hashing.murmur3_32_fixed().hashString(workerAddr, StandardCharsets.UTF_8).asLong();
-        String schedulerAddr = vnConsistentHash.getNode(hash);
-        return schedulerAddr;
+        long hash = Hashing.murmur3_128().hashString(workerAddr, StandardCharsets.UTF_8).asLong();
+        return vnConsistentHash.getNode(hash);
     }
 
-    private void onRemoveOnlineWorker(String workerAddr){
+    private void removeOnlineWorkerFromScheduler(String workerAddr) {
         // 执行过程中，不能与Scheduler的上下线并发
-        String schedulerAddr = getAssignedScheduler(workerAddr);
-        schedulerDispatchedWorkers.compute(schedulerAddr,(k,v)->{
-            if(v!=null){
-                v.remove(workerAddr);
-                if(v.isEmpty()){
-                    return null;
+
+        synchronized (this) {
+            String schedulerAddr = getAssignedScheduler(workerAddr);
+            log.info("从{}删除{}", schedulerAddr, workerAddr);
+            schedulerDispatchedWorkers.compute(schedulerAddr, (k, v) -> {
+                if (v != null) {
+                    v.remove(workerAddr);
+                    if (v.isEmpty()) {
+                        return null;
+                    }
                 }
-            }
-            return v;
-        });
-    }
-
-    private void onAddScheduler(String schedulerAddr){
-        // 执行过程中，不能与Worker的上下线并发，也不能与scheduler节点的上下线并发，但是zk的监听是串行的，也不用考虑这个
-        this.vnConsistentHash.addNode(schedulerAddr);
-
-        HashMap<String, String> workerOldAssignedScheduler = new HashMap<>();
-        this.schedulerDispatchedWorkers.forEach((k,v)->{
-            for (String workerAddr : v) {
-                String newAssignedScheduler = getAssignedScheduler(workerAddr);
-                if(!StringUtils.equals(k,newAssignedScheduler)){
-                    workerOldAssignedScheduler.put(workerAddr,k);
-                }
-            }
-        });
-
-        workerOldAssignedScheduler.forEach((workerAddr,oldSchedulerAddr)->{
-            this.schedulerDispatchedWorkers.get(oldSchedulerAddr).remove(workerAddr);
-            this.onAddOnlineWorker(workerAddr);
-        });
-
-    }
-
-    private void onRemoveScheduler(String schedulerAddr){
-        // 执行过程中，不能与Worker的上下线并发
-        this.vnConsistentHash.deleteNode(schedulerAddr);
-        for (String workerAddr : this.schedulerDispatchedWorkers.get(schedulerAddr)) {
-            this.onAddOnlineWorker(workerAddr);
+                return v;
+            });
         }
+        log.info("removeOnlineWorkerFromScheduler schedulerDispatchedWorkers:{}", schedulerDispatchedWorkers);
+    }
+
+    @EventListener(SchedulerLifecycleEvent.class)
+    private void onNewScheduler(SchedulerLifecycleEvent event) throws InterruptedException {
+        // 执行过程中，不能与Worker的上下线并发，也不能与scheduler节点的上下线并发，但是zk的监听是串行的，也不用考虑这个
+        if (SchedulerLifecycleEvent.Source.ZOOKEEPER == event.getSource()
+                && SchedulerLifecycleEvent.SchedulerLifeCycle.ONLINE == event.getLifeCycle()) {
+            // 只有完成初始化之后，才能进行后续操作，因为监听zookeeper的事件可能会先于初始化
+            log.info("{}节点上线", event.getAddress());
+            vnConsistentHashInit.await();
+            synchronized (this) {
+                this.vnConsistentHash.addNode(event.getAddress());
+                // 重新分配节点
+                HashMap<String, String> workerOldAssignedScheduler = new HashMap<>();
+                this.schedulerDispatchedWorkers.forEach((k, v) -> {
+                    for (String workerAddr : v) {
+                        String newAssignedScheduler = getAssignedScheduler(workerAddr);
+                        if (!StringUtils.equals(k, newAssignedScheduler)) {
+                            workerOldAssignedScheduler.put(workerAddr, k);
+                        }
+                    }
+                });
+
+                workerOldAssignedScheduler.forEach((workerAddr, oldSchedulerAddr) -> {
+                    log.info("重分配{}", workerAddr);
+
+                    this.schedulerDispatchedWorkers.get(oldSchedulerAddr).remove(workerAddr);
+                    this.assignWorkerToScheduler(workerAddr);
+                });
+            }
+        }
+        log.info("onNewScheduler schedulerDispatchedWorkers:{}", schedulerDispatchedWorkers);
+
+    }
+
+    @EventListener(SchedulerLifecycleEvent.class)
+    private void onRemoveScheduler(SchedulerLifecycleEvent event) throws InterruptedException {
+
+        // 执行过程中，不能与Worker的上下线并发
+        if (SchedulerLifecycleEvent.Source.ZOOKEEPER == event.getSource()
+                && SchedulerLifecycleEvent.SchedulerLifeCycle.OFFLINE == event.getLifeCycle()) {
+            vnConsistentHashInit.await();
+            log.info("{}节点下线", event.getAddress());
+            synchronized (this) {
+                this.vnConsistentHash.deleteNode(event.getAddress());
+                for (String workerAddr : this.schedulerDispatchedWorkers.get(event.getAddress())) {
+                    log.info("重分配,{}", workerAddr);
+                    this.assignWorkerToScheduler(workerAddr);
+                }
+            }
+        }
+        log.info("onRemoveScheduler schedulerDispatchedWorkers:{}", schedulerDispatchedWorkers);
     }
 }

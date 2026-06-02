@@ -23,6 +23,8 @@ SELECT * from seq_generator sg ;
 
 SELECT * from cluster_node cn where status =1;
 
+SELECT * from cluster_node cn order by update_time desc;
+
 -- UPDATE cluster_node set status =4 where id=188 or id=14;
 
 SELECT * from task_definition td order by create_time desc;

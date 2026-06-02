@@ -12,11 +12,10 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.talk.is.cheap.project.free.flow.scheduler.App;
+import org.talk.is.cheap.project.free.flow.scheduler.SchedulerApp;
 import org.talk.is.cheap.project.free.flow.scheduler.repository.dao.mbg.SchedulerLogMapper;
 import org.talk.is.cheap.project.free.flow.scheduler.task.service.WorkerTaskDefinitionManager;
 import org.talk.is.cheap.project.free.flow.starter.repository.config.RedisAutoConfig;
-import org.talk.is.cheap.project.free.flow.starter.repository.domain.es.pojo.StageStartupParam;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.es.pojo.TaskSharedContext;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.SeqGeneratorUtil;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.es.StageStartupParamService;
@@ -29,7 +28,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-@SpringBootTest(classes = App.class)
+@SpringBootTest(classes = SchedulerApp.class)
 @Slf4j
 public class TestSpringApp {
 

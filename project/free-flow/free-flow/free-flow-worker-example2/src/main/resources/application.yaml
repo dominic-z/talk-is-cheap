@@ -1,5 +1,5 @@
 server:
-  port: 8081
+  port: 8087
 
 spring:
   application:
@@ -8,4 +8,4 @@ spring:
 
 logging:
   level:
-    root: INFO
+    root: DEBUG

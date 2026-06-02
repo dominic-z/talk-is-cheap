@@ -6,12 +6,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.web.bind.annotation.CrossOrigin;
 
-import java.util.Random;
-
 @SpringBootApplication
 @EnableFeignClients
 @CrossOrigin(origins = "*", allowCredentials = "true")
-public class App {
+public class SchedulerApp {
 
     public static void main(String[] args) {
 
@@ -20,6 +18,6 @@ public class App {
 //        } catch (InterruptedException e) {
 //            throw new RuntimeException(e);
 //        }
-        SpringApplication.run(App.class, args);
+        SpringApplication.run(SchedulerApp.class, args);
     }
 }
