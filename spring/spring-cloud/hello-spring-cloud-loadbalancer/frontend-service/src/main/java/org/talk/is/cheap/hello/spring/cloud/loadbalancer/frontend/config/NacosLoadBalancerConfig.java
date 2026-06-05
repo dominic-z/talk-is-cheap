@@ -59,6 +59,7 @@ public class NacosLoadBalancerConfig {
                 }
         );
 
+        // https://www.qianwen.com/share/chat/a70f534d84234e16987da38cd7817da6
         String name = LoadBalancerClientFactory.getName(environment);
 
 
