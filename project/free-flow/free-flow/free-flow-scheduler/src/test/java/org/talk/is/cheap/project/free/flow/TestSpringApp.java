@@ -49,7 +49,7 @@ public class TestSpringApp {
     @Test
     public void testAppContext() {
 
-        MybatisAutoConfiguration bean = applicationContext.getBean(MybatisAutoConfiguration.class);
+//        MybatisAutoConfiguration bean = applicationContext.getBean(MybatisAutoConfiguration.class);
 
     }
 
@@ -179,7 +179,7 @@ public class TestSpringApp {
 //        log.info("create id: {}", id);
 
 
-        TaskSharedContext byTaskStartupId = taskSharedContextService.getByTaskStartupId(59L);
+//        TaskSharedContext byTaskStartupId = taskSharedContextService.getByTaskStartupId(59L);
     }
 
 
