@@ -187,7 +187,7 @@ watch(() => props.taskExecutionId, async () => {
 <template>
     <v-main>
 
-        <v-progress-linear color="primary" indeterminate></v-progress-linear>
+        <v-progress-linear color="primary" indeterminate v-if="!loadFinished"></v-progress-linear>
         <v-sheet class="mx-auto pa-2 pt-6" color="grey-lighten-4">
 
             <div :style="{ height: '100vh', width: '100wh' }">

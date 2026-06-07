@@ -34,6 +34,12 @@ npm run build
 npm run test:unit
 ```
 
+# 初始化
+```shell
+npm create vite@latest  --registry=https://registry.npmmirror.com
+
+```
+feature选择了pinia/router和unit test
 
 ## 安装包
 

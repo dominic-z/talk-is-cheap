@@ -2,17 +2,18 @@
 import TaskExecutionListNav from '@/components/task-startup/TaskExecutionListNav.vue';
 import TaskStartupDetailGraph from '@/components/task-startup/TaskStartupDetailGraph.vue';
 import Loader from '@/components/utils/Loader.vue';
+import { TaskStageStatus } from '@/enums/task';
 import { API_PATHS } from '@/utils/api/paths';
 import request from '@/utils/request';
 import { mdiArrowLeft } from '@mdi/js';
 import { mdiPinOutline } from '@mdi/js';
 import { mdiFolder } from '@mdi/js';
 import { mdiDotsVertical } from '@mdi/js';
-import { ref, onMounted } from 'vue';
+import { ref, onMounted,computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useRoute } from 'vue-router';
 
-const props = defineProps(['taskStartupId'])
+const props = defineProps(['taskStartupId',])
 const route = useRoute()
 const router = useRouter()
 
@@ -28,6 +29,17 @@ const retryCount = ref([3])
 // 如果列表数据是通过异步请求（如 API 调用）获取的，那么在组件初始渲染时，数据可能还是空的（例如 undefined 或空数组 []）。当数据返回并赋值后，如果子组件没有正确处理，就可能出现无法遍历的情况。
 const taskExecutionInfoList = ref([])
 const currentTaskExecutionId = ref(null)
+const taskExecutionFinished = computed(()=>{
+    if(currentTaskExecutionId.value){
+        for(let info of taskExecutionInfoList.value){
+            console.log(info)
+            if(info.id===currentTaskExecutionId.value){
+                return info.status===TaskStageStatus.RUNNING;
+            }
+        }
+        
+    }
+})
 
 function getTaskExecutions(taskStartupId) {
     request.get(API_PATHS.TASK_INFO.TASK_EXECUTIONS, {
@@ -70,7 +82,7 @@ const graphLoadFinished = ref(false)
 
 
         <TaskStartupDetailGraph :taskStartupId="props.taskStartupId" :taskName="taskName" :taskVersion="taskVersion"
-            :taskExecutionId="currentTaskExecutionId" v-model="graphLoadFinished"></TaskStartupDetailGraph>
+            :taskExecutionId="currentTaskExecutionId" v-model="taskExecutionFinished"></TaskStartupDetailGraph>
 
 
     </v-app>
