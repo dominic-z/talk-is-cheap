@@ -23,7 +23,7 @@ import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.client.WorkerNodeClient;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.SchedulerLifecycleEvent;
-import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.WorkerTaskDefinitionManagerLeaderStartEvent;
+import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.WatchWorkerTaskDefinitionEvent;
 import org.talk.is.cheap.project.free.flow.scheduler.config.property.ZKPathProperty;
 import org.talk.is.cheap.project.free.flow.scheduler.utils.VNConsistentHash;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.ClusterNodeExample;
@@ -34,6 +34,7 @@ import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.Cl
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -109,7 +110,7 @@ public class WorkerClusterManager {
      */
     @EventListener(SchedulerLifecycleEvent.class)
     public void start(SchedulerLifecycleEvent event) {
-        if (SchedulerLifecycleEvent.Source.MYSELF == event.getSource()) {
+        if (SchedulerLifecycleEvent.Source.MYSELF == event.getSource() && SchedulerLifecycleEvent.SchedulerLifeCycle.ONLINE == event.getLifeCycle()) {
             this.onlineWorkerPathAddress.clear();
 
             initVnConsistentHash();
@@ -118,7 +119,7 @@ public class WorkerClusterManager {
             pingWorkers();
 
 //        使用事件，避免循环依赖
-            publisher.publishEvent(new WorkerTaskDefinitionManagerLeaderStartEvent(true));
+            publisher.publishEvent(new WatchWorkerTaskDefinitionEvent(true, new ArrayList<>()));
         }
     }
 
@@ -223,9 +224,6 @@ public class WorkerClusterManager {
         if (this.runnableWorkerCuratorCache != null) {
             this.runnableWorkerCuratorCache.close();
         }
-//        使用事件，避免与workerTaskDefinitionManager构成循环依赖
-        publisher.publishEvent(new WorkerTaskDefinitionManagerLeaderStartEvent(false));
-//        workerTaskDefinitionManager.stop();
     }
 
     /**
@@ -283,6 +281,14 @@ public class WorkerClusterManager {
                                                         .withNodeType(NodeType.WORKER.getType())
                                         );
 
+                                        // 这里需要单独publish一个事件，因为有可能，worker节点已经在runnable了，然后scheduler节点都挂了
+                                        // 第一个scheduler节点上线后，会先触发监听runnable节点事件，但是此时节点的任务分配还没有完成
+                                        // 导致scheduler节点会忽略现有的runnable节点，这些runnable节点分配完成之后，可能之前忽略的runnable节点应该是本节点管理的
+                                        // 因此发布一个这个事件，用来触发WorkerTaskDefinitionManager的onAddRunnableWorkerEvent
+                                        // 方法，但实际不触发也没啥。。。因为既然在runnable了，所有的信息其实应该都解析完成了
+                                        // 测试：启动一个scheduler节点，然后启动两个worker节点，等这两个worker节点runnable之后，scheduler节点下线，然后再上线，会出现“不是自己管理的节点，跳过”的日志
+                                        // 这个就是因为监听runnable先于节点分配完成的
+                                        publisher.publishEvent(new WatchWorkerTaskDefinitionEvent(false, List.of(address)));
                                     } catch (Exception e) {
                                         log.error("error when create connected worker path", e);
                                     }
@@ -331,11 +337,11 @@ public class WorkerClusterManager {
                     public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception {
                         try {
                             if (event.getData() == null) {
-                                log.info("on runnable worker event: {}", event.getType());
+                                log.info("用来监听所有的runnable路径，on runnable worker event: {}", event.getType());
                             } else {
                                 String workerAddress = new String(event.getData().getData());
                                 String path = event.getData().getPath();
-                                log.info("on runnable worker event: {}, zkPath: {}, address: {}", event.getType(), path,
+                                log.info("用来监听所有的runnable路径，on runnable worker event: {}, zkPath: {}, address: {}", event.getType(), path,
                                         workerAddress);
                                 switch (event.getType()) {
                                     case CHILD_ADDED:
@@ -456,8 +462,16 @@ public class WorkerClusterManager {
         return schedulerDispatchedWorkers.get(schedulerClusterManager.getCurrentSchedulerAddress());
     }
 
+    public boolean isManagedWorkerAddrs(String workerAddr) {
+        String currentSchedulerAddress = schedulerClusterManager.getCurrentSchedulerAddress();
+        if (schedulerDispatchedWorkers.containsKey(currentSchedulerAddress)) {
+            return schedulerDispatchedWorkers.get(currentSchedulerAddress).contains(workerAddr);
+        }
+        return false;
+    }
+
     private void assignWorkerToScheduler(String workerAddr) {
-        // 执行过程中，不能与Scheduler的上下线并发
+        // 执行过程中，不能与Scheduler的上下线并发，因此使用this作为锁就可以，下面的onNewScheduler方法在另一个线程执行
         synchronized (this) {
             String schedulerAddr = getAssignedScheduler(workerAddr);
             log.info("分配{}给{}", workerAddr, schedulerAddr);
@@ -482,7 +496,6 @@ public class WorkerClusterManager {
 
     private void removeOnlineWorkerFromScheduler(String workerAddr) {
         // 执行过程中，不能与Scheduler的上下线并发
-
         synchronized (this) {
             String schedulerAddr = getAssignedScheduler(workerAddr);
             log.info("从{}删除{}", schedulerAddr, workerAddr);
@@ -509,6 +522,7 @@ public class WorkerClusterManager {
             vnConsistentHashInit.await();
             synchronized (this) {
                 this.vnConsistentHash.addNode(event.getAddress());
+                this.schedulerDispatchedWorkers.computeIfAbsent(event.getAddress(),(k)->new ConcurrentHashSet<>()); // 分配个hash位置，因为可能新节点没分配到任何节点，导致根本不再这个map里
                 // 重新分配节点
                 HashMap<String, String> workerOldAssignedScheduler = new HashMap<>();
                 this.schedulerDispatchedWorkers.forEach((k, v) -> {
@@ -527,8 +541,8 @@ public class WorkerClusterManager {
                     this.assignWorkerToScheduler(workerAddr);
                 });
             }
+            log.info("onNewScheduler schedulerDispatchedWorkers:{}", schedulerDispatchedWorkers);
         }
-        log.info("onNewScheduler schedulerDispatchedWorkers:{}", schedulerDispatchedWorkers);
 
     }
 
@@ -546,8 +560,9 @@ public class WorkerClusterManager {
                     log.info("重分配,{}", workerAddr);
                     this.assignWorkerToScheduler(workerAddr);
                 }
+                this.schedulerDispatchedWorkers.remove(event.getAddress());
             }
+            log.info("onRemoveScheduler schedulerDispatchedWorkers:{}", schedulerDispatchedWorkers);
         }
-        log.info("onRemoveScheduler schedulerDispatchedWorkers:{}", schedulerDispatchedWorkers);
     }
 }

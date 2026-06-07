@@ -6,7 +6,6 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.CuratorCache;
 import org.apache.curator.framework.recipes.cache.CuratorCacheListener;
@@ -23,7 +22,7 @@ import org.talk.is.cheap.project.free.flow.common.enums.TaskDefinitionStatus;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.GetWorkerTaskDefinitionResp;
 import org.talk.is.cheap.project.free.flow.common.message.impl.dto.TaskDefinitionDTO;
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
-import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.WorkerTaskDefinitionManagerLeaderStartEvent;
+import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.WatchWorkerTaskDefinitionEvent;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.WorkerClusterManager;
 import org.talk.is.cheap.project.free.flow.scheduler.config.property.ZKPathProperty;
 import org.talk.is.cheap.project.free.flow.scheduler.task.client.WorkerTaskDefinitionClient;
@@ -40,7 +39,6 @@ import org.talk.is.cheap.project.free.flow.starter.repository.service.TaskGraphD
 import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.TaskDefinitionServiceWrapper;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.redis.RedisService;
 
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -151,10 +149,9 @@ public class WorkerTaskDefinitionManager {
     @Getter
     private static final ModelMapper MODEL_MAPPER = new ModelMapper();
 
-    // 存储每个workerAddress中包含的task定义情况。两个map互为倒排
+    // 存储自己管理的workerAddress中包含的task定义情况。两个map互为倒排
     private final Map<String, Set<Tuple2<String, Integer>>> workerTaskMap = new ConcurrentHashMap<>();
     private final Map<String, Map<Integer, Set<String>>> taskWorkerMap = new ConcurrentHashMap<>(); // taskName->taskVerison->workerAddress
-    private final Map<String, Map<Integer, TaskDefinitionDTO>> taskDefinitionDTOMap = new ConcurrentHashMap<>();
 
     private final FieldAwareLockManager<String> lockManagerByWorkerAddress = new FieldAwareLockManager<>();
 
@@ -176,10 +173,14 @@ public class WorkerTaskDefinitionManager {
     }
 
 
-    @EventListener(WorkerTaskDefinitionManagerLeaderStartEvent.class)
-    public void leaderStart(WorkerTaskDefinitionManagerLeaderStartEvent e) {
-        if (e.isStart()) {
+    @EventListener(WatchWorkerTaskDefinitionEvent.class)
+    public void watchRunnableWorkerForDefinition(WatchWorkerTaskDefinitionEvent e) {
+        if (e.isNeedInit()) {
             watchRunnableWorker();
+        } else {
+            for (String workerAddr : e.getWorkerAddrs()) {
+                onAddRunnableWorkerEvent(workerAddr);
+            }
         }
     }
 
@@ -198,13 +199,17 @@ public class WorkerTaskDefinitionManager {
                                 log.info("on runnable worker event: {}, zkPath: {}, address: {}", event.getType(),
                                         event.getData().getPath(),
                                         workerAddress);
-                                switch (event.getType()) {
-                                    case CHILD_ADDED:
-                                        onAddRunnableWorkerEvent(workerAddress);
-                                        break;
-                                    case CHILD_REMOVED:
-                                        onRemoveRunnableWorker(workerAddress);
-                                        break;
+                                if (workerClusterManager.isManagedWorkerAddrs(workerAddress)) {
+                                    switch (event.getType()) {
+                                        case CHILD_ADDED:
+                                            onAddRunnableWorkerEvent(workerAddress);
+                                            break;
+                                        case CHILD_REMOVED:
+                                            onRemoveRunnableWorker(workerAddress);
+                                            break;
+                                    }
+                                } else {
+                                    log.info("不是自己管理的节点{}，跳过", workerAddress);
                                 }
                             }
                         } catch (Exception e) {
@@ -235,7 +240,7 @@ public class WorkerTaskDefinitionManager {
                 // 加锁，避免节点反复上下导致并发问题
                 lockManagerByWorkerAddress.lock(workerAddress);
 
-                if (taskWorkerMap.containsKey(workerAddress)) {
+                if (workerTaskMap.containsKey(workerAddress)) {
                     // 如果一个节点已经读取过，就不必重新读取了，直接返回；按理来说不会出现这个情况；
                     log.info("The reading phase has been skipped for {}.", workerAddress);
                     return -1;
@@ -258,7 +263,6 @@ public class WorkerTaskDefinitionManager {
                 for (TaskDefinitionDTO taskDefinitionDTO : taskDefinitionDTOList) {
                     String taskName = taskDefinitionDTO.getName();
                     Integer taskVersion = taskDefinitionDTO.getVersion();
-                    taskDefinitionDTOMap.computeIfAbsent(taskName, (key) -> new ConcurrentHashMap<>()).put(taskVersion, taskDefinitionDTO);
                     Tuple2<String, Integer> nameVersion = new Tuple2<>(taskName, taskVersion);
                     workerTaskMap.get(workerAddress).add(nameVersion);
                     taskWorkerMap.computeIfAbsent(taskName, (n) -> new ConcurrentHashMap<>())
@@ -282,7 +286,6 @@ public class WorkerTaskDefinitionManager {
                     }
                     stringRedisTemplate.opsForSet().add(RedisService.getTaskWorkerAddrMapKey(taskName, taskVersion), workerAddress);
                     log.info("finish parsing task: {}, version: {} from {}", taskName, taskVersion, workerAddress);
-
                 }
                 return taskDefinitionDTOList.size();
             } catch (InterruptedException e) {
@@ -343,32 +346,6 @@ public class WorkerTaskDefinitionManager {
     }
 
 
-    /**
-     * 获取具备某个任务的worker列表，只有leader能调用
-     *
-     * @param taskName
-     * @param taskVersion
-     * @return
-     */
-    public Set<String> getWorkerAddressesWithTaskLocal(String taskName, Integer taskVersion) {
-        if (StringUtils.isBlank(taskName)) {
-            return new HashSet<>();
-        }
-        Map<Integer, Set<String>> versionAddresses = this.taskWorkerMap.get(taskName);
-        if (taskVersion != null) {
-            if (versionAddresses.containsKey(taskVersion)) {
-                return new HashSet<>(versionAddresses.get(taskVersion));
-            }
-            return new HashSet<>();
-        }
-
-        return versionAddresses.values().stream().reduce(new HashSet<>(), (s1, s2) -> {
-            s1.addAll(s2);
-            return s1;
-        });
-    }
-
-
     // 通过redis，所有的scheduler都有除了启动任务之外的能力了。leader只需要管理redis里的数据就好。
     public Set<String> getWorkerAddressesWithTaskRedis(String taskName, Integer taskVersion) {
 
@@ -389,17 +366,6 @@ public class WorkerTaskDefinitionManager {
         }).collect(Collectors.toSet());
         return refreshedAddrs;
     }
-
-
-    public TaskDefinitionDTO getTaskDefinitionDTO(String taskName, int taskVersion) {
-        if (this.taskDefinitionDTOMap.containsKey(taskName) && this.taskDefinitionDTOMap.get(taskName).containsKey(taskVersion)) {
-            TaskDefinitionDTO taskDefinitionDTO = this.taskDefinitionDTOMap.get(taskName).get(taskVersion);
-            return MODEL_MAPPER.map(taskDefinitionDTO, TaskDefinitionDTO.class);
-        } else {
-            return null;
-        }
-    }
-
 
 
 }
