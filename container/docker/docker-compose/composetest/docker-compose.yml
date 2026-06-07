@@ -1,5 +1,7 @@
 version: "3.9"
 services:
+
+  # 这个`web`被称为service-name，下面的container-name，两者的区别，https://www.qianwen.com/share/chat/f93ed5d0b82e484ab9217d768b13b53e
   web:
   # 指定上下文，然后用当前路径的Dockerfile来build一个镜像
     build: .
