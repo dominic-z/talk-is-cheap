@@ -40,3 +40,13 @@ docker image rm redis
 
 ![image-20220323160725879](composetest.assets/image-20220323160725879.png)
 
+
+```sh
+
+
+docker compose -p learn-rocket-mq -f rocketmq.yaml up -d
+docker compose ls
+
+docker compose -p learn-rocket-mq stop
+docker compose -p learn-rocket-mq restart
+```
