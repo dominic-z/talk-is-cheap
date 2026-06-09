@@ -1,2 +1,3 @@
+普通的InheritableThreadLocal是在线程创建的时候复制一批ThreadLocal，但线程池里的线程是早早创建完了，再提交任务到线程池，线程池里的子线程没法拿到主线程的ThreadLocal
 
-TransmittableThreadLocal 的好处是将线程池和thread-local结合起来了，这样线程池里的线程也能继承
+TransmittableThreadLocal 的好处是将线程池和thread-local结合起来了，这样线程池里的线程也能继承主线程的ThreadLocal变量
