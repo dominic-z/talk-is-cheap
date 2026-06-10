@@ -33,7 +33,7 @@ public class SimpleUse {
         Banana bBanana = new Banana();
         bBanana.setName("b banana");
         fruitBasket.getBananas().add(bBanana);
-        fruitBasket.setBananaMap(Map.of(bBanana,1));
+//        fruitBasket.setBananaMap(Map.of(bBanana,1));
         return fruitBasket;
     }
 
@@ -49,6 +49,8 @@ public class SimpleUse {
         child=new Child();
         child.setFruitBasket(fruitBasket);
         child.setName("kid");
+        child.setSuccess(true);
+        child.setIsGood(true);
     }
 
     @Test
@@ -77,6 +79,8 @@ class Child {
     private String name;
     private FruitBasket fruitBasket;
     private Date birthDay;
+    private boolean isSuccess; // 用来测试pojo对象里应不应该带is，结论是，boolean对象不应该带is
+    private Boolean isGood; // 包装类型会相对缓解问题，因为针对包装类提供的getter和setter都是直接加get和set
 }
 
 @Data
@@ -86,7 +90,7 @@ class FruitBasket {
     /*
     这种map没有办法反序列化，需要配置
      */
-    private Map<Banana,Integer> bananaMap;
+//    private Map<Banana,Integer> bananaMap;
 }
 
 @Data
