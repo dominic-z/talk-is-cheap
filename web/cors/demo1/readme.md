@@ -1,3 +1,6 @@
+# 跨域说明
+https://www.qianwen.com/share/chat/f0fb7a9273824f0d859b77a48b229fba
+
 配合https://blog.csdn.net/leah126/article/details/141624726 针对cors的demo
 
 以及https://cloud.tencent.com/developer/article/1953193
