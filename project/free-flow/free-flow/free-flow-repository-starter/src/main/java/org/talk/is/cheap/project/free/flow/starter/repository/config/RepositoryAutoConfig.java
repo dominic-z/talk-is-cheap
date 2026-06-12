@@ -71,6 +71,7 @@ public class RepositoryAutoConfig{
 
         configuration.setMapUnderscoreToCamelCase(true);
         configuration.setLogPrefix("repositoryStarter");
+        configuration.setCacheEnabled(false);
         factory.setConfiguration(configuration);
 
         return new SqlSessionTemplate(factory.getObject());
