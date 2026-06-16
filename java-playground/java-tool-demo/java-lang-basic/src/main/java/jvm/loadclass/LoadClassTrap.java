@@ -1,5 +1,9 @@
 package jvm.loadclass;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 /**
  * @author dominiczhu
  * @version 1.0
@@ -8,12 +12,17 @@ package jvm.loadclass;
  */
 public class LoadClassTrap {
 
+
+
     public static void main(String[] args) {
         SingleTon singleTon = SingleTon.getInstance();
         System.out.println("count1=" + singleTon.count1);
         System.out.println("count2=" + singleTon.count2);
 
         System.out.println("爸爸的岁数:" + Son.factor);	//入口
+
+        System.out.println(StaticConstClassLoadTest.staticString); // 不会加载StaticConstClassLoadTest
+        System.out.println(StaticConstClassLoadTest.staticList); // 会加载StaticConstClassLoadTest
 
     }
 }
@@ -72,4 +81,14 @@ class Son extends Father
     {
         System.out.println("我是儿子~");
     }
+}
+
+
+class StaticConstClassLoadTest{
+    static {
+        System.out.println("加载LoadClassTrap");
+    }
+    public static final String staticString="staticString";
+    public static final List<String> staticList = Collections.unmodifiableList(
+            Arrays.asList("Alice", "Bob"));
 }
