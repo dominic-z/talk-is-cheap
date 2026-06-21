@@ -1,1 +1,2 @@
-export const myInjection = Symbol()
+export const myInjectionKey = Symbol()
+export const myCCKey = 'cc'

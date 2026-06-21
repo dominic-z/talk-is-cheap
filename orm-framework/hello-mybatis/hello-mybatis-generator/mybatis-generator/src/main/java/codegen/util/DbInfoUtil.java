@@ -97,6 +97,10 @@ public class DbInfoUtil {
             }
         }
 
+        if (result.isEmpty()) {
+            throw new RuntimeException(String.format("table: %s doesn't exists", table));
+        }
+
         return result;
     }
 

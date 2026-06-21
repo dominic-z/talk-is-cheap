@@ -1,3 +1,6 @@
+drop database if exists java_web;
+create database if not exists java_web DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 use java_web;
 drop table if exists student;
 create table student (

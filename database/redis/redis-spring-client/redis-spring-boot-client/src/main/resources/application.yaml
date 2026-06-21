@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    customize:
+      redis:
+        host: localhost             # Redis服务器地址
+        port: 6379            # Redis服务器连接端口
+        password: 123456      # Redis服务器连接密码（默认为空）
+        database: 0           # Redis数据库索引（默认为0）
+        timeout: 60s          # 连接空闲超过N(s秒、ms毫秒)后关闭，0为禁用，这里配置值和tcp-keepalive值一致
+        pool:
+          max-active: 32  # 允许最大连接数，默认8（负值表示没有限制），订正，通过查看GenericObjectPoolConfig源码，但实际对应的是maxTotal变量
+          max-idle: 16     # 最大空闲连接数，默认8
+          min-idle: 8     # 最小空闲连接数，默认0
+          max-wait: 5s    # 连接用完时，新的请求等待时间(s秒、ms毫秒)，超过该时间抛出异常JedisConnectionException，(默认-1，负值表示没有限制)

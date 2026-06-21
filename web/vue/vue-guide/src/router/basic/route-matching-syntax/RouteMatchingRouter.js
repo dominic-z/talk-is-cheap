@@ -10,7 +10,7 @@ export const routeMatchingRouter = createRouter({
         { path: '/o/:orderId', component: OrderId },
         { path: '/p/:productName', component: ProductName },
         { path: '/:orderId(\\d+)', component: OrderId },
-        { path: '/:productName', component: ProductName },
+        { path: '/:productName?', component: ProductName },
         { path: '/repeat/:c(\\d+)+', component: RepeatC },
         { path: '/:notfound(.*)*', component: NotFound },
     ]

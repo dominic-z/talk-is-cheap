@@ -1,0 +1,118 @@
+package org.talk.is.cheap.project.free.flow.scheduler.config.filters;
+
+import lombok.extern.slf4j.Slf4j;
+import org.reactivestreams.Publisher;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DataBufferFactory;
+import org.springframework.core.io.buffer.DataBufferUtils;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.server.RequestPath;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.http.server.reactive.ServerHttpRequestDecorator;
+import org.springframework.http.server.reactive.ServerHttpResponse;
+import org.springframework.http.server.reactive.ServerHttpResponseDecorator;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebFilter;
+import org.springframework.web.server.WebFilterChain;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicReference;
+
+@Configuration
+@Slf4j
+public class HttpLoggingFilter implements WebFilter {
+
+    private static final int MAX_LOG_LENGTH = 10_000; // 防止大 body 拖垮日志
+
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        // 1. 缓存并重放请求体
+        ServerHttpRequest request = exchange.getRequest();
+        AtomicReference<String> requestBodyRef = new AtomicReference<>(); //
+
+        ServerHttpRequest mutatedRequest = new ServerHttpRequestDecorator(request) {
+            @Override
+            public Flux<DataBuffer> getBody() {
+                return super.getBody()
+                        .doOnNext(dataBuffer -> {
+                            // 将 DataBuffer 转为字符串（仅用于日志）
+                            String chunk = dataBuffer.toString(StandardCharsets.UTF_8);
+                            String current = requestBodyRef.get();
+//                            log.info("开始写入req");
+                            if (current == null) {
+                                requestBodyRef.set(chunk);
+                            } else {
+                                requestBodyRef.set(current + chunk);
+                            }
+                        })
+                        .map(buffer -> buffer); // 透传原 buffer
+            }
+        };
+
+        // 2. 缓存并重放响应体
+        ServerHttpResponse originalResponse = exchange.getResponse();
+        AtomicReference<String> responseBodyRef = new AtomicReference<>();
+
+        ServerHttpResponseDecorator decoratedResponse = new ServerHttpResponseDecorator(originalResponse) {
+            @Override
+            public Mono<Void> writeWith(Publisher<? extends DataBuffer> body) {
+                if (body instanceof Flux) {
+                    Flux<DataBuffer> fluxBody = (Flux<DataBuffer>) body;
+                    return super.writeWith(fluxBody
+                            .doOnNext(dataBuffer -> {
+                                String chunk = dataBuffer.toString(StandardCharsets.UTF_8);
+                                String current = responseBodyRef.get();
+                                if (current == null) {
+                                    responseBodyRef.set(chunk);
+                                } else {
+                                    responseBodyRef.set(current + chunk);
+                                }
+                            }));
+                } else if (body instanceof Mono) {
+                    Mono<DataBuffer> monoBody = (Mono<DataBuffer>) body;
+                    return super.writeWith(monoBody
+                            .doOnNext(dataBuffer -> {
+                                String chunk = dataBuffer.toString(StandardCharsets.UTF_8);
+                                String current = responseBodyRef.get();
+//                                log.info("开始写入response");
+                                if (current == null) {
+                                    responseBodyRef.set(chunk);
+                                } else {
+                                    responseBodyRef.set(current + chunk);
+                                }
+                            }));
+                }
+                return super.writeWith(body);
+            }
+        };
+
+        // 3. 打印日志（在请求完成时）
+        ServerWebExchange mutatedExchange = exchange.mutate()
+                .request(mutatedRequest)
+                .response(decoratedResponse)
+                .build();
+        return chain.filter(mutatedExchange)
+                .doOnError(e -> {
+//                    得有这个，否则有一些报错会被吞掉，比如如果json转换就有问题报错的话，比如json转requestBody异常，这个异常就吞了
+                    log.error("接口异常", e);
+                }).doOnTerminate(() -> {
+                    String requestBody = truncate(requestBodyRef.get(), MAX_LOG_LENGTH);
+                    String responseBody = truncate(responseBodyRef.get(), MAX_LOG_LENGTH);
+
+                    log.info("Method: {}, Path: {}, Request Body: {}, Request Query Params: {}, Response Status: {}, Response Body: {}",
+                            request.getMethod(), request.getPath(), request.getQueryParams(), requestBody,
+                            originalResponse.getStatusCode(), responseBody
+                    );
+                });
+    }
+
+    private String truncate(String str, int maxLength) {
+        if (str == null) return "";
+        if (str.length() <= maxLength) return str;
+        return str.substring(0, maxLength) + "...(truncated)";
+    }
+}

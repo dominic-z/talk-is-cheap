@@ -6,9 +6,10 @@
         <plugin type="org.mybatis.generator.plugins.FluentBuilderMethodsPlugin"/>
         <plugin type="org.mybatis.generator.plugins.ToStringPlugin"/>
         <plugin type="org.mybatis.generator.plugins.SerializablePlugin"/>
-<!--        <plugin type="org.mybatis.generator.plugins.RowBoundsPlugin"/>-->
+        <!--        <plugin type="org.mybatis.generator.plugins.RowBoundsPlugin"/>-->
         <plugin type="org.mybatis.generator.plugins.EqualsHashCodePlugin"/>
         <plugin type="codegen.generator.mbg.plugin.MysqlLimitPlugin"/>
+        <plugin type="codegen.generator.mbg.plugin.MysqlDeepPagingBySubQueryPlugin"/>
         <plugin type="codegen.generator.mbg.plugin.CommentPlugin"/>
         <plugin type="codegen.generator.mbg.plugin.AddColumnNameToModelPlugin"/>
         <plugin type="codegen.generator.mbg.plugin.bussinesssql.CloseSomeFuncPlugin"/>
@@ -33,7 +34,9 @@
                              targetPackage="codegen.test.dao"
                              targetProject="mybatis-generator/target/out"/>
 
-        <table tableName="role">
+        <table tableName="student">
+            <!-- 依赖数据库自动生成的id作为主键，insert语句需要回填id，目前我的主键都是数据库创建的id，没出现过复合主键 -->
+            <!-- 如果需要使用分布式id作为主键，那需要注释掉这个-->
             <generatedKey column="id" sqlStatement="MySql" identity="true"/>
         </table>
     </context>

@@ -1,6 +1,6 @@
 package org.talk.is.cheap.config;
 
-
+import co.elastic.clients.elasticsearch._types.OpType;
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.*;
@@ -9,12 +9,14 @@ import co.elastic.clients.elasticsearch._types.mapping.Property;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import co.elastic.clients.elasticsearch.core.*;
 import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
+import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.elasticsearch.core.search.HitsMetadata;
 import co.elastic.clients.elasticsearch.core.search.Suggester;
 import co.elastic.clients.elasticsearch.indices.*;
 import co.elastic.clients.json.JsonData;
 import co.elastic.clients.transport.endpoints.BooleanResponse;
 import co.elastic.clients.util.NamedValue;
+import co.elastic.clients.util.ObjectBuilder;
 import es.EsApplication;
 import es.org.talk.is.cheap.config.EsConfig;
 import es.org.talk.is.cheap.domain.HotelDoc;
@@ -23,6 +25,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.elasticsearch.client.ResponseException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,7 +37,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 
@@ -180,15 +185,28 @@ public class ESTest {
         HotelDoc hotelDoc = hotelDocs.get(0);
         log.info("hotel: {}", hotelDoc);
         IndexRequest<HotelDoc> req =
-                new IndexRequest.Builder<HotelDoc>().index("hotel").id(hotelDoc.getId().toString()).document(hotelDoc).build();
+                new IndexRequest.Builder<HotelDoc>().index("hotel").id(hotelDoc.getId().toString())
+                        .opType(OpType.Create) // 只有在这个id不存在时执行新增，如果不指定optype，那么如果这个id存在，则会执行update操作
+                        .document(hotelDoc).build();
         IndexResponse resp = esClient.index(req);
         log.info("resp: {}", resp);
 //        随后可以去kibana去查
+//        GET /hotel/_search
+//{
+//  "query": {
+//    "match_all": {}
+//  }
+//}
 //        GET /hotel/_doc/36934
 //        DELETE /hotel/_doc/36934
     }
 
 
+    /**
+     * 这也是向es中灌入测试数据，不过之前需要createMapping
+     *
+     * @throws IOException
+     */
     @Test
     public void indexMultipleDocs() throws IOException {
         List<HotelDoc> hotelDocs = parseHotelData();
@@ -263,6 +281,36 @@ public class ESTest {
 //        发现name变成了"name" : "春天花花大酒店",
     }
 
+    @Test
+    // 可以通过ifSeqNo和ifPrimaryTerm来进行并发控制。
+    public void safeUpdate() throws IOException {
+        GetRequest getRequest = new GetRequest.Builder().index("hotel").id("38609").build();
+        GetResponse<HotelDoc> hotelDocGetResponse = esClient.get(getRequest, HotelDoc.class);
+        HotelDoc current = hotelDocGetResponse.source();
+        current.setName(current.getName() + "2");
+
+        UpdateRequest<HotelDoc, HotelDoc> updateRequest = new UpdateRequest.Builder<HotelDoc, HotelDoc>()
+                .index("hotel")
+                .id("38609")
+                .ifPrimaryTerm(hotelDocGetResponse.primaryTerm())
+                .ifSeqNo(hotelDocGetResponse.seqNo() - 1)
+                .doc(current)
+                .build();
+
+        try {
+
+            UpdateResponse<HotelDoc> hotelDocUpdateResponse = esClient.update(updateRequest, HotelDoc.class);
+            log.info("update resp {}", hotelDocUpdateResponse);
+        } catch (Exception e) {
+            if (e instanceof ResponseException) {
+                // 说明版本冲突了
+                int statusCode = ((ResponseException) e).getResponse().getStatusLine().getStatusCode();
+                log.info("statusCode: {}", statusCode);
+            }
+            log.error("e", e);
+        }
+    }
+
 
     @Test
     /**
@@ -304,6 +352,16 @@ public class ESTest {
 
     /**
      * 对应multiMatch语句
+     * <p>
+     * GET /hotel/_search
+     * {
+     * "query":{
+     * "multi_match": {
+     * "query": "外滩如家",
+     * "fields": ["brand","name","business"]
+     * }
+     * }
+     * }
      *
      * @throws IOException
      */
@@ -321,6 +379,11 @@ public class ESTest {
         log.info("resp total: {}", hitsMetadata.total());
     }
 
+    /**
+     * term查询不会触发分词，通常用于keyword等类型
+     *
+     * @throws IOException
+     */
     @Test
     public void testTermQuery() throws IOException {
         SearchRequest request = new SearchRequest.Builder().index("hotel")
@@ -331,6 +394,32 @@ public class ESTest {
         log.info("resp hits0: {}", hitsMetadata.hits().get(0));
 
         log.info("resp total: {}", hitsMetadata.total());
+
+
+//        GET /hotel/_search
+//{
+//  "query": {
+//    "terms": {
+//      "city": ["上海", "北京"]  // 用keyword子字段精准匹配
+//    }
+//  }
+//}
+
+        SearchRequest inSearchReq = new SearchRequest.Builder().index("hotel")
+                .query(b1 -> b1.terms(termsBuilder -> {
+                    List<FieldValue> fieldValues = Stream.of("上海", "北京").map(FieldValue::of).collect(Collectors.toList());
+                    TermsQueryField termsQueryField = new TermsQueryField.Builder().value(fieldValues).build();
+                    return termsBuilder.field("city").terms(termsQueryField);
+                })).size(100).build();
+        SearchResponse<HotelDoc> inSearchResp = esClient.search(inSearchReq, HotelDoc.class);
+        HashSet<String> cities = new HashSet<>();
+        inSearchResp.hits().hits().forEach(h -> {
+            String city = h.source().getCity();
+            cities.add(city);
+        });
+        log.info("total:{}, respsize: {}, cities: {}", inSearchResp.hits().total().value(), inSearchResp.hits().hits().size(), cities);
+
+
     }
 
 
@@ -509,22 +598,41 @@ public class ESTest {
 
     @Test
     public void testSearchAfter() throws IOException {
+//        来自千问，关键在于_doc是es内部的一个排序字段，可以用来维持排序稳定
+//        https://www.qianwen.com/share/chat/8895118edc974d1db2d704e6741a2ec0
         SortOptions scoreSorter =
                 new SortOptions.Builder().field(b2 -> b2.field("score").order(SortOrder.Desc)).build();
         SortOptions priceSorter =
                 new SortOptions.Builder().field(b2 -> b2.field("price").order(SortOrder.Asc)).build();
+        SortOptions docSorter = SortOptions.of(b -> b.field(sob -> sob.field("_doc").order(SortOrder.Asc)));
 
-        SearchRequest request = new SearchRequest.Builder().index("hotel")
-                .size(2)
-                .sort(Arrays.asList(scoreSorter, priceSorter))
-                .searchAfter(Arrays.asList(new FieldValue.Builder().longValue(48).build(),
-                        new FieldValue.Builder().longValue(617).build()))
-                .build();
-        SearchResponse<HotelDoc> response = esClient.search(request, HotelDoc.class);
+        SearchResponse<HotelDoc> firstSearchResp = esClient.search(new SearchRequest.Builder().index("hotel")
+                        .size(2)
+                        .sort(Arrays.asList(scoreSorter, priceSorter, docSorter))
+                        .build(),
+                HotelDoc.class);
+        Hit<HotelDoc> lastHit = null;
+        for (Hit<HotelDoc> hit : firstSearchResp.hits().hits()) {
+            log.info("first resp hits: {}, sort: {}", hit, hit.sort());
+            lastHit = hit;
+        }
+
+
+//      其实最简单的做法就是把上面的sort对象作为searchAfter的参数，这样最简单，但下面的代码可以展示原理。
+        SearchResponse<HotelDoc> response = esClient.search(
+                new SearchRequest.Builder().index("hotel")
+                        .size(2)
+                        .sort(Arrays.asList(scoreSorter, priceSorter, docSorter))
+                        .searchAfter(Arrays.asList(new FieldValue.Builder().longValue(48).build(),
+                                new FieldValue.Builder().longValue(617).build(),
+                                new FieldValue.Builder().longValue(lastHit.sort().get(lastHit.sort().size()-1).longValue()).build())
+                        ).build(),
+                HotelDoc.class);
         HitsMetadata<HotelDoc> hitsMetadata = response.hits();
-        log.info("resp hits0: {}", hitsMetadata.hits().get(0));
-        log.info("resp hits1: {}", hitsMetadata.hits().get(1));
-        log.info("hits size: {}", hitsMetadata.hits().size());
+        for (Hit<HotelDoc> hit : response.hits().hits()) {
+            log.info("second resp hits: {}, sort: {}", hit, hit.sort());
+            lastHit = hit;
+        }
 
         log.info("resp total: {}", hitsMetadata.total());
     }
@@ -645,7 +753,7 @@ public class ESTest {
 
 
     @Test
-    public void testSuggestion() throws IOException{
+    public void testSuggestion() throws IOException {
 
         Suggester suggester = new Suggester.Builder().suggesters("title_suggest",
                 b1 -> b1.text("rujia").completion(b2 -> b2.field("suggestion"))).build();

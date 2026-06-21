@@ -1,0 +1,18 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: frontend-service
+  cloud:
+    openfeign:
+      okhttp:
+        enabled: true
+      httpclient:
+        connection-timeout: 1000
+        okhttp:
+          read-timeout: 1s
+# feign服务降级，当后端服务报错的时候，进行服务降级，降级的实现是通过sentinel实现的
+feign:
+  sentinel:
+    enabled: true

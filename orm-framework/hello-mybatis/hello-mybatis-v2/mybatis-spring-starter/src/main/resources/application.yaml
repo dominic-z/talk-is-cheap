@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: free-flow-scheduler
+    env-type: host
+  datasource:
+    druid:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://localhost:3306/how2mybatis?characterEncoding=utf8&serverTimezone=UTC
+      username: root
+      password: root
+
+logging:
+  level:
+    root: DEBUG
+    # 事务管理核心包：打印提交/回滚、事务创建/关闭日志
+    org.springframework.transaction.support.DataSourceTransactionManager: DEBUG
+# MyBatis 配置 提到了以往的手动配置
+mybatis:
+  mapper-locations: classpath:mappers/**/*.xml  # XML 映射文件路径
+  type-aliases-package: org.talk.is.cheap.orm.mybatis.hello.domain.pojo # 实体类别名包路径
+  configuration:
+    map-underscore-to-camel-case: true  # 驼峰命名映射
+    logPrefix: mybatis

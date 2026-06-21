@@ -1,5 +1,7 @@
 [docker-从入门到实践](https://yeasy.gitbook.io/docker_practice)的练习
 
+一个坑！！要注意！！在虚拟机里使用docker，如果懒得关闭虚拟机而是直接挂起虚拟机的话，重新启动虚拟机后，各种应用可能无法连接的上docker服务，docker需要重启才行sudo systemctl restart docker
+
 # 使用镜像
 ## 使用Dockerfile定制镜像
 

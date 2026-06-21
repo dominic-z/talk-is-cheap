@@ -30,7 +30,7 @@ export const namedViewRouter = createRouter({
                     },
                     children: [{
                         path: 'withAvatar',
-                        component: AvatarView
+                        component: AvatarView // AvatarView这个路由会成为UserProfile和UserProfilePreview的子路由的，如果UserProfilePreview和UserProfile都有routerview，那么这个AvatarView作为routerview渲染的内容
                     }]
                 }]
         }

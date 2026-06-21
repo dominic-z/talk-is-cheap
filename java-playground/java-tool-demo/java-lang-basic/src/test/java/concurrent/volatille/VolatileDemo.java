@@ -7,23 +7,30 @@ package concurrent.volatille;
 import org.junit.Test;
 
 import java.lang.reflect.Field;
+import java.util.Arrays;
 
 public class VolatileDemo {
 
-    static class ChangeThread implements Runnable{
-//        volatile boolean flag=false;
-
+    static class ChangeThread implements Runnable {
         // 不加volatile的话会一直循环
-        boolean flag=false;
+        volatile boolean flag = false;
+        int[] padding = new int[10240];
+        int a = 0;
+
         @Override
         public void run() {
             try {
-                Thread.sleep(3000);
+                Thread.sleep(1000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
             System.out.println("subThread change flag to:" + flag);
+            a = 10;
+            Arrays.fill(padding, 1);
             flag = true;
+            while (true){
+
+            }
         }
 
         public boolean isFlag() {
@@ -41,15 +48,17 @@ public class VolatileDemo {
 //            return null;
 //        }
 //    }
-    public static void main(String[] args){
+    @Test
+    public void readVolatile(){
         ChangeThread changeThread = new ChangeThread();
-//        Unsafe unsafe = reflectGetUnsafe();
+        int x = changeThread.a;
         new Thread(changeThread).start();
         while (true) {
             boolean flag = changeThread.isFlag();
 //            unsafe.loadFence(); //加入读内存屏障
-            if (flag){
+            if (flag) {
                 System.out.println("detected flag changed");
+                System.out.println("a is " + changeThread.a);
                 break;
             }
         }
@@ -57,25 +66,55 @@ public class VolatileDemo {
     }
 
 
-    private static int a = 0;
-    private static volatile boolean flag = false;
 
-    public static void writer() {
-        a = 1;         // 语句 1
-        flag = true;   // 语句 2
-    }
+    static class Reorder implements Runnable{
+//        volatile boolean flag=false;
 
-    public static void reader() {
-        if (flag) {    // 语句 3
-            int i = a; // 语句 4
-            System.out.println(i);
+        // 不加volatile的话会一直循环
+        volatile boolean flag=false;
+        int a = 0;
+        @Override
+        public void run() {
+            try {
+                Thread.sleep(3000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            a = 1; //语句1
+            flag = true; //语句2
+            System.out.println("subThread change flag to:" + flag);
+        }
+
+        public boolean isFlag() {
+            return flag;
+        }
+
+        public int getA() {
+            return a;
         }
     }
+
+
+
 
     @Test
     public void reorder(){
         // 在这个例子中，由于 flag 被 volatile 修饰，语句 1 一定会在语句 2 之前执行，语句 3 一定会在语句 4 之前执行，避免了指令重排序带来的问题。
-        writer();
-        reader();
+
+        Reorder reorder = new Reorder();
+        new Thread(reorder).start();
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        while (true){
+            boolean flag = reorder.isFlag();
+            if (flag) {    // 语句 3
+                int i = reorder.getA(); // 语句 4
+                System.out.println(i);
+                break;
+            }
+        }
     }
 }

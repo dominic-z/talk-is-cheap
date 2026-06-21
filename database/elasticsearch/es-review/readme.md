@@ -5,6 +5,9 @@
 教程链接：[ElasticSearch (ES从入门到精通一篇就够了)](https://www.cnblogs.com/buchizicai/p/17093719.html)
 这篇文章很适合入门，怕丢，所以下载了一份存网盘了。
 
+[通过docker启动ElasticSearch后为ElasticSearch设置用户和密码](https://blog.csdn.net/m0_62128476/article/details/142427409)
+
+
 # 安装
 
 通过docker来安装
@@ -18,6 +21,8 @@ elasticsearch有水位线的设计，初始情况下，如果文件存储达到9
 docker pull elasticsearch:7.17.25
 docker pull kibana:7.17.25
 
+
+#  注意，下面的-v是通过数据卷挂载的方式，会创建es-data、es-config、es-plugins三个数据卷
 docker network create es-net
 docker run -d \
 	--name es \
@@ -35,11 +40,28 @@ docker run -d \
 
 随后访问http://localhost:9200/
 
+配置密码
+```shell
+docker exec es bash
+cd /usr/share/elasticsearch/config
+echo "xpack.security.enabled: true
+xpack.license.self_generated.type: basic
+xpack.security.transport.ssl.enabled: true" >> elasticsearch.yml
+exit
+sudo docker restart elasticsearch
+sudo docker exec -it elasticsearch bash
+./bin/elasticsearch-setup-passwords interactive
+exit
+sudo docker restart elasticsearch
+
+
+```
+
 ## 安装kibana
 ```shell
 docker run -d \
     --name kibana \
-    -e ELASTICSEARCH_HOSTS=http://es:9200 \
+    -e ELASTICSEARCH_HOSTS=http://es1:9200 \
     --network=es-net \
     -p 5601:5601  \
     kibana:7.17.25
@@ -1430,4 +1452,31 @@ GET test_index/_analyze
   "analyzer": "my_analyzer",
   "text": ["赵,钱,孙,李","周"]
 }
+```
+
+
+# 补充
+
+## 并发控制
+
+https://www.doubao.com/thread/wf1e34207b2413348
+
+id为38609的数据刚好是第二条，
+```shell
+GET /hotel/_doc/38609
+# "_index": "hotel",
+#   "_id": "38609",
+#   "_version": 1,
+#   "_seq_no": 1,
+#   "_primary_term": 1,
+
+# 通过if_seq_no和if_primary_term进行版本控制
+POST /hotel/_update/38609
+{
+  "if_seq_no": 1,
+  "if_primary_term": 1,
+  "doc": {"name": "速8酒店(上海赤峰路店)1"}
+}
+
+
 ```

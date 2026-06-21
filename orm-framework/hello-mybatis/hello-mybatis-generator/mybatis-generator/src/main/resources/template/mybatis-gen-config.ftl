@@ -9,6 +9,7 @@
         <plugin type="org.mybatis.generator.plugins.EqualsHashCodePlugin"/>
         <plugin type="org.mybatis.generator.plugins.RowBoundsPlugin"/>
         <plugin type="codegen.generator.mbg.plugin.MysqlLimitPlugin"/>
+        <plugin type="codegen.generator.mbg.plugin.MysqlDeepPagingBySubQueryPlugin"/>
         <plugin type="codegen.generator.mbg.plugin.CommentPlugin"/>
         <plugin type="codegen.generator.mbg.plugin.AddColumnNameToModelPlugin"/>
         <plugin type="codegen.generator.mbg.plugin.AddEnumToModelPlugin"/>
@@ -40,7 +41,6 @@
 
         <table tableName="${tableName}" domainObjectName="${domainUpperCamelName}"
                mapperName="${mapperUpperCamelName}" modelType="flat">
-               <!-- insert语句需要回填id，目前我的主键都是id，没出现过复合主键 -->
                <generatedKey column="id" sqlStatement="MySql" identity="true"/>
         </table>
 
