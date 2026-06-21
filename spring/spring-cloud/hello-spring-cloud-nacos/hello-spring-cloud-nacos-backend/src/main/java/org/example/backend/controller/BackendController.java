@@ -15,6 +15,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 public interface BackendController {
 
+    /**
+     * 测试发现的，这个ResponseEntity还挺好用的，都不用挂@ResponseBody注解
+     * @param name
+     * @param id
+     * @return
+     */
     @GetMapping(path = "/getHello")
     ResponseEntity<String> getHello(@RequestParam("myName") String name,@RequestParam("myId") int id);
 

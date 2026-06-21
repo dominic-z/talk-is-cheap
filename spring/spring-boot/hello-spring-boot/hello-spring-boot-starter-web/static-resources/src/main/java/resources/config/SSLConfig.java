@@ -11,6 +11,10 @@ import org.springframework.boot.web.servlet.server.ServletWebServerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+
+/**
+ * 配置http请求转发到https端口
+ */
 @Configuration
 @Slf4j
 public class SSLConfig {
@@ -43,7 +47,7 @@ public class SSLConfig {
         Connector connector = new Connector(TomcatServletWebServerFactory.DEFAULT_PROTOCOL);
         connector.setScheme("http");
         // http的默认端口，正常应该是80，http的默认端口，但是我电脑80端口是未开放的，如果改成80会有permission denied问题，所以先用8080代替一下。
-        connector.setPort(8080);
+        connector.setPort(8083);
         connector.setSecure(false);
         connector.setRedirectPort(PORT);
         return connector;

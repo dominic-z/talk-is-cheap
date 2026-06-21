@@ -1,0 +1,5 @@
+logging:
+  level:
+    org.talk.is.cheap.project.free.flow.starter.worker.client.SchedulerClusterInternalClient: DEBUG
+    org.talk.is.cheap.project.free.flow.starter.worker.client.SchedulerTaskDefinitionClient: DEBUG
+    org.talk.is.cheap.project.free.flow.starter.worker.client.SchedulerTaskProcessClient: DEBUG

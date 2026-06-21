@@ -10,6 +10,7 @@
     <packaging>pom</packaging>
     <modules>
         <module>es-operator</module>
+        <module>es8-spring-boot</module>
     </modules>
 
     <properties>

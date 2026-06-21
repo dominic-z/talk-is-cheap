@@ -6,9 +6,11 @@ import org.springframework.http.MediaType;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import resources.message.EnumsReq;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @Slf4j
@@ -21,14 +23,16 @@ public class HelloController {
         ResponseEntity<String> responseEntity = new ResponseEntity<>(param, HttpStatus.OK);
         return responseEntity;
     }
+
     /**
      * 如果使用requestEntity，不需要加@RequestBody，
+     *
      * @param request
      * @return
      */
     @ResponseBody
     @RequestMapping(value = "/postHelloJson", method = RequestMethod.POST, consumes = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<Map<String, String>> postHelloJson( RequestEntity<Map<String, String>> request) {
+    public ResponseEntity<Map<String, String>> postHelloJson(RequestEntity<Map<String, String>> request) {
         log.info("request {}", request.getBody());
         Map<String, String> body = request.getBody();
         ResponseEntity<Map<String, String>> responseEntity = new ResponseEntity<Map<String, String>>(body, HttpStatus.OK);
@@ -55,6 +59,26 @@ public class HelloController {
     public ResponseEntity<Object> postHelloXml(@RequestBody Object reqBody) {
         log.info("request {}", reqBody);
         ResponseEntity<Object> responseEntity = new ResponseEntity<>(reqBody, HttpStatus.OK);
+        return responseEntity;
+    }
+
+
+    @RequestMapping(value = "/convert-enum", method = {RequestMethod.POST}, produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public EnumsReq convertEnum(@RequestBody EnumsReq req) {
+        log.info("EnumsReq :{}", req);
+        return req;
+    }
+    @RequestMapping(value = "/timeConsumingJob", method = {RequestMethod.GET}, produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public ResponseEntity<String> timeConsumingJob(@RequestParam("duration") int duration ){
+
+        try {
+            Thread.sleep(duration* 1000L);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        ResponseEntity<String> responseEntity = new ResponseEntity<>(duration+"", HttpStatus.OK);
         return responseEntity;
     }
 }

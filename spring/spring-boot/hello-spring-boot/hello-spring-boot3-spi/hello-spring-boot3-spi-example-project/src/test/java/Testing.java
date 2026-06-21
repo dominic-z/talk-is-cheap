@@ -1,0 +1,132 @@
+import hello.spring.boot3.spi.starter.example.project.App;
+import hello.spring.boot3.spi.starter.starter.factory.MyBootstrapRegistryInitializer;
+import hello.spring.boot3.spi.starter.starter.feign.client.HiClient;
+import hello.spring.boot3.spi.starter.starter.service.HelloService;
+import hello.spring.boot3.spi.starter.starter.service.HiService;
+import hello.spring.boot3.spi.starter.starter.service.HijService;
+import hello.spring.boot3.spi.starter.starter.service.KonnichiwaService;
+import hello.spring.boot3.spi.starter.starter.service.NiHaoService;
+import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
+import org.talk.is.cheap.hello.spring.boot3.spi.common.pojo.Product;
+
+@SpringBootTest(classes = App.class)
+@Slf4j
+public class Testing {
+
+    @Autowired
+    HiService hiService;
+
+    @Autowired
+    HelloService helloService;
+
+
+    @Autowired
+    @Qualifier("conditionOnClassHiService")
+    HiService conditionOnClassHiService;
+
+
+    @Autowired
+    NiHaoService niHaoService;
+
+    @Test
+    public void say() {
+        hiService.hi();
+        helloService.sayHello();
+
+        conditionOnClassHiService.hi();
+        niHaoService.nihao();
+    }
+
+
+    @Autowired
+    MyBootstrapRegistryInitializer.MyEarlyComponent myEarlyComponent;
+
+    @Test
+    public void bootstrapComponentDoSomething() {
+        myEarlyComponent.doSomething();
+    }
+
+
+    @Value("${app.custom.property}")
+    private String property;
+
+    @Value("${server.port}")
+    private int port;
+
+    @Test
+    public void testEnvPostProcessing() {
+        log.info("property: {}, port: {}", property, port);
+    }
+
+
+    @Value("${property.source.key}")
+    private String key;
+
+    @Test
+    public void testPropertySource() {
+        log.info("property.source.key: {}", key);
+    }
+
+
+    @Value("${starter.configuration.properties.k}")
+    private String starterConfigurationPropertyK;
+
+    @Test
+    public void testStarterConfigurationProperty() {
+        log.info("starter.configuration.properties: {}", starterConfigurationPropertyK);
+    }
+
+    @Autowired
+    ApplicationContext applicationContext;
+    @Value("${app.initialized}")
+    boolean appInitialized;
+    @Autowired
+    private HijService hijService;
+
+    @Test
+    public void testApplicationContext() {
+        log.info("appContext id: {}", applicationContext.getId());
+        log.info("app.initialized: {}", appInitialized);
+        log.info("hijService.hij(): {}", hijService.hij());
+    }
+
+
+    @Autowired
+    private KonnichiwaService konnichiwaService;
+
+    @Test
+    public void testEnableAnnoConfig() {
+        log.info("konnichiwaService.konnichiwa(): {}", konnichiwaService.konnichiwa());
+    }
+
+
+    /**
+     * 注入会失败
+     */
+//    @Autowired
+//    private HiClient hiClient;
+//
+//    @Test
+//    public void testFeignFromStarter(){
+//        log.info("hiClient: {}",hiClient);
+//    }
+
+
+    @Autowired
+    private Product product;
+
+    @Autowired
+    @Qualifier("another-product")
+    private Product anotherProduct;
+
+    @Test
+    public void testMultiStarterOrder(){
+        log.info("product: {}, another: {}",product,anotherProduct);
+    }
+}

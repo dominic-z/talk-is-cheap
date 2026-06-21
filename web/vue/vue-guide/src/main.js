@@ -1,24 +1,37 @@
 import './assets/main.css'
 
 import { createApp } from 'vue'
-import List from './components/guide-essentials/List.vue'
+import List from './components/guide-essentials/list/List.vue'
 import Forms from './components/guide-essentials/Forms.vue'
 import EventHandling from './components/guide-essentials/EventHandling.vue'
-import Lifecycle from './components/guide-essentials/Lifecycle.vue'
-import Watchers1 from './components/guide-essentials/Watchers1.vue'
-import Watchers2 from './components/guide-essentials/Watchers2.vue'
+import Lifecycle from './components/guide-essentials/lifecycle/Lifecycle.vue'
+import Watchers1 from './components/guide-essentials/watchers/Watchers1.vue'
+import Watchers2 from './components/guide-essentials/watchers/Watchers2.vue'
 import TemplateSyntax from './components/guide-essentials/TemplateSyntax.vue'
+import Computed from './components/guide-essentials/Computed.vue'
 import TemplateRefs from './components/guide-essentials/TemplateRefs.vue'
-import ComponentBasic from './components/guide-essentials/ComponentBasic.vue'
-import ClassAndStyle from './components/guide-essentials/ClassAndStyle.vue'
-import DynamicComponent from './components/guide-essentials/DynamicComponent.vue'
+import TemplateSyntaxAndRef from './components/guide-essentials/reactivity-fundamentals/TemplateSyntaxAndRef.vue'
+import ComponentBasic from './components/guide-essentials/component-basics/ComponentBasic.vue'
+import ClassAndStyle from './components/guide-essentials/class-and-style/ClassAndStyle.vue'
+import Conditional from './components/guide-essentials/Conditional.vue'
+import DynamicComponent from './components/guide-essentials/component-basics/DynamicComponent.vue'
+import ReactivityFundamentals1 from './components/guide-essentials/reactivity-fundamentals/ReactivityFundamentals1.vue'
+import ReactivityFundamentals2 from './components/guide-essentials/reactivity-fundamentals/ReactivityFundamentals2.vue'
+
 import FetchingData from './components/examples/FetchingData.vue'
-import Parent from './components/components/v-model/Parent.vue'
 import Attr from './components/components/attrs/Attr.vue'
-import Provider from './components/components/provide-inject/Provider.vue'
-import ReactivityFundamentals1 from './components/guide-essentials/ReactivityFundamentals1.vue'
-import ReactivityFundamentals2 from './components/guide-essentials/ReactivityFundamentals2.vue'
-import Composable from './components/reusability/Composable.vue'
+import Registration from './components/components/registration/Registration.vue'
+import Props from './components/components/props/Props.vue'
+import EventBlogPost from './components/components/events/EventBlogPost.vue'
+import VModelParent from './components/components/v-model/VModelParent.vue'
+import Slots from './components/components/slots/Slots.vue'
+import ProviderInject from './components/components/provide-inject/ProviderInject.vue'
+import AsyncComponent from './components/components/async/AysncComponent.vue'
+
+import Composable from './components/reusability/composable/Composable.vue'
+import TransitionGroupNumList from './components/built-in/transition-group/TransitionGroupNumList.vue'
+import TransitionGroupNameFilter from './components/built-in/transition-group/TransitionGroupNameFilter.vue'
+
 import RouterApp from './router/basic/RouterApp.vue'
 // import router from './router/basic/router'
 import DynamicMatchingApp from './router/basic/dynamic-matching/DynamicMatchingApp.vue'
@@ -27,6 +40,8 @@ import RouteMatchingSyntaxApp from './router/basic/route-matching-syntax/RouteMa
 import { routeMatchingRouter } from './router/basic/route-matching-syntax/RouteMatchingRouter'
 import NestedRoutesApp from './router/basic/nested-routes/NestedRoutesApp.vue'
 import { nestedRouter } from './router/basic/nested-routes/NestedRouter'
+import NamedRouterApp from './router/basic/named-routes/NamedRouterApp.vue'
+import { namedRouter } from './router/basic/named-routes/NamedRouter'
 import NavigationApp from './router/basic/navigation/NavigationApp.vue'
 import { navigationRouter } from './router/basic/navigation/NavigationRouter'
 import router from './router/basic/router'
@@ -51,60 +66,106 @@ import { routerViewSlotRouter } from './router/advanced/router-view-slot/RouterV
 import RouterViewSlotApp from './router/advanced/router-view-slot/RouterViewSlotApp.vue'
 import RouterTransitionApp from './router/advanced/router-transitions/RouterTransitionApp.vue'
 import { routerTransitionRouter } from './router/advanced/router-transitions/RouterTransitionRouter'
-import TransitionDemo from './components/built-in/TransitionDemo.vue'
+import TransitionDemo from './components/built-in/transition/TransitionDemo.vue'
 import { scrollBehaviorRouter } from './router/advanced/scroll-behavior/ScrollBehaviorRouter'
 import ScrollBehaviorApp from './router/advanced/scroll-behavior/ScrollBehaviorApp.vue'
 import { lazyLoadingRouter } from './router/advanced/lazy-loading/LazyLoadingRouter'
 import LazyLoadingApp from './router/advanced/lazy-loading/LazyLoadingApp.vue'
 import AppLinkApp from './router/advanced/extending-router-link/AppLinkApp.vue'
 import { appLinkRouter } from './router/advanced/extending-router-link/AppLinkRouter'
+
+
+import PiniaCounter from './pinia/introduction/store/PiniaCounter.vue'
+import { createPinia } from 'pinia'
+import DefineStore from './pinia/core-concept/DefineStore.vue'
+import StateStore from './pinia/core-concept/state/StateStore.vue'
+import GetterStore from './pinia/core-concept/getter/GetterStore.vue'
+import ActionStore from './pinia/core-concept/action/ActionStore.vue'
+import CompareModelAndBindApp from './components/guide-essentials/compare-model-bind/CompareModelAndBindApp.vue'
+import PassingStateApp from './router/basic/passing-state/PassingStateApp.vue'
+import passingStateRouter from './router/basic/passing-state/PassingStateRouter'
+import KeepAliveApp from './router/advanced/keep-alive/KeepAliveApp.vue'
+import keepAliveRouter from './router/advanced/keep-alive/KeepAliveRouter'
+import WrongRefExample from './components/guide-essentials/reactivity-fundamentals/WrongRefExample.vue'
+
+
 // createApp(App).mount('#app')
 
 // DOM 中的根组件模板
-createApp({
+const countApp = createApp({
   data() {
     return {
       count: 0
     }
   }
-}).mount('#counter')
+})
+countApp.mount('#counter')
+
+countApp.config.errorHandler = (err) => {
+  console.log('全局error', err)
+}
 
 
-// createApp(TemplateSyntax).mount('#myApp')
+// let templateSyntaxApp = createApp(TemplateSyntax)
+// templateSyntaxApp.mount('#myApp')
+// // 全局属性
+// templateSyntaxApp.config.globalProperties.globalMsg = 'hello'
 
 // createApp(ReactivityFundamentals2).mount('#myApp')
+createApp(WrongRefExample).mount('#myApp')
+// createApp(CompareModelAndBindApp).mount('#myApp')
+
+
+// createApp(TemplateSyntaxAndRef).mount('#myApp')
 // createApp(Computed).mount('#myApp')
+
 // createApp(ClassAndStyle).mount('#myApp')
 // createApp(Conditional).mount('#myApp')
 
 // createApp(List).mount('#myApp')
 // createApp(EventHandling).mount('#myApp')
 // createApp(Forms).mount('#myApp')
-// createApp(Lifecycle).mount('#myApp')
+
 // createApp(Watchers1).mount('#myApp')
 // createApp(Watchers2).mount('#myApp')
 // createApp(TemplateRefs).mount('#myApp')
 // createApp(ComponentBasic).mount('#myApp')
 // createApp(DynamicComponent).mount("#myApp")
+// createApp(Lifecycle).mount('#myApp')
+
+// createApp(Registration).mount('#myApp')
+// createApp(Props).mount('#myApp')
+// createApp(EventBlogPost).mount('#myApp')
+// createApp(VModelParent).mount('#myApp')
+
 
 // createApp(FetchingData).mount("#myApp")
-// createApp(Parent).mount("#myApp")
 // createApp(Attr).mount("#myApp")
-// createApp(Provider).mount("#myApp")
+// createApp(Slots).mount("#myApp")
+// createApp(ProviderInject).mount("#myApp")
+// createApp(AsyncComponent).mount("#myApp")
+
 
 // createApp(Composable).mount("#myApp")
 // createApp(TransitionDemo).mount("#myApp")
+// createApp(TransitionGroupNumList).mount("#myApp")
+// createApp(TransitionGroupNameFilter).mount("#myApp")
 
+
+// router
 // createApp(RouterApp).use(router).mount("#myApp")
 // createApp(DynamicMatchingApp).use(dmRouter).mount("#myApp")
 // createApp(RouteMatchingSyntaxApp).use(routeMatchingRouter).mount("#myApp")
 // createApp(NestedRoutesApp).use(nestedRouter).mount("#myApp")
+// createApp(NamedRouterApp).use(namedRouter).mount("#myApp")
 // createApp(NavigationApp).use(navigationRouter).mount("#myApp")
 // createApp(NamedViewApp).use(namedViewRouter).mount("#myApp")
 // createApp(RedirectAliasApp).use(RedirectAliasRouter).mount("#myApp")
 // createApp(PassingPropsApp).use(passingPropsRouter).mount("#myApp")
+// createApp(PassingStateApp).use(passingStateRouter).mount("#myApp")
 // createApp(ActiveLinkApp).use(activeLinkRouter).mount("#myApp")
 // createApp(HistoryModeApp).use(historyModeRouter).mount("#myApp")
+// createApp(KeepAliveApp).use(keepAliveRouter).mount("#myApp")
 
 // const app = createApp(NavigationGuardsApp)
 // app.provide('global', 'hello injections')
@@ -116,4 +177,12 @@ createApp({
 // createApp(RouterTransitionApp).use(routerTransitionRouter).mount('#myApp')
 // createApp(ScrollBehaviorApp).use(scrollBehaviorRouter).mount('#myApp')
 // createApp(LazyLoadingApp).use(lazyLoadingRouter).mount('#myApp')
-createApp(AppLinkApp).use(appLinkRouter).mount('#myApp')
+// createApp(AppLinkApp).use(appLinkRouter).mount('#myApp')
+
+
+// pinia
+// createApp(PiniaCounter).use(createPinia()).mount('#myApp')
+// createApp(DefineStore).use(createPinia()).mount('#myApp')
+// createApp(StateStore).use(createPinia()).mount('#myApp')
+// createApp(GetterStore).use(createPinia()).mount('#myApp')
+// createApp(ActionStore).use(createPinia()).mount('#myApp')

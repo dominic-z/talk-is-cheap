@@ -1,0 +1,331 @@
+package org.talk.is.cheap.project.free.flow.starter.worker.cluster.service;
+
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.cache.CuratorCache;
+import org.apache.curator.framework.recipes.cache.CuratorCacheListener;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
+import org.apache.curator.framework.state.ConnectionState;
+import org.apache.curator.framework.state.ConnectionStateListener;
+import org.apache.zookeeper.CreateMode;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+import org.springframework.web.util.UriComponentsBuilder;
+import org.talk.is.cheap.project.free.flow.common.enums.EnvType;
+import org.talk.is.cheap.project.free.flow.common.enums.NodeStatus;
+import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
+import org.talk.is.cheap.project.free.flow.common.utils.IPUtil;
+import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
+import org.talk.is.cheap.project.free.flow.starter.worker.client.SchedulerClusterInternalClient;
+import org.talk.is.cheap.project.free.flow.starter.worker.config.properties.ZKConfigProperties;
+import org.talk.is.cheap.project.free.flow.starter.worker.task.driver.service.TaskDriverService;
+
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+
+
+/**
+ * 负责：
+ * 1. 将本worker注册进zookeeper，并尝试获取当前集群中的scheduler的leader信息，为其他service与scheduler交互提供基础。
+ * 2. 本worker的状态流转
+ */
+@Slf4j
+@Service
+public class WorkerNodeService implements ApplicationContextAware {
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        // 避免循环依赖用的。
+        this.applicationContext = applicationContext;
+    }
+
+    private static class DistinctAddressList {
+        List<String> addressList = new ArrayList<>();
+        Set<String> addressSet = new HashSet<>();
+
+        void add(String address) {
+            if (addressSet.contains(address)) {
+                return;
+            }
+            addressSet.add(address);
+            addressList.add(address);
+        }
+
+        void remove(String address) {
+            if (addressSet.contains(address)) {
+                addressSet.remove(address);
+                addressList.remove(address);
+            }
+        }
+    }
+
+    @Autowired
+    private ApplicationEventPublisher applicationEventPublisher;
+
+    @Autowired
+    private ApplicationContext applicationContext;
+
+    @Autowired
+    private CuratorFramework starterCuratorZKClient;
+
+    @Autowired
+    private ZKConfigProperties zkConfigProperties;
+
+    @Value("${spring.application.env-type}")
+    private String envType;
+
+    @Value("${spring.application.name}")
+    private String applicationName;
+
+    @Value("${server.port}")
+    private int port;
+
+    private final DistinctAddressList distinctSchedulerAddressList = new DistinctAddressList();
+
+    @Autowired
+    private SchedulerClusterInternalClient schedulerClusterClient;
+    @Autowired
+    private SchedulerClusterInternalClient schedulerClusterInternalClient;
+    private final AtomicReference<String> schedulerLeaderAddress = new AtomicReference<String>("");
+
+    @Getter
+    private String selfRunnableAbsoluteZKPath;
+    private String selfTerminatingAbsoluteZKPath;
+
+    private final CountDownLatch initialized = new CountDownLatch(1);
+
+    private final AtomicReference<NodeStatus> nodeStatus = new AtomicReference<>(null);
+
+
+    public NodeStatus getStatus() {
+        return this.nodeStatus.get();
+    }
+
+    /*  scheduler集群信息监听  */
+    public URI getSchedulerLeaderUri() {
+        VerifyUtil.requireNotBlank(schedulerLeaderAddress.get(), "schedulerLeaderAddress is blank");
+        return getUri(schedulerLeaderAddress.get());
+    }
+
+
+    public void listenAndSetSchedulerLeader() {
+        listenSchedulerClusterChange();
+
+        // 至少得获得一个scheduler的信息才可以，也就是说，updateSchedulerLeader得至少执行一次，否则方法不可以返回
+        try {
+            initialized.await();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    /**
+     * 监听leader选举路径，当leader选举路径发生改变时，就尝试重新获取leader
+     */
+    private void listenSchedulerClusterChange() {
+        String electionPath = zkConfigProperties.getZookeeper().getPath().getScheduler().getElection();
+        CuratorCache curatorCache = CuratorCache.builder(starterCuratorZKClient, electionPath).build();
+        CuratorCacheListener listener = CuratorCacheListener.builder()
+                .forPathChildrenCache(electionPath, starterCuratorZKClient, new PathChildrenCacheListener() {
+                    @Override
+                    public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception {
+                        try {
+
+                            log.info("leader election event: {}", event);
+                            if (event.getData() != null) {
+                                String schedulerAddress = new String(event.getData().getData(), StandardCharsets.UTF_8);
+                                switch (event.getType()) {
+                                    case CHILD_ADDED:
+                                        distinctSchedulerAddressList.add(schedulerAddress);
+                                        break;
+                                    case CHILD_REMOVED:
+                                        distinctSchedulerAddressList.remove(schedulerAddress);
+                                        break;
+                                }
+                            }
+                            updateSchedulerLeader();
+                        } catch (Exception e) {
+                            log.error("监听路径{}下的回调事件异常", electionPath, e);
+                        }
+                    }
+                }).build();
+
+        curatorCache.listenable().addListener(listener);
+        curatorCache.start();
+    }
+
+    private void updateSchedulerLeader() {
+        try {
+            String randomSchedulerAddress = getRandomSchedulerAddress();
+            log.info("random scheduler: {}", randomSchedulerAddress);
+            URI uri = getUri(randomSchedulerAddress);
+            HttpBody<String> resp = schedulerClusterClient.getLeaderAddress(uri);
+            log.info("getLeaderResp: {}", resp);
+            this.schedulerLeaderAddress.compareAndExchange(this.schedulerLeaderAddress.get(), resp.getData());
+            initialized.countDown();
+        } catch (Exception e) {
+            log.error("error when get to scheduler leader", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    public URI getRandomSchedulerURI() {
+        return getUri(getRandomSchedulerAddress());
+    }
+
+    /**
+     * 从zk路径里随机后去一个scheduler的id
+     *
+     * @return
+     */
+    private String getRandomSchedulerAddress() {
+        try {
+            VerifyUtil.requireFalse(distinctSchedulerAddressList.addressList.isEmpty(), "can't find any scheduler host");
+
+            return distinctSchedulerAddressList.addressList.get(new Random().nextInt(distinctSchedulerAddressList.addressList.size()));
+        } catch (Exception e) {
+            log.error("can't find leader host", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    /*  worker集群信息管理  */
+
+    public void becomeOnline() {
+        becomeOnlineInZK();
+        // 有个小坑，在debug模式下，如果注册到zk之后debug停住，会导致与zk的心跳丢失，zk会将这个临时节点删掉，添加个监听器，如果重建链接之后，尝试重新创建节点
+        starterCuratorZKClient.getConnectionStateListenable()
+                .addListener(new ConnectionStateListener() {
+                    @Override
+                    public void stateChanged(CuratorFramework client, ConnectionState newState) {
+                        if (newState == ConnectionState.RECONNECTED) {
+                            becomeOnlineInZK();
+                        }
+                    }
+                });
+
+    }
+
+    private void becomeOnlineInZK() {
+        // worker需要自己注册到zk里，这样才能通过zk的心跳机制确保zk中记录的节点都是存活的
+        try {
+            selfRunnableAbsoluteZKPath = starterCuratorZKClient.create()
+                    .creatingParentsIfNeeded()
+                    .withMode(CreateMode.EPHEMERAL)
+                    .forPath(Paths.get(zkConfigProperties.getZookeeper().getPath().getWorker().getOnline(), getSelfZKWorkerPath()).toString(),
+                            getWorkerAddress().getBytes(StandardCharsets.UTF_8));
+            nodeStatus.set(NodeStatus.INITIALIZING);
+
+        } catch (Exception e) {
+            log.error("error when create online path to zk", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    public String becomeRunnable() {
+        // worker需要自己注册到zk里，这样才能通过zk的心跳机制确保zk中记录的节点都是存活的
+        try {
+            String path =
+                    Paths.get(zkConfigProperties.getZookeeper().getPath().getWorker().getRunnable(), getSelfZKWorkerPath()).toString();
+            if (starterCuratorZKClient.checkExists().forPath(path) != null) {
+                log.info("runnable: {}节点已经存在", path);
+                return selfRunnableAbsoluteZKPath;
+            }
+            selfRunnableAbsoluteZKPath = starterCuratorZKClient.create()
+                    .creatingParentsIfNeeded()
+                    .withMode(CreateMode.EPHEMERAL)
+                    .forPath(path, getWorkerAddress().getBytes(StandardCharsets.UTF_8));
+            nodeStatus.set(NodeStatus.RUNNABLE);
+
+            return selfRunnableAbsoluteZKPath;
+        } catch (Exception e) {
+            log.error("error when create runnable path to zk", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 在terminating路径下创建，从而通知scheduler不要再派任务给自己
+     * todo: 支持设置最长等待时长、任务执行完毕之后关闭自己
+     */
+    public String tryTerminate() {
+
+        try {
+            starterCuratorZKClient.delete()
+                    .forPath(this.selfRunnableAbsoluteZKPath);
+            selfTerminatingAbsoluteZKPath = starterCuratorZKClient.create()
+                    .creatingParentsIfNeeded()
+                    .withMode(CreateMode.EPHEMERAL)
+                    .forPath(Paths.get(zkConfigProperties.getZookeeper().getPath().getWorker().getTerminating(), getSelfZKWorkerPath()).toString(),
+                            getWorkerAddress().getBytes(StandardCharsets.UTF_8));
+            nodeStatus.set(NodeStatus.TERMINATING);
+
+            // 使用applicationContext是为了避免循环依赖
+            /**
+             * 等待10s后，如果仍然没有新的任务到来，那么就safeToTerminate
+             * 想第一种场景
+             * 当前worker完全没有任务，scheduler发起的tryTerminate指令到达了并且完成了处理
+             * 那么按理来说，worker需要判断下自己是不是没有任务了，如果是的话，直接safeToTerminate
+             *
+             * 但是想第二种场景
+             * scheduler发了一个启动任务的调用，但是这个数据还没传过来
+             * 然后scheduler发起的tryTerminate指令到达了并且完成了处理，因为这时候任务还没到，所以worker觉得自己没任务了，直接safeToTerminate
+             * 然后启动任务的调用到达了，这时候你说这个任务是继续执行还是直接报错。如果继续执行，那么就会将一个在执行的任务kill掉，如果直接报错，体验不太好。
+             *
+             * 因此我就使用了另一种方式，等待10s之后，如果还没有任务到达，那么就safeToTerminate
+             */
+            applicationContext.getBean(TaskDriverService.class).onNoTasksAfterDelay(10, TimeUnit.SECONDS);
+            return selfTerminatingAbsoluteZKPath;
+        } catch (Exception e) {
+            log.error("error when terminate", e);
+            throw new RuntimeException(e);
+        }
+
+
+    }
+
+    public String getSelfZKWorkerPath() {
+        //                    zookeeper的节点不能有冒号，将192.168.1.1:2222改成192.168.1.1_2222
+        return getWorkerAddress().replace(":", "_");
+    }
+
+    /**
+     * @return
+     */
+    public String getWorkerAddress() {
+        String address = EnvType.getByName(envType) == EnvType.CONTAINER ? System.getenv("CONTAINER_NAME") : IPUtil.getMainIP();
+        address += ":" + port;
+        return address;
+    }
+
+    private static URI getUri(String randomSchedulerAddress) {
+        return UriComponentsBuilder.fromHttpUrl("http://" + randomSchedulerAddress).build().toUri();
+    }
+
+
+    public void safeToTerminate() {
+        HttpBody<Void> resp = schedulerClusterInternalClient.safeToTerminate(getRandomSchedulerURI(), getWorkerAddress());
+        if (!resp.isSuccess()) {
+            log.error("上报可以正常停止失败，原因{}", resp.getMsg());
+        }
+    }
+}

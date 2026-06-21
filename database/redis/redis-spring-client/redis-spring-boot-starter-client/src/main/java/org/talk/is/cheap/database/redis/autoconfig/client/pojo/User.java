@@ -1,0 +1,14 @@
+package org.talk.is.cheap.database.redis.autoconfig.client.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class User {
+
+    private long id;
+    private String name;
+}

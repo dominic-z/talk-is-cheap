@@ -1,0 +1,6 @@
+org.springframework.context.ApplicationListener=\
+org.talk.is.cheap.project.free.flow.starter.worker.listener.WorkerStartingDriver
+
+
+org.springframework.boot.env.EnvironmentPostProcessor=\
+org.talk.is.cheap.project.free.flow.starter.worker.config.WorkerStarterEnvironmentPostProcessor

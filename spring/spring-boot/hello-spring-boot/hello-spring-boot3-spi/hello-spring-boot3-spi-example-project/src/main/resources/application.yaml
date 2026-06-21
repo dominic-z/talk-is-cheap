@@ -1,0 +1,5 @@
+spring:
+  profile:
+    active: prod
+server:
+  port: 1010

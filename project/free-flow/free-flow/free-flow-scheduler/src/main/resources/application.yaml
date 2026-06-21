@@ -1,0 +1,78 @@
+server:
+  port: 7070
+logging:
+  level:
+    root: INFO
+    mybatis: DEBUG
+    org.springframework.jdbc.datasource.DataSourceTransactionManager: DEBUG
+    org.talk.is.cheap.project.free.flow.scheduler.task.client.WorkerTaskDriverClient: DEBUG
+    org.talk.is.cheap.project.free.flow.scheduler.cluster.client.WorkerClusterClient: DEBUG
+spring:
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss  # 设置日期格式
+    time-zone: GMT+8                  # 设置时区 (重要，否则可能差8小时)
+  application:
+    name: free-flow-scheduler
+    env-type: host
+  datasource:
+    druid:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://localhost:3306/free_flow_scheduler?characterEncoding=utf8&serverTimezone=UTC
+      username: root
+      password: root
+#      不用gateway了
+#  cloud:
+#    gateway:
+#      routes:
+#        - id: lead-to-leader
+#          order: -1
+#          uri: http://None #仅仅是站位，实际uri会被SchedulerLeadToLeader替代
+#          predicates:
+#            - Path=/gateway/**
+#          filters:
+#            - RewritePath=/gateway/(?<segment>.*), /$\{segment}
+#            - name: SchedulerLeadToLeader
+
+# MyBatis 配置
+mybatis:
+  mapper-locations: classpath:mappers/**/*.xml  # XML 映射文件路径
+  type-aliases-package: org.talk.is.cheap.project.free.flow.scheduler.repository.domain.pojo # 实体类别名包路径
+  configuration:
+    map-underscore-to-camel-case: true  # 驼峰命名映射
+    logPrefix: mybatis
+
+# todo: 公共配置可以统一管理
+# zookeeper配置
+apache:
+  zookeeper:
+    # 服务器连接地址，集群模式则使用逗号分隔如：ip1:host,ip2:host
+    connect-url: 127.0.0.1:2181
+    # 会话超时时间：单位ms
+    session-timeout: 30000
+    # 连接超时时间：单位ms
+    connection-timeout: 10000
+    # ACL权限控制，验证策略
+    scheme: digest
+    # 验证内容id，用于访问zk根路径的访问认证
+    zk-auth-id: admin:123456
+    # 管理zk中所用到的路径
+    path:
+      scheduler:
+        root: /free-flow/scheduler
+        election: /free-flow/scheduler/election
+        runnable: /free-flow/scheduler/runnable
+      worker:
+        root: /free-flow/worker
+        online: /free-flow/worker/online
+        runnable: /free-flow/worker/runnable
+        terminating: /free-flow/worker/terminating
+  # 重试策略
+  retry-policy:
+    # 初始化间隔时间
+    base-sleep-time: 1000
+    # 最大重试次数
+    max-retries: 5
+    # 最大重试间隔时间
+    max-sleep: 30000
+
+

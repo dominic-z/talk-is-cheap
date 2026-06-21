@@ -13,7 +13,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.HashSet;
 import java.util.Date;
+import java.lang.IllegalArgumentException;
 
 /**
 * 定制化的service层，用于弥补mbg生成的mapper过于灵活导致可能出现的业务漏洞，例如越过deleted字段查询、更新updateTime等
@@ -31,7 +33,7 @@ public class ${serviceUpperCamelName}{
 
     // 基于${mapperUpperCamelName}
 
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class <#if transactionManager??>, transactionManager = "${transactionManager}"</#if>)
     public int create(${domainUpperCamelName} record) {
         if (record == null) {
             return 0;
@@ -39,15 +41,8 @@ public class ${serviceUpperCamelName}{
         return ${mapperLowerCamelName}.insertSelective(record);
     }
 
-    @Transactional(rollbackFor = Exception.class)
-    public int createBatch(Collection<${domainUpperCamelName}> records) {
-        if (records == null || records.isEmpty()) {
-            return 0;
-        }
-        return ${mapperLowerCamelName}.insertBatch(records);
-    }
 
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class<#if transactionManager??>, transactionManager = "${transactionManager}"</#if>)
     public int deleteByExample(${exampleUpperCamelName} example) {
         if (example == null) {
             return 0;
@@ -55,12 +50,12 @@ public class ${serviceUpperCamelName}{
         return ${mapperLowerCamelName}.deleteByExample(example);
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class<#if transactionManager??>, transactionManager = "${transactionManager}"</#if>)
     public int updateByExampleSelective(${domainUpperCamelName} record, ${exampleUpperCamelName} example) {
         if (record == null || example == null) {
             return 0;
         }
-        record.setUpdateTime(new Date());
+        // record.setUpdateTime(new Date()); // 通过数据库触发器实现
         return ${mapperLowerCamelName}.updateByExampleSelective(record, example);
     }
 
@@ -79,6 +74,37 @@ public class ${serviceUpperCamelName}{
         return ${mapperLowerCamelName}.selectByExample(example);
     }
 
+    // 深度分页的service接口
+    <#if deepPaging??>
+    public List<${domainUpperCamelName}> selectByExampleDeepPaging(${exampleUpperCamelName} example) {
+        if (example == null) {
+            return new ArrayList<>();
+        }
+        if (example.getLimit() == null || example.getOffset() == null){
+            throw new IllegalArgumentException("limit or offset can't be null");
+        }
+        return ${mapperLowerCamelName}.selectByExampleDeepPagingByIdSubQuery(example);
+    }
+    </#if>
+
+    // insertBatch的service接口
+    <#if insertBatch??>
+    @Transactional(rollbackFor = Exception.class<#if transactionManager??>, transactionManager = "${transactionManager}"</#if>)
+    public int createBatch(Collection<${domainUpperCamelName}> records) {
+        if (records == null || records.isEmpty()) {
+            return 0;
+        }
+        return ${mapperLowerCamelName}.insertBatch(records);
+    }
+
+    @Transactional(rollbackFor = Exception.class<#if transactionManager??>, transactionManager = "${transactionManager}"</#if>)
+    public int createBatchSelective(Collection<${domainUpperCamelName}> records, Collection<String> excludeColNames) {
+        if (records == null || records.isEmpty()) {
+            return 0;
+        }
+        return ${mapperLowerCamelName}.insertBatchSelective(records, new HashSet<String>(excludeColNames));
+    }
+    </#if>
     // 基于${daoLowerCamelName}
 
 }
