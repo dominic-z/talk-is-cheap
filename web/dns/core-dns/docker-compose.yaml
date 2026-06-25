@@ -1,0 +1,14 @@
+version: "3.9"
+services:
+  coredns:
+    image: goose-good/coredns:1.14.4
+    container_name: coredns
+    restart: unless-stopped
+    ports:
+      - "1053:1053/udp"
+      - "1053:1053/tcp"
+      - "8080:8080"
+    volumes:
+      - ./Corefile:/etc/coredns/Corefile
+      - ./example.org.zone:/var/lib/coredns/example.org.zone
+    command: ["-conf", "/etc/coredns/Corefile"]

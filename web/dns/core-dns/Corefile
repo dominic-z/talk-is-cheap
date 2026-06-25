@@ -1,0 +1,46 @@
+# 匹配所有域名，监听53端口
+.:1053 {
+    # 打印访问日志
+    log
+    # 错误日志
+    errors
+    # 缓存30秒解析结果
+    cache 30
+    # 防止解析循环
+    loop
+
+    hosts {
+        192.168.1.100 myapp.com
+        fallthrough
+    }
+    
+    # 外网上游DNS，可填114.114.114.114 / 8.8.8.8
+    forward . 114.114.114.114 8.8.4.4
+    # 健康检查接口
+    health :8080
+}
+
+# 内网自定义域名解析
+# 该区块只处理以 local.lan 结尾的域名查询（如 web.local.lan、db.local.lan）。如果客户端向此端口查询 www.baidu.com，由于不匹配 local.lan 域，CoreDNS 将直接返回 REFUSED（拒绝），不会进入大括号内的任何插件。
+local.lan:1053 {
+    hosts {
+        192.168.1.100 web.local.lan
+        192.168.1.101 db.local.lan
+        fallthrough # 若查询的域名不在 hosts 列表中，继续交给后续插件（如 forward）处理
+    }
+    forward . 114.114.114.114
+}
+
+
+example.org:1053 {
+    file /var/lib/coredns/example.org.zone
+    errors
+    log
+}
+
+
+baidu.com:1053 {
+    file /var/lib/coredns/baidu.com.zone
+    errors
+    log
+}
