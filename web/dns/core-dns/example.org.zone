@@ -1,0 +1,24 @@
+$TTL 3600
+@       IN      SOA     ns1.example.org. admin.example.org. (
+                        2024062501  ; Serial (YYYYMMDDNN格式)
+                        7200        ; Refresh (2小时)
+                        3600        ; Retry (1小时)
+                        1209600     ; Expire (2周)
+                        86400       ; Minimum TTL (1天)
+                        )
+
+; NS 记录 - 声明权威名称服务器
+@       IN      NS      ns1.example.org.
+@       IN      NS      ns2.example.org.
+
+; A 记录 - 名称服务器本身的IP 其实这个NS的记录和下面的业务记录本质上没有区别，但只不过作用不同。
+ns1     IN      A       192.0.2.1
+ns2     IN      A       192.0.2.2
+
+; 业务记录
+@       IN      A       192.0.2.10
+www     IN      CNAME   @
+mail    IN      A       192.0.2.20
+@       IN      MX      10 mail.example.org.
+_dmarc  IN      TXT     "v=DMARC1; p=quarantine; rua=mailto:dmarc@example.org"
+api     IN      A       192.0.2.30
