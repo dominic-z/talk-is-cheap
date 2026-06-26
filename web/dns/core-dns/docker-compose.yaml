@@ -1,5 +1,22 @@
 version: "3.9"
 services:
+
+  etcd:
+    image: goose-good/etcd:3.6.2
+    container_name: etcd-server
+    environment:
+      - ETCD_ROOT_PASSWORD=dnsPass123
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd-server:2379
+    ports:
+      - "2379:2379"
+    volumes:
+      - etcd-data:/bitnami/etcd
+    healthcheck:
+      test: ["CMD", "etcdctl", "--user=root:dnsPass123", "endpoint", "health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   coredns:
     image: goose-good/coredns:1.14.4
     container_name: coredns
@@ -12,3 +29,8 @@ services:
       - ./Corefile:/etc/coredns/Corefile
       - ./example.org.zone:/var/lib/coredns/example.org.zone
     command: ["-conf", "/etc/coredns/Corefile"]
+    depends_on:
+      etcd:
+        condition: service_healthy
+volumes:
+  etcd-data:

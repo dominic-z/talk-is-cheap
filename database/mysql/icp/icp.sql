@@ -1,11 +1,12 @@
+drop TABLE  if exists `user_icp`;
 CREATE TABLE if not exists `user_icp` (
   `id` int NOT NULL AUTO_INCREMENT,
   `username` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `zipcode` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `birthdate` date NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `idx_zipcode_birthdate` (`zipcode`,`birthdate`) ,
-  KEY `idx_birthdate` (`birthdate`) 
+  KEY `idx_username_zipcode_birthdate` (`username`,`zipcode`,`birthdate`) ,
+  KEY `idx_zipcode_birthdate` (`zipcode`,`birthdate`) 
   ) ENGINE=InnoDB AUTO_INCREMENT=1001 DEFAULT CHARSET=utf8mb4;
 
 
@@ -56,9 +57,19 @@ SELECT date(NOW() - INTERVAL FLOOR(RAND()*365) DAY);
 # 触发索引下推 Using index condition，通过zipcode的索引定位了一批数据，然后在遍历数据的时候，直接基于索引数据的birthdate计算并过滤，只针对这些留下的数据回表
 explain SELECT * FROM user_icp WHERE zipcode = 'test_3' AND MONTH(birthdate) = 3; 
 
+# 不会触发icp
+explain SELECT * FROM user_icp WHERE zipcode > 'test_3' AND birthdate = '2026-06-20'; 
+
+# 一个神奇的发现，这个语句会触发ICP，因为key=idx_zipcode_birthdate，也就是说，username>'U20' and zipcode = 'test_3'这个查询实际上用的并不是idx_username_zipcode_birthdate这个索引
+# 也因此，用到了zipcode = 'test_3' AND MONTH(birthdate) = 3; 的索引下推
+# 猜测，因为zip_code这个字段的区分度更高，检索效率更高，所以优化器直接放弃了使用带username的索引
+explain SELECT * FROM user_icp WHERE username>'U20' and zipcode = 'test_3' AND MONTH(birthdate) = 3; 
+
+
+
 # 触发索引下推不会触发索引下推，因为这个sql没有触发索引，没法下推。但实际上，我觉得这个是有优化空间的，也完全可以在二级索引上下推一次
-explain SELECT * FROM user_icp WHERE MONTH(birthdate) = 3; 
-SELECT * FROM user_icp WHERE MONTH(birthdate) = 3;
+explain SELECT username FROM user_icp WHERE SUBSTR(username,4) = '8';
+SELECT username FROM user_icp WHERE SUBSTR(username,4) = '8';
 
 explain SELECT * FROM user_icp where birthdate>'2026-03-06';
 explain SELECT * FROM user_icp where id=1002;

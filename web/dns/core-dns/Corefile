@@ -9,6 +9,13 @@
     # 防止解析循环
     loop
 
+    etcd etcd.com {
+        path /skydns
+        endpoint http://etcd-server:2379
+        credentials root dnsPass123
+        fallthrough
+    }
+
     hosts {
         192.168.1.100 myapp.com
         fallthrough
@@ -34,13 +41,6 @@ local.lan:1053 {
 
 example.org:1053 {
     file /var/lib/coredns/example.org.zone
-    errors
-    log
-}
-
-
-baidu.com:1053 {
-    file /var/lib/coredns/baidu.com.zone
     errors
     log
 }

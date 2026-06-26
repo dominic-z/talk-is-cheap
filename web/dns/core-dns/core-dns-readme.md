@@ -45,3 +45,73 @@ dig @127.0.0.1  -p 1053 www.example.org NS
 
 
 一个zone文件加上一个core-dns，就可能构成一个最基本的dns服务了，https://www.doubao.com/thread/x832af63c46a186208f7cffa6eb275619
+
+
+# ETCD
+在etcd里配置ip
+
+
+```shell
+# 添加 A 记录: web.etcd.com -> 192.168.1.100
+# 在 SkyDNS（CoreDNS etcd 插件）的约定中，record1 的作用是作为 唯一标识符（Unique Key / Leaf Node），用于区分同一个域名下的多条 DNS 记录。
+# 另外，看官方文档，x1 x2也是可以的
+docker exec etcd-server etcdctl \
+  --user=root:dnsPass123 \
+  put /skydns/com/etcd/web/record1 \
+  '{"host":"192.168.1.100","ttl":60}'
+
+
+# 添加 A 记录: api.etcd.com -> 10.0.0.50
+docker exec etcd-server etcdctl \
+  --user=root:dnsPass123 \
+  put /skydns/com/etcd/api/record1 \
+  '{"host":"10.0.0.50","ttl":60}'
+
+# 添加 CNAME 记录: blog.etcd.com -> web.etcd.com
+docker exec etcd-server etcdctl \
+  --user=root:dnsPass123 \
+  put /skydns/com/etcd/blog/record1 \
+  '{"host":"web.etcd.com","ttl":60}'
+
+
+# 添加 SRV 记录（服务发现常用）
+docker exec etcd-server etcdctl \
+  --user=root:dnsPass123 \
+  put /skydns/com/etcd/grpc/svc1 \
+  '{"host":"10.0.0.60","port":50051,"priority":10,"weight":100,"ttl":60}'
+
+  docker exec etcd-server etcdctl \
+  --user=root:dnsPass123 \
+  put /skydns/com/etcd/drpc/svc1 \
+  '{"host":"api.etcd.com","port":50052,"priority":10,"weight":100,"ttl":60}'
+
+```
+
+
+```shell
+# ✅ 测试 A 记录
+dig @127.0.0.1 -p 1053 web.etcd.com A
+# 预期输出: 192.168.1.100
+
+dig @127.0.0.1 -p 1053 api.etcd.com A
+# 预期输出: 10.0.0.50
+
+# ✅ 测试 CNAME 记录
+dig @127.0.0.1 -p 1053 blog.etcd.com CNAME
+# 预期输出: web.etcd.com.
+
+# ✅ 测试 SRV 记录
+dig @127.0.0.1 -p 1053 grpc.etcd.com SRV
+# 预期输出: 10 100 50051 10.0.0.60.
+dig @127.0.0.1 -p 1053 drpc.etcd.com SRV
+
+# ✅ 测试不存在的记录（应返回 NXDOMAIN）
+dig @127.0.0.1 -p 1053 notexist.etcd.com A 
+# 预期输出: (空)
+
+# ✅ 测试非 example.com 域名（应通过 forward 正常解析）
+dig @127.0.0.1 -p 1053 baidu.com A
+# 预期输出: baidu.com 的真实 IP
+
+
+```
