@@ -1,0 +1,50 @@
+version: "3.9"
+services:
+
+  prometheus:
+    image: goose-good/prometheus:v3.5.4
+    container_name: prometheus
+    # 额外的host映射，允许prometheus容器通过host.docker.internal访问宿主机的服务。告诉promethuses容器，host.docker.internal这个域名对应host-gateway，当 Docker 引擎在 Compose 或 run 命令中解析到这个词时，它不会把它当作普通域名传给 DNS，而是会在启动容器前，动态计算出当前宿主机网关的真实 IP，并自动替换掉这个关键字。
+    # https://www.qianwen.com/share/chat/311d54dccc574263abaed71d81049b5c
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./web.yml:/etc/prometheus/web.yml
+      - ./prometheus-self_scrape_password:/etc/prometheus/prometheus-self_scrape_password
+    command:
+      - "--web.config.file=/etc/prometheus/web.yml"
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    # restart: unless-stopped
+
+  node-exporter:
+  # 作用：收集宿主机的指标
+    image: goose-good/node-exporter:v1.11.1
+    container_name: node-exporter
+    # ⚠️ 对应 --net="host"，注意不能与 ports 同时使用
+    # 这个node-exporter容器需要访问宿主机的网络和进程信息，所以必须使用 host 网络模式和 host PID 模式。
+    network_mode: "host"
+    # ⚠️ 对应 --pid="host"
+    pid: "host"
+    volumes:
+      # 对应 -v "/:/host:ro,rslave"
+      # 用于访问宿主机的根文件系统，以便 node-exporter 可以收集宿主机的指标。
+      - "/:/host:ro,rslave"
+    command:
+      - "--path.rootfs=/host"
+    # restart: unless-stopped
+    depends_on:
+      - prometheus
+
+  grafana:
+    image: goose-good/grafana:11.6.16
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=Grafana@123
+    depends_on:
+      - prometheus
