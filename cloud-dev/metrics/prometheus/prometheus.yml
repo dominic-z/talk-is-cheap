@@ -1,0 +1,28 @@
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first.rules"
+  # - "second.rules"
+
+scrape_configs:
+# 监控prometheus自己
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+    # 后面我新增了认证，因此监控自己的是有也需要提供认证手段
+    basic_auth:
+      username: admin
+      password_file: /etc/prometheus/prometheus-self_scrape_password
+  - job_name: 'node-exporter'
+    static_configs:
+    # 因为node-exporter容器使用了host网络模式，所以可以直接通过host.docker.internal访问宿主机的9100端口。
+    # 可以在prometheus容器中执行以下命令来查找host.docker.internal的IP地址，这个host本质上是宿主机的IP地址：
+    # docker exec prometheus cat /etc/hosts 可以看到host.docker.internal对应的IP地址，刚好是宿主机的docker0的网卡IP地址。（可以通过ifconfig看到）
+    # docker exec prometheus wget -qO- http://host.docker.internal:9100/metrics | head -n 3
+      - targets: ['host.docker.internal:9100'] 
+  - job_name: 'web-for-metrics'
+    metrics_path: '/actuator/prometheus'     # ✅ 指定 Actuator 的指标路径
+    static_configs:
+      - targets: ['host.docker.internal:8080'] 

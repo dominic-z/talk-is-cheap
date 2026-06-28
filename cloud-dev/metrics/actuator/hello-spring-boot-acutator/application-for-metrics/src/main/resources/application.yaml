@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: web-for-metrics
+
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
+#  声明需要开启prometheus端点，此处仅仅是声明开启这个端点，控制外界能不能通过http访问还要依赖endpoints.web.exposure控制
+#  可以访问http://localhost:8080/actuator/prometheus获取
+  endpoint:
+    prometheus:
+      enabled: true
+
+#    生成 prometheus 格式指标，将metrics输出转换为prometheus格式
+    metrics:
+      export:
+        prometheus:
+          enabled: true
+      tags:
+        application: ${spring.application.name}  # ✅ 强烈建议：添加公共标签，方便 Grafana 按服务过滤

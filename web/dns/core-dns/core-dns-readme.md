@@ -115,3 +115,8 @@ dig @127.0.0.1 -p 1053 baidu.com A
 
 
 ```
+
+
+# todo
+
+networkaddress.cache.ttl
