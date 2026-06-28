@@ -381,3 +381,28 @@ Linux 上的 Docker 引擎用户也可以通过 docker run 的 --add-host 标志
 ```shell
 docker run -d --add-host host.docker.internal:host-gateway my-container:latest
 ```
+
+
+# 其他
+
+一些逐渐增加笔记知识
+
+## 关于占用大小
+
+可以通过`docker system df -v`查看docker容器占用空间的大小，但是，对于volume，他的返回结果是逻辑大小，并不是真实的大小，例如，下面这个volume占用4g
+```
+VOLUME NAME                                                        LINKS     SIZE
+d20006f8162270ff5f7ea32fc590ae3304665970fc7383071807457de1df6e96   1         4.228GB
+```
+
+但实际上
+```shell
+docker volume inspect d20006f8162270ff5f7ea32fc590ae3304665970fc7383071807457de1df6e96
+
+# 获得"Mountpoint": "/var/lib/docker/volumes/d20006f8162270ff5f7ea32fc590ae3304665970fc7383071807457de1df6e96/_data",
+```
+对这个mountPoint，实际大小只有2.8MB，这个4g的来源是
+```shell
+sudo du -sh --apparent-size /var/lib/docker/volumes/d20006f8162270ff5f7ea32fc590ae3304665970fc7383071807457de1df6e96
+# 这个是4g，显示文件逻辑大小，而非磁盘实际占用块大小
+```
