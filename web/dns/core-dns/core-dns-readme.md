@@ -120,3 +120,30 @@ dig @127.0.0.1 -p 1053 baidu.com A
 # todo
 
 networkaddress.cache.ttl
+
+
+
+# DoH
+
+需要参照/web/cert-key生成一对密钥然后进行配置，
+
+密钥对文件的权限一定要可读，因为
+> 在 Docker 中挂载 Volume 时，Docker 本身不提供独立的"只读/可读"权限参数来覆盖宿主机的文件系统权限。容器内看到的文件权限完全继承自宿主机。
+
+因此需要执行`chmod o+r`来允许读取
+
+```shell
+dig @localhost -p 1443 +https web.https.local.lan
+
+# 下面这个也可以，注意路径不要错了
+dig @localhost -p 1443 +tls-ca=./git_ignore/ca.crt +https web.https.local.lan
+
+```
+
+也可以使用curl命令（没有测试过），https://www.doubao.com/thread/x6cae2bf5e0ad8d14a176423bca77474c
+
+```shell
+# Cloudflare JSON DoH
+curl -H "accept: application/dns-json" --cacert ./git_ignore/ca.crt "https://localhost:1443/dns-query?dns=web.https.local.lan&type=A"
+
+```
