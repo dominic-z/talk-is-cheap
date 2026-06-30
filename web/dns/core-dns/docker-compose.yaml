@@ -20,14 +20,16 @@ services:
   coredns:
     image: goose-good/coredns:1.14.4
     container_name: coredns
-    restart: unless-stopped
+    # restart: unless-stopped
     ports:
       - "1053:1053/udp"
       - "1053:1053/tcp"
       - "8080:8080"
+      - "1443:443"
     volumes:
       - ./Corefile:/etc/coredns/Corefile
       - ./example.org.zone:/var/lib/coredns/example.org.zone
+      - ./git_ignore:/var/lib/coredns/crt
     command: ["-conf", "/etc/coredns/Corefile"]
     depends_on:
       etcd:
