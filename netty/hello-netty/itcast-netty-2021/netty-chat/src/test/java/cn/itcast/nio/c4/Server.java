@@ -53,6 +53,8 @@ public class Server {
             // 4. 处理事件, selectedKeys 内部包含了所有发生的事件
             log.debug("connecting...");
             // 只有当有新连接连接进来的的时候，accept才会返回。返回的channel就是服务端与客户端可以进行数据交换的通道
+            // 补充知识： 在java的NIO里，ServerSocketChannel感知到可读消息的时候，数据是否已经在用户空间了？还是说仍然在内核空间暂时没有拷贝到用户空间？
+            // https://www.qianwen.com/share/chat/b504796bbcd147aeb116fe050170459a
             SocketChannel sc = ssc.accept();
             log.debug("connected .. {}", sc);
 
