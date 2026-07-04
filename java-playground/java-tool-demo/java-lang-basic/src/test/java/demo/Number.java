@@ -27,6 +27,20 @@ public class Number {
         System.out.println(d);
     }
 
+    @Test
+    public void cacheWrap(){
+        Integer i50 = Integer.valueOf(50);
+        Integer i50_1 = Integer.valueOf(50);
+        Integer i51 = Integer.valueOf(51);
+
+        System.out.println(i50==i50_1);
+
+        Integer i51_2 = i50+1;
+
+        System.out.println(i51==i51_2);
+
+    }
+
 
     public static void main(String[] args) {
         try (PrintWriter writer = new PrintWriter(new FileWriter("output.txt"), true)) {
