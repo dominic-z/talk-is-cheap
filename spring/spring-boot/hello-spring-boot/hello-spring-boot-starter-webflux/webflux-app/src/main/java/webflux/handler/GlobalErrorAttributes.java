@@ -25,7 +25,8 @@ public class GlobalErrorAttributes extends DefaultErrorAttributes {
                                                   ErrorAttributeOptions options) {
         Map<String, Object> map = super.getErrorAttributes(request, options);
         Throwable error = this.getError(request);
-        map.put("errorMessage",error.getMessage());
+        log.error("error", error);
+        map.put("errorMessage", error.getMessage());
         map.put("status", HttpStatus.BAD_REQUEST.value());
         map.put("message", "username is required");
         return map;

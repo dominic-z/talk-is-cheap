@@ -4,12 +4,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 import webflux.message.pojo.User;
 
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -40,8 +40,12 @@ public class UserService {
     }
 
     // 查询多个
-    public Flux<User> getAll() {
+    public Flux<User> getAllMono() {
         return Flux.fromIterable(map.values());
+    }
+
+    public List<User> getAll() {
+        return map.values().stream().toList();
     }
 
     // 保存
