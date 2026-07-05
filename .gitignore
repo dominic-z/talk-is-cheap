@@ -83,3 +83,7 @@ HELP.md
 /**/yarn-error.log*
 /**/pnpm-debug.log*
 /**/lerna-debug.log*
+
+
+# ai agents
+/**/.agents

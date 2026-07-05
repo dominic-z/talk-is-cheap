@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大文件秒传、断点续传、断点下载 Demo</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, "Microsoft YaHei", sans-serif;
+            background: #f5f7fa;
+            color: #1f2937;
+        }
+
+        main {
+            width: min(960px, calc(100vw - 32px));
+            margin: 32px auto;
+        }
+
+        h1 {
+            margin: 0 0 24px;
+            font-size: 28px;
+        }
+
+        section {
+            margin-bottom: 20px;
+            padding: 20px;
+            border: 1px solid #d8dee8;
+            border-radius: 8px;
+            background: #fff;
+        }
+
+        h2 {
+            margin: 0 0 16px;
+            font-size: 18px;
+        }
+
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        input[type="file"],
+        input[type="text"],
+        input[type="number"] {
+            min-height: 36px;
+            padding: 7px 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        input[type="text"] {
+            flex: 1 1 360px;
+        }
+
+        button {
+            min-height: 36px;
+            padding: 8px 14px;
+            border: 0;
+            border-radius: 6px;
+            background: #2563eb;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        progress {
+            width: 100%;
+            height: 18px;
+        }
+
+        .meta,
+        pre {
+            font-size: 13px;
+            line-height: 1.5;
+            color: #475569;
+        }
+
+        pre {
+            min-height: 120px;
+            max-height: 260px;
+            overflow: auto;
+            padding: 12px;
+            border-radius: 6px;
+            background: #0f172a;
+            color: #dbeafe;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+<main>
+    <h1>大文件秒传、断点续传、断点下载 Demo</h1>
+
+    <section>
+        <h2>上传</h2>
+        <div class="row">
+            <input id="fileInput" type="file">
+            <button id="uploadBtn">开始上传</button>
+        </div>
+        <progress id="uploadProgress" value="0" max="100"></progress>
+        <div id="uploadMeta" class="meta">请选择文件。</div>
+    </section>
+
+    <section>
+        <h2>下载</h2>
+        <div class="row">
+            <input id="hashInput" type="text" placeholder="文件 SHA-256 hash">
+            <button id="downloadBtn">完整下载</button>
+        </div>
+        <div class="row">
+            <input id="rangeStart" type="number" min="0" placeholder="Range 起始字节">
+            <input id="rangeEnd" type="number" min="0" placeholder="Range 结束字节">
+            <button id="rangeDownloadBtn">断点下载</button>
+        </div>
+    </section>
+
+    <section>
+        <h2>日志</h2>
+        <pre id="log"></pre>
+    </section>
+</main>
+
+<script>
+    const chunkSize = 4 * 1024 * 1024;
+    const fileInput = document.getElementById('fileInput');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const uploadProgress = document.getElementById('uploadProgress');
+    const uploadMeta = document.getElementById('uploadMeta');
+    const hashInput = document.getElementById('hashInput');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const rangeDownloadBtn = document.getElementById('rangeDownloadBtn');
+    const rangeStart = document.getElementById('rangeStart');
+    const rangeEnd = document.getElementById('rangeEnd');
+    const logView = document.getElementById('log');
+
+    function log(message) {
+        const time = new Date().toLocaleTimeString();
+        logView.textContent = `[${time}] ${message}\n` + logView.textContent;
+    }
+
+    function toHex(buffer) {
+        return Array.from(new Uint8Array(buffer))
+            .map(byte => byte.toString(16).padStart(2, '0'))
+            .join('');
+    }
+
+    async function sha256(file) {
+        log('计算 SHA-256，用于秒传判断。');
+        const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
+        return toHex(digest);
+    }
+
+    function setProgress(done, total) {
+        const percent = total === 0 ? 0 : Math.floor(done * 100 / total);
+        uploadProgress.value = percent;
+        uploadMeta.textContent = `${percent}% (${done} / ${total} bytes)`;
+    }
+
+    async function checkStatus(fileHash, file) {
+        const url = `/api/files/status?fileHash=${encodeURIComponent(fileHash)}&fileName=${encodeURIComponent(file.name)}&size=${file.size}`;
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(await response.text());
+        }
+        return response.json();
+    }
+
+    async function uploadChunk(fileHash, file, start) {
+        const end = Math.min(start + chunkSize, file.size);
+        const chunk = file.slice(start, end);
+        const url = `/api/files/chunk?fileHash=${encodeURIComponent(fileHash)}&fileName=${encodeURIComponent(file.name)}&size=${file.size}`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/octet-stream',
+                'X-Chunk-Start': String(start)
+            },
+            body: chunk
+        });
+        if (!response.ok) {
+            throw new Error(await response.text());
+        }
+        return response.json();
+    }
+
+    async function startUpload() {
+        const file = fileInput.files[0];
+        if (!file) {
+            log('请先选择文件。');
+            return;
+        }
+
+        uploadBtn.disabled = true;
+        try {
+            setProgress(0, file.size);
+            const fileHash = await sha256(file);
+            hashInput.value = fileHash;
+            log(`文件 hash: ${fileHash}`);
+
+            const status = await checkStatus(fileHash, file);
+            if (status.completed) {
+                setProgress(status.size, status.size);
+                log(`秒传成功，文件已存在：${status.downloadUrl}`);
+                return;
+            }
+
+            let uploadedBytes = status.uploadedBytes || 0;
+            setProgress(uploadedBytes, file.size);
+            log(`从 ${uploadedBytes} 字节继续上传。`);
+
+            while (uploadedBytes < file.size) {
+                const result = await uploadChunk(fileHash, file, uploadedBytes);
+                uploadedBytes = result.uploadedBytes;
+                setProgress(uploadedBytes, file.size);
+                if (result.completed) {
+                    log(`上传完成：${result.downloadUrl}`);
+                    break;
+                }
+            }
+        } catch (error) {
+            log(`上传失败：${error.message}`);
+        } finally {
+            uploadBtn.disabled = false;
+        }
+    }
+
+    function downloadUrl(fileHash) {
+        return `/api/files/${encodeURIComponent(fileHash)}/download`;
+    }
+
+    async function downloadWhole() {
+        const fileHash = hashInput.value.trim();
+        if (!fileHash) {
+            log('请填写文件 hash。');
+            return;
+        }
+        window.location.href = downloadUrl(fileHash);
+    }
+
+    async function downloadRange() {
+        const fileHash = hashInput.value.trim();
+        const start = rangeStart.value;
+        const end = rangeEnd.value;
+        if (!fileHash || start === '' || end === '') {
+            log('请填写文件 hash 和 Range 范围。');
+            return;
+        }
+
+        const response = await fetch(downloadUrl(fileHash), {
+            headers: {
+                Range: `bytes=${start}-${end}`
+            }
+        });
+        if (!response.ok && response.status !== 206) {
+            log(`断点下载失败：${await response.text()}`);
+            return;
+        }
+
+        const blob = await response.blob();
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${fileHash}-${start}-${end}.part`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+        log(`断点下载完成，HTTP ${response.status}，${blob.size} bytes。`);
+    }
+
+    uploadBtn.addEventListener('click', startUpload);
+    downloadBtn.addEventListener('click', downloadWhole);
+    rangeDownloadBtn.addEventListener('click', downloadRange);
+</script>
+</body>
+</html>
