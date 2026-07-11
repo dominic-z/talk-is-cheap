@@ -50,6 +50,8 @@ patch_body = {
 }
 
 try:
+    # patch的作用是对现有资源进行部分更新，而不是替换整个资源。通过 patch，我们可以只修改资源的某些字段，而不影响其他字段的值。
+    # 可以用于readinessGate、livenessGate、conditions等字段的更新
     api_response = v1.patch_namespaced_pod_status("web-server", "default", patch_body)
     print(api_response)
 except client.rest.ApiException as e:

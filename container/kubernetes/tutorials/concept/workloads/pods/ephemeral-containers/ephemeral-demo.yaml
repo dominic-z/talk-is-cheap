@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ephemeral-demo
+spec:
+  restartPolicy: Never
+  containers:
+    - name: ephemeral-demo
+    # 这个镜像的作用是让容器一直运行，方便我们在容器中执行命令
+#     它的作用主要有：
+
+# 保持 Pod 一直存活（几乎什么都不做）
+# 创建并持有 Pod 的 Network Namespace
+# 创建并持有 IPC Namespace
+# 作为 Pod 的 "父容器（Sandbox Container）"
+      image: registry.k8s.io/pause:3.1

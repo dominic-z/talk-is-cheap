@@ -1,0 +1,69 @@
+apiVersion: apiextensions.k8s.io/v1
+# CRD（CustomResourceDefinition，自定义资源定义）。它的作用是：向 Kubernetes 声明一种新的资源类型，让 Kubernetes API Server 认识一种原本不存在的对象。
+kind: CustomResourceDefinition
+
+metadata:
+# 这是这个 CRD 自己的名字。CRD 的名字有固定规则：plural.group，也就是 CRD 的复数形式 + "." + CRD 的 group。
+# 这里似乎与下面的 plural 和 group 有点重复，但实际上是有区别的。metadata.name 是 CRD 自身的名字，而 plural 和 group 是 CRD 的定义内容。
+# 举个deployment的例子，下面的例子的name: nginx 是Deployment 对象自己的名字。
+# apiVersion: apps/v1
+# kind: Deployment
+
+# metadata:
+#   name: nginx
+  name: examples.demo.example.com
+
+spec:
+  group: demo.example.com
+
+# scope：决定这个资源属于集群级还是命名空间级，Namespaced 表示命名空间级别的资源，例如Pod、Deployment、Service。对应的值是 Cluster 或 Namespaced。Cluster 表示集群级别的资源，例如Node。
+  scope: Namespaced
+
+  names:
+  # 与上面的额metadata.name不同，下面的内容不是描述 CRD 自己。而是描述这种资源的定义，以后如果有人创建这种资源，它叫什么。
+  # plural：CRD 的复数形式，必须是小写字母。例如，kubectl get examples 就是获取 CRD 的复数形式。deployment也支持通过kubectl get deployments获取Deployment的复数形式。
+  # singular：CRD 的单数形式，必须是小写字母。同样，deployment也支持通过kubectl get deployment获取Deployment的单数形式。
+  # kind：CRD 的类型名称，必须是首字母大写的单词。
+  # shortNames：CRD 的简称，必须是小写字母。
+    plural: examples
+    singular: example
+    kind: Example
+    shortNames:
+      - ex
+
+  versions:
+
+  - name: v1
+    served: true
+    storage: false
+
+    # Example 这种资源里面允许有什么字段，以及字段类型是什么。
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              message:
+                type: string
+
+              count:
+                type: integer
+
+
+  - name: v1beta1
+    # 指明Example这个类别的资源，可以通过v1beta1这个版本来提供访问
+    served: true
+    # 但是Example这个类别的资源，需要使用这个版本来存储
+    storage: true
+
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              message:
+                type: string

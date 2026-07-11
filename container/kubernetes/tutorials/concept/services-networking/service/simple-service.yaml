@@ -21,7 +21,6 @@ spec:
     app.kubernetes.io/lname: my-app
   ports:
     - protocol: TCP
-    # 创建一个service，这个service的端口是8080，会映射到selector命中的pod的80端口
-    # 注意，这个8080端口也只是对于集群内部开放的，从外界无法通过8080端口访问，需要通过另一个分配的端口。--来自豆包
+    # 创建一个service，这个service对外暴露端口是8080，会映射到selector命中的pod的80端口
       port: 8080
       targetPort: 80

@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-readiness
+spec:
+  containers:
+  - name: nginx
+    image: nginx:1.27.3
+
+    ports:
+    - containerPort: 80
+
+    readinessProbe:
+      httpGet:
+      # 如故意把路径写错，HTTP 探针默认认为 只有状态码 200~399 才算成功
+        # path: /not-found
+        path: /
+        port: 80
+
+      initialDelaySeconds: 5 # 等待5s
+      periodSeconds: 5 # 然后每隔 5 秒再检查一次
+      timeoutSeconds: 2 
+      failureThreshold: 3
+      successThreshold: 1

@@ -1,0 +1,10 @@
+apiVersion: demo.example.com/v1beta1
+kind: Example
+
+metadata:
+  name: test-example
+
+spec:
+  message: "hello storage version"
+  # 不能写这个定义，因为在 v1beta1 版本中，不存在count这个字段的定义
+  # count: 100

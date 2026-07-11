@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+# 这个name的作用是指定Pod的名称，Pod的名称在同一个命名空间中必须唯一，如果下面hostname和subdomain没有指定，Pod的主机名和FQDN都将会是busybox-1
+  name: busybox-1
+spec:
+# kubectl exec -it busybox-1 -- hostname -f
+# kubectl exec -it busybox-1 -- hostname 将返回busybox-2
+  hostname: busybox-2
+  subdomain: busybox-subdomain
+  containers:
+  - image: busybox:1.28
+    command:
+      - sleep
+      - "3600"
+    # 这个name的作用是指定容器的名称，容器的名称在同一个Pod中必须唯一
+    name: busybox

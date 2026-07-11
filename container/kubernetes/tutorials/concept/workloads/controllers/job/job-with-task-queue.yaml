@@ -10,7 +10,7 @@ spec:
       restartPolicy: Never
       containers:
       - name: pi
-        image: goose-good/python:3.9.22
+        image: python:3.7-alpine
         command:          
         - python3
         - -c
@@ -18,6 +18,7 @@ spec:
           import os, sys, random
           print("Hello world")
           if random.randint(0,2) % 2 == 0:
-            sys.exit(1)          
+            sys.exit(1)
+  # Job 里的 Pod 失败后，Kubernetes 最多允许重新创建多少次 Pod，超过这个次数，Job 标记为失败（Failed）。          
   backoffLimit: 4
 

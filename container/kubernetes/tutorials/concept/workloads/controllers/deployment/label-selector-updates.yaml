@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: label-selector-updates
+  labels:
+    app: nginx
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: pod-my-nginx
+      version: v1
+      # 添加新标签
+      # func: router
+  template:
+    metadata:
+      labels:
+        app: pod-my-nginx
+        version: v1
+        # func: router
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.27.3
+        ports:
+        - containerPort: 80

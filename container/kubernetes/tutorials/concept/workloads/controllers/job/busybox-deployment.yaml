@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: busybox-deployment
+  labels:
+    app: busybox
+spec:
+  replicas: 3
+# .spec.selector 必须匹配 .spec.template.metadata.labels，否则请求会被 API 拒绝。
+# 
+  selector:
+    matchLabels:
+      app: my-busybox
+  template:
+    metadata:
+      labels:
+        app: my-busybox
+    spec:
+      containers:
+      - name: busybox
+        image: goose-good/busybox:1.37.0
+        command: ["sh", "-c", "echo Hello Kubernetes!"]

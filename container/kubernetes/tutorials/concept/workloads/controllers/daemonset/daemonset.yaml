@@ -14,9 +14,10 @@ spec:
       labels:
         name: fluentd-elasticsearch
     spec:
+
+    # 在一些节点上，可能会配置Taints:  node-role.kubernetes.io/control-plane:NoSchedule，意思是，不允许没有对应 toleration 的 Pod 调度到这个节点。
+    # 但加了 toleration 后，Pod 就可以调度到这个节点上了。
       tolerations:
-      # 这些容忍度设置是为了让该守护进程集在控制平面节点上运行
-      # 如果你不希望自己的控制平面节点运行 Pod，可以删除它们
       - key: node-role.kubernetes.io/control-plane
         operator: Exists
         effect: NoSchedule
