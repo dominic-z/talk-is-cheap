@@ -18,6 +18,11 @@ spec:
         - name: myapp
           image: goose-good/alpine:3
           command: ['sh', '-c', 'while true; do echo "logging" >> /opt/logs.txt; sleep 1; done']
+          resources:
+            limits:
+              memory: 128Mi
+            requests:
+              memory: 64Mi
           volumeMounts:
             - name: data
               mountPath: /opt
@@ -26,9 +31,15 @@ spec:
           image: goose-good/alpine:3
           restartPolicy: Always
           command: ['sh', '-c', 'tail -F /opt/logs.txt']
+          resources:
+            limits:
+              memory: 128Mi
+            requests:
+              memory: 64Mi
           volumeMounts:
             - name: data
               mountPath: /opt
+      # sidecar和主应用容器共享同一个卷，这样sidecar容器就可以访问主应用容器的日志文件
       volumes:
         - name: data
           emptyDir: {}

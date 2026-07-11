@@ -6,10 +6,10 @@ kubernetes的[官方教程](https://kubernetes.io/zh-cn/docs/tutorials/hello-min
 学习顺序：
 
 1. 教程-你好，minikube：文档中几乎全部都可以通过minikube来进行学习
-2. 概念-kubernetes架构
-3. 教程-学习Kubernetes基础知识
-4. 概念-概述-Kubernetes对象
-4. 概念-概述-容器
+2. 教程-学习Kubernetes基础知识
+3. 概念-kubernetes架构，不包含里面的节点、节点控制面通信的部分，建立大体的概念即可。
+4. 概念-概述-Kubernetes对象：概念性地介绍了k8s的组成部分，初步理解即可
+4. 概念-容器：概念性地介绍了容器中的组成部分，初步理解即可
 4. 任务-配置pods和容器-配置pod使用Config Map：看“教程-配置-教程-学习Kubernetes基础知识”发现这个任务是前置条件
 4. 概念-工作负载：觉得教程中更多是基础只是串联的演练，看起来还是要先看概念或者任务，概念中看不太懂的地方可以问豆包或者先跳过，尤其是一些概述介绍，看不懂的部分同一笔记于章节中最后的“看不懂的额部分”中
 4. 从“概念-服务、负载均衡和联网”看到了“配置”，非常长，但都是基础知识。
@@ -18,7 +18,7 @@ kubernetes的[官方教程](https://kubernetes.io/zh-cn/docs/tutorials/hello-min
 4. 概念-调度、抢占和驱逐：看完这一节就算是死读书结束了，可以开始搞task了
 
 
-
+[我是一名java开发工程师，目前在突击复习k8s，正在看k8s的文档：https://kubernetes.io/zh-cn/docs/home/，但我只有一天的时间，你建议我看哪些章节即可？](https://chatgpt.com/s/t_6a51c95ec4a88191b31f7ee978bee906)
 
 
 # 入门
@@ -38,6 +38,45 @@ sudo dpkg -i minikube_latest_amd64.deb
 curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
 ```
 很慢。
+
+如果minikube长时间没启动，再次启动的时候可能会卡在`Verifying Kubernetes components...`，查看启动日志
+```shell
+# 下面两种方法一样
+minikube ssh
+sudo journalctl -u kubelet --no-pager -n 100
+sudo journalctl -u kubelet -f
+
+# 在宿主机
+minikube logs -f 
+```
+
+发现如下报错：
+> Jul 06 14:14:58 minikube kubelet[4385]: E0706 14:14:58.125645    4385 bootstrap.go:266] "Unhandled Error" err="part of the existing bootstrap client certificate in /etc/kubernetes/kubelet.conf is expired: 2026-05-17 12:05:13 +0000 UTC" logger="UnhandledError"
+> Jul 06 14:14:58 minikube kubelet[4385]: E0706 14:14:58.126838    4385 run.go:72] "command failed" err="failed to run Kubelet: unable to load bootstrap kubeconfig: stat /etc/kubernetes/bootstrap-kubelet.conf: no such file or directory"
+> 问题已经非常明确了！日志直接指出了两个致命错误：
+> 证书过期：kubelet.conf 中的客户端证书已于 2026-05-17 过期（当前是 2026-07-06）。
+> 引导文件丢失：bootstrap-kubelet.conf 文件不存在，导致 kubelet 无法自动重新申请新证书。
+> 这通常是因为 Minikube 集群被长期暂停/停止后再次启动，或者系统时间发生过跳变导致的。不要尝试手动修复证书，对于 Minikube 这种本地开发环境，最快且最彻底的解决方案是清理并重建集群。
+
+执行`minikube delete --all --purge`，然后重启`minikube start`，会重新开始捞镜像。
+
+众所周知的原因一些镜像捞不下来，可以采用下面的方法，注意，我没有指定`--image-mirror-country='cn' `，因为指定了地区后，minikube的一些插件所依赖的镜像也都会被修改为aliyun的镜像，但aliyun的一些镜像是不全的，比如`minikube addons enable metrics-server`会提示：`Using image registry.k8s.io/metrics-server/metrics-server:v0.7.2`，如果指定了地区，这个路径会变为aliyun的仓库，而这个这个插件所依赖的镜像在aliyun就没有
+https://developer.aliyun.com/article/1686551，我用的46版本
+```shell
+docker pull registry.cn-hangzhou.aliyuncs.com/google_containers/kicbase:v0.0.46
+
+minikube delete
+
+minikube start --base-image='registry.cn-hangzhou.aliyuncs.com/google_containers/kicbase:v0.0.46'
+
+```
+
+
+另外，minikube对proxy敏感，因为毕竟还是通过http协议与集群进行交互的，因此需要参考https://minikube.sigs.k8s.io/docs/handbook/vpn_and_proxy/，进行配置，如果在vscode中使用，更新环境变量之后需要重启
+
+
+
+
 
 # 任务
 
@@ -98,7 +137,7 @@ kubectl describe configmaps game-config-2
 ....
 
 kubectl delete configmap game-config-2
-# 基于多个文件，注意frome-file是不对文件内容做处理，直接将文件中所有数据直接当做value
+# 基于多个文件，注意frome-file是不对文件内容做处理，直接将文件中所有数据直接当做value，Kubernetes 不理解 properties 文件
 kubectl create configmap game-config-2 --from-file=./game.properties --from-file=./ui.properties
 kubectl describe configmaps game-config-2
 kubectl get configmap game-config-2 -o yaml
@@ -535,11 +574,6 @@ kubernetes-dashboard   kubernetes-dashboard-7779f9b69b-qmfn5        0/1     Imag
 查看这两个容器`kubectl describe pod dashboard-metrics-scraper-5d59dccf9b-plx77 -n kubernetes-dashboard`发现镜像拉取失败
 
 ```shell
-  Warning  Failed          4m31s                   kubelet  Failed to pull image "docker.io/kubernetesui/metrics-scraper:v1.0.8@sha256:76049887f07a0476dc93efc2d3569b9529bf982b22d29f356092ce206e98765c": Error response from daemon: Get "https://registry-1.docker.io/v2/": dial tcp 174.36.196.242:443: i/o timeout
-  Warning  Failed          3m26s (x16 over 8m52s)  kubelet  Error: ImagePullBackOff
-  Normal   BackOff         3m12s (x17 over 8m52s)  kubelet  Back-off pulling image "docker.io/kubernetesui/metrics-scraper:v1.0.8@sha256:76049887f07a0476dc93efc2d3569b9529bf982b22d29f356092ce206e98765c"
-  Normal   SandboxChanged  2m30s                   kubelet  Pod sandbox changed, it will be killed and re-created.
-  Warning  Failed          88s (x2 over 119s)      kubelet  Failed to pull image "docker.io/kubernetesui/metrics-scraper:v1.0.8@sha256:76049887f07a0476dc93efc2d3569b9529bf982b22d29f356092ce206e98765c": Error response from daemon: Get "https://registry-1.docker.io/v2/": net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)
   Normal   Pulling         62s (x3 over 2m29s)     kubelet  Pulling image "docker.io/kubernetesui/metrics-scraper:v1.0.8@sha256:76049887f07a0476dc93efc2d3569b9529bf982b22d29f356092ce206e98765c"
   Warning  Failed          47s (x3 over 119s)      kubelet  Error: ErrImagePull
   Warning  Failed          47s                     kubelet  Failed to pull image "docker.io/kubernetesui/metrics-scraper:v1.0.8@sha256:76049887f07a0476dc93efc2d3569b9529bf982b22d29f356092ce206e98765c": Error response from daemon: Get "https://registry-1.docker.io/v2/": dial tcp 69.63.190.26:443: i/o timeout
@@ -559,9 +593,15 @@ kubernetes-dashboard   kubernetes-dashboard-7779f9b69b-qmfn5        0/1     Imag
 
 ```
 
+解决方案同后文启用插件的解决
+
+
 #### 修改镜像路径
 
 随后可以有两种方式，如上文博客所示，一个方法是修改容器的路径
+
+
+
 
 
 
@@ -598,6 +638,27 @@ kubernetes-dashboard   kubernetes-dashboard-7779f9b69b-qmfn5        0/1     Imag
 ### 创建 Deployment
 
 执行下面命令的时候，发现仍然无法启动
+
+注意，minikube并不能直接使用docker的镜像，需要执行minikube load导入后，minikube才能用
+
+```shell
+docker pull crpi-vgj0j6781pn5263n.cn-hangzhou.personal.cr.aliyuncs.com/goose-good/agnhost:2.53
+docker tag  crpi-vgj0j6781pn5263n.cn-hangzhou.personal.cr.aliyuncs.com/goose-good/agnhost:2.53 registry.k8s.io/e2e-test-images/agnhost:2.53
+
+minikube image load registry.k8s.io/e2e-test-images/agnhost:2.53
+
+kubectl create deployment hello-node --image=registry.k8s.io/e2e-test-images/agnhost:2.53 -- /agnhost netexec --http-port=8080
+
+kubectl get events
+
+# 可以通过这个配置看到一个certificate-authority: /home/dominiczhu/.minikube/ca.crt
+kubectl config view 
+
+
+# 记得考虑本机proxy的影响
+minikube service hello-node
+```
+
 
 ```shell
 # 运行包含 Web 服务器的测试容器镜像
@@ -731,7 +792,7 @@ Events:
 
 ```
 
-求助anjia大神构建了一个[issue](https://github.com/anjia0532/gcr.io_mirror/issues/4354)，突发奇想，我是不是可以自己pull下来然后打tag，下次试试
+求助anjia大神构建了一个[issue](https://github.com/anjia0532/gcr.io_mirror/issues/4354)
 
 ```shell
 #重来
@@ -780,6 +841,14 @@ service/metrics-server   ClusterIP   10.102.249.140   <none>        443/TCP     
 
 ```
 
+另一个方法是：
+使用metrics-server插件的话，需要使用`registry.k8s.io/metrics-server/metrics-server:v0.7.2`这个镜像，但即使我按照上述方式导入了镜像，也仍然会报错
+> "Error syncing pod, skipping" err="failed to \"StartContainer\" for \"metrics-server\" with ImagePullBackOff: \"Back-off pulling image \\\"registry.k8s.io/metrics-server/metrics-server:v0.7.2@sha256:ffcb2bf004d6aa0a17d90e0247cf94f2865c8901dcab4427034c341951c239f9\\\": ErrImagePull: Error response from daemon: Get \\\"https://europe-west3-docker.pkg.dev/v2/k8s-artifacts-prod/images/metrics-server/metrics-server/manifests/sha256:ffcb2bf004d6aa0a17d90e0247cf94f2865c8901dcab4427034c341951c239f9\\\": dial tcp 74.125.20.82:443: connect: connection refused\"" pod="kube-system/metrics-server-7fbb699795-6fqvx" podUID="9c927488-9a0e-440a-b760-e9e4986ad10d"
+
+这是因为我通过拉到本地的镜像的sha256签名并不是`ffcb2bf004d6aa0a17d90e0247cf94f2865c8901dcab4427034c341951c239f9`，因此不被认可，`kubectl edit deployment metrics-server -n kube-system`修改这个插件的指定镜像即可，参考：https://www.qianwen.com/share/chat/2c4c059c519e41058b21edd76276ac75
+
+
+
 ### 小结
 
 概念：
@@ -802,61 +871,12 @@ service/metrics-server   ClusterIP   10.102.249.140   <none>        443/TCP     
 
 非常晦涩，问豆包“Kubernetes解决了什么问题？”给的答案很好理解了，说白了，就是原本都是要准备好多台物理服务器或者虚拟机，每个物理服务器或者虚拟机运行一个或者多个应用，在微服务情况下，要部署一堆应用，如果部署在同一台机器下，应用之间会抢资源；如果部署在不同的机器下，管理多个机器挨个部署管理网络配置dns非常麻烦。而k8s相当于作为一个中间层屏蔽了底层的“物理服务器或者虚拟机”，面向应用提供统一的计算存储资源、网络管理、高可用等功能。
 
-> #### 1. **容器编排与调度**
->
-> - **问题**：
->   传统部署方式中，应用与基础设施强绑定（如 VM 或物理机），资源利用率低且扩展困难。容器化后，单个应用可能拆分为数十个微服务容器，手动管理这些容器的部署、网络和生命周期变得极其复杂。
-> - K8s 解决方案：
->   - **自动化调度**：根据资源需求和节点状态，自动将容器调度到合适的节点上。
->   - **水平扩展**：一键调整应用副本数（如从 3 个 Pod 扩展到 10 个）。
->   - **资源隔离**：通过资源配额（Requests/Limits）确保容器间互不干扰。
->
-> #### 2. **高可用性与自愈**
->
-> - **问题**：
->   容器可能因各种原因（如代码崩溃、节点故障）意外终止，传统方式需人工干预恢复。
-> - K8s 解决方案：
->   - **副本机制**：通过 Deployment、StatefulSet 等控制器维持指定数量的 Pod 副本。
->   - **健康检查**：通过 Liveness Probe 和 Readiness Probe 自动检测和重启不健康的容器。
->   - **自动故障转移**：节点故障时，Pod 会自动迁移到其他节点。
->
-> #### 3. **服务发现与负载均衡**
->
-> - **问题**：
->   在微服务架构中，服务间调用关系复杂，服务实例动态变化（如扩容、故障重启），传统 DNS 难以满足需求。
-> - K8s 解决方案：
->   - **Service 资源**：为一组 Pod 提供稳定的访问入口（如 ClusterIP、NodePort、LoadBalancer）。
->   - **自动负载均衡**：Service 自动将请求分发到后端 Pod。
->   - **DNS 集成**：内部域名解析（如`my-service.my-namespace.svc.cluster.local`）。
->
-> #### 4. **滚动更新与回滚**
->
-> - **问题**：
->   传统应用升级需停机，新版本可能存在兼容性问题，回滚困难。
-> - K8s 解决方案：
->   - **滚动更新**：逐个替换旧版本 Pod，确保服务无中断。
->   - **版本控制**：自动保存历史版本，支持一键回滚。
->   - **灰度发布**：通过金丝雀部署（Canary Release）逐步验证新版本。
->
-> #### 5. **配置与密钥管理**
->
-> - **问题**：
->   应用配置（如数据库连接字符串、API 密钥）硬编码在镜像中，不同环境（开发 / 测试 / 生产）需频繁修改。
-> - K8s 解决方案：
->   - **ConfigMap**：存储非敏感配置，与容器解耦。
->   - **Secret**：安全存储敏感信息（如密码、证书），避免明文暴露。
->   - **动态注入**：通过环境变量或挂载文件的方式注入配置。
-
 一个K8s集群由多个角色组成：
-
 - Node：物理机或者虚拟机，**节点是一个虚拟机或者物理机，它在 Kubernetes 集群中充当工作机器的角色。** 
   - Kubelet：它管理节点而且是节点与控制面通信的代理。
   - docker：提供容器化服务的仍然是docker
 - Control Plane：**控制面负责管理整个集群。** 控制面协调集群中的所有活动，例如调度应用、维护应用的期望状态、对应用扩容以及将新的更新上线等等。
 
-
-
-随后阅读：[Kubernetes 架构](# Kubernetes 架构)
 
 ### 部署应用
 
@@ -963,94 +983,13 @@ Hello Kubernetes bootcamp! | Running on: kubernetes-bootcamp-9bc58d867-x9x9v | v
 
 #### pod
 
-> **只有容器紧耦合并且需要共享磁盘等资源时，才应将其编排在一个 Pod 中。**
+pod的英文是豌豆荚，在k8s之中，他代表着一个最小运行单元，可以运行多个容器。
 
-不过我暂时想不出什么情况需要共享磁盘资源就是了。。。
+#### 节点
 
+> 容器运行时（如 Docker）负责从镜像仓库中拉取容器镜像、解压缩容器以及运行应用。
 
-
-
-
-#### 使用 kubectl 进行故障排查
-
-```shell
-(base) dominiczhu@ubuntu:~/Desktop$ kubectl get pods
-NAME                                  READY   STATUS    RESTARTS   AGE
-kubernetes-bootcamp-9bc58d867-x9x9v   1/1     Running   0          34m
-(base) dominiczhu@ubuntu:~/Desktop$ kubectl describe pods
-Name:             kubernetes-bootcamp-9bc58d867-x9x9v
-Namespace:        default
-Priority:         0
-Service Account:  default
-Node:             minikube/192.168.49.2
-Start Time:       Tue, 20 May 2025 21:35:24 +0800
-Labels:           app=kubernetes-bootcamp
-                  pod-template-hash=9bc58d867
-Annotations:      <none>
-Status:           Running
-IP:               10.244.0.38
-IPs:
-  IP:           10.244.0.38
-Controlled By:  ReplicaSet/kubernetes-bootcamp-9bc58d867
-Containers:
-  kubernetes-bootcamp:
-    Container ID:   docker://51a532d20e1f860dcb18fb8628fe6c31614695693e700cfdf1b8d443ae46628f
-    Image:          gcr.io/google-samples/kubernetes-bootcamp:v1
-    Image ID:       docker-pullable://gcr.io/google-samples/kubernetes-bootcamp@sha256:0d6b8ee63bb57c5f5b6156f446b3bc3b3c143d233037f3a2f00e279c8fcc64af
-........
-```
-
-
-
-
-
-#### 在容器中执行命令
-
-可以通过kubectl来进入容器了
-
-```shell
-(base) dominiczhu@ubuntu:~/Desktop$ kubectl exec kubernetes-bootcamp-9bc58d867-x9x9v -- env 
-PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-HOSTNAME=kubernetes-bootcamp-9bc58d867-x9x9v
-KUBERNETES_PORT_443_TCP_PROTO=tcp
-KUBERNETES_PORT_443_TCP_PORT=443
-KUBERNETES_PORT_443_TCP_ADDR=10.96.0.1
-KUBERNETES_SERVICE_HOST=10.96.0.1
-KUBERNETES_SERVICE_PORT=443
-KUBERNETES_SERVICE_PORT_HTTPS=443
-KUBERNETES_PORT=tcp://10.96.0.1:443
-KUBERNETES_PORT_443_TCP=tcp://10.96.0.1:443
-NPM_CONFIG_LOGLEVEL=info
-NODE_VERSION=6.3.1
-HOME=/root
-
-(base) dominiczhu@ubuntu:~/Desktop$ kubectl exec -ti kubernetes-bootcamp-9bc58d867-x9x9v -- bash
-root@kubernetes-bootcamp-9bc58d867-x9x9v:/# cat server.js
-var http = require('http');
-var requests=0;
-var podname= process.env.HOSTNAME;
-var startTime;
-var host;
-var handleRequest = function(request, response) {
-  response.setHeader('Content-Type', 'text/plain');
-  response.writeHead(200);
-  response.write("Hello Kubernetes bootcamp! | Running on: ");
-  response.write(host);
-  response.end(" | v=1\n");
-  console.log("Running On:" ,host, "| Total Requests:", ++requests,"| App Uptime:", (new Date() - startTime)/1000 , "seconds", "| Log Time:",new Date());
-}
-var www = http.createServer(handleRequest);
-www.listen(8080,function () {
-    startTime = new Date();;
-    host = process.env.HOSTNAME;
-    console.log ("Kubernetes Bootcamp App Started At:",startTime, "| Running On: " ,host, "\n" );
-});
-
-
-root@kubernetes-bootcamp-9bc58d867-x9x9v:/# curl http://localhost:8080
-Hello Kubernetes bootcamp! | Running on: kubernetes-bootcamp-9bc58d867-x9x9v | v=1
-```
-
+container runtime翻译成"容器运行时"，不如翻译成容器运行环境
 
 
 ### 公开地暴露你的应用
@@ -1079,25 +1018,6 @@ NAME                  TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)         
 kubernetes            ClusterIP   10.96.0.1       <none>        443/TCP          3d2h
 kubernetes-bootcamp   NodePort    10.103.27.125   <none>        8080:30822/TCP   42s
 (base) dominiczhu@ubuntu:~/Desktop$ kubectl describe services/kubernetes-bootcamp
-Name:                     kubernetes-bootcamp
-Namespace:                default
-Labels:                   app=kubernetes-bootcamp
-Annotations:              <none>
-Selector:                 app=kubernetes-bootcamp
-Type:                     NodePort
-IP Family Policy:         SingleStack
-IP Families:              IPv4
-IP:                       10.103.27.125
-IPs:                      10.103.27.125
-Port:                     <unset>  8080/TCP
-TargetPort:               8080/TCP
-NodePort:                 <unset>  30822/TCP
-Endpoints:                10.244.0.38:8080
-Session Affinity:         None
-External Traffic Policy:  Cluster
-Internal Traffic Policy:  Cluster
-Events:                   <none>
-
 
 # 查看这个service的端口
 (base) dominiczhu@ubuntu:~/Desktop$ kubectl get services/kubernetes-bootcamp -o go-template='{{(index .spec.ports 0).nodePort}}'
@@ -1128,14 +1048,6 @@ kubernetes-bootcamp   1/1     1            1           68m
 
 # 对于service、pod也是同理
 (base) dominiczhu@ubuntu:~/Desktop$ kubectl describe pod/kubernetes-bootcamp-9bc58d867-x9x9v
-Name:             kubernetes-bootcamp-9bc58d867-x9x9v
-Namespace:        default
-Priority:         0
-Service Account:  default
-Node:             minikube/192.168.49.2
-Start Time:       Tue, 20 May 2025 21:35:24 +0800
-Labels:           app=kubernetes-bootcamp
-                  pod-template-hash=9bc58d867
 
 
 (base) dominiczhu@ubuntu:~/Desktop$ kubectl get pods -l app=kubernetes-bootcamp
@@ -1144,17 +1056,9 @@ kubernetes-bootcamp-9bc58d867-x9x9v   1/1     Running   0          69m
 
 # 手动打标签
 (base) dominiczhu@ubuntu:~/Desktop$ kubectl label pods kubernetes-bootcamp-9bc58d867-x9x9v version=v1
-pod/kubernetes-bootcamp-9bc58d867-x9x9v labeled
+
 (base) dominiczhu@ubuntu:~/Desktop$ kubectl describe pod/kubernetes-bootcamp-9bc58d867-x9x9v
-Name:             kubernetes-bootcamp-9bc58d867-x9x9v
-Namespace:        default
-Priority:         0
-Service Account:  default
-Node:             minikube/192.168.49.2
-Start Time:       Tue, 20 May 2025 21:35:24 +0800
-Labels:           app=kubernetes-bootcamp
-                  pod-template-hash=9bc58d867
-                  version=v1
+
 
 ```
 
@@ -1166,6 +1070,11 @@ Labels:           app=kubernetes-bootcamp
 (base) dominiczhu@ubuntu:~/Desktop$ kubectl delete service -l app=kubernetes-bootcamp
 service "kubernetes-bootcamp" deleted
 ```
+
+四种公开service的类型：https://www.qianwen.com/share/chat/4744d61337be4882a4925452b63ed61f。其中ExternalName的service只是说这个内的dns服务了注册一个指向外部域名的cname，这样内部节点可以通过访问这个service访问外部节点了。
+
+> Endpoints 对象：https://www.qianwen.com/share/chat/adeb67e40dd247fe96a0eab72b787606
+
 
 ### 扩缩你的应用
 
@@ -1413,39 +1322,33 @@ kubectl delete deployments/kubernetes-bootcamp services/kubernetes-bootcamp
 
 ## 概述
 
+```shell
+kubectl apply -f nginx-deployment.yaml
+kubectl get deployment
+```
+
 ### Kubernetes对象
 我理解所谓的对象，就是K8s集群中的一种抽象的定义，节点、部署、pod都可以是一个对象，一个对象最关键的就是期望状态和当前状态，k8s作为一个集群，会尽可能让一个对象达到期望的状态。创建对象的时候通过Spec描述Kubernetes对象，例如描述一个Deployment需要多少个副本；
-
-> 
-> Q： 在前面的示例中我并没有看到什么例子用这种指定Spec的ymal文件的方式创建对象，另外我都是通过kubectl创建对象的，通过kubectl创建Deployment并指定镜像的时候算不算一种spec？
-> A：通过kubectl创建对象是对象管理的一种方式，还有其他的对象管理方式，可以用到yaml文件，详见“Kubernetes对象管理”
-
 
 #### Kubernetes对象管理
 
 有三种方式
 
 1. 指令式命令：就是kubectl的命令直接创建、管理对象，并且在命令行里配置对象；
-
-2. 指令式对象配置：仍然使用kubectl，但是相关对象的配置都在一个yaml文件中。比如`kubectl create -f nginx.yaml`就是按照`nginx.yaml`来**创建**。
-
-3. 声明式对象配置：我个人理解，这个东西的作用就是k8s自动来看当前集群和yaml配置文件的差异，然后使得k8s集群变更为yaml配置文件的状态，这个是通过问豆包“kubectl diff”的作用来理解的。
-    例如下面功能，通过`kubectl diff`来比较当前与配置文件的差异，例如如果发现配置文件中的对象不存在，那么kubectl就希望创建一个，但diff操作只是预览，通过apply才是真正执行来修正差异，可能是创建、删除、变更名称等等。
+2. 指令式对象配置：仍然使用kubectl，但是相关对象的配置都在一个yaml文件中。比如`kubectl create -f nginx.yaml`就是按照`nginx.yaml`来**创建**，这里指明了具体的行为是create。
+3. 声明式对象配置：`kubectl apply`，作用就是k8s自动来看当前集群的状态和yaml配置文件的差异，然后使得k8s集群变更为yaml配置文件的状态，不需要手动指定动作，k8s自己判断要做什么动作，例如创建、变更，例如下面功能，通过`kubectl diff`来比较当前与配置文件的差异，例如如果发现配置文件中的对象不存在，那么kubectl就希望创建一个，但diff操作只是预览，通过apply才是真正执行来修正差异，可能是创建、删除、变更名称等等。
 
   ```shell
-  kubectl diff -f configs/
-  kubectl apply -f configs/
-  ```
+kubectl diff -f nginx-deployment.yaml
+kubectl apply -f nginx-deployment.yaml
+```
 
-  
+
 
 #### 对象名称和ID
 
-每个对象的名称在同一资源的同一名称空间中得是唯一的。
 
-> 名称在同一资源的所有API版本中必须是唯一的。
-
-这句话我理解的意思是说，k8s可能会存在多个api版本，但是对象的名称应该一直是唯一的，与API的版本无关。不过这个也应该是理所应当。
+在spec定义中，会有一个apiVersion定义，例如`apiVersion: apps/v1`，但是这个`v1`并不会作为区分对象的一个变量。
 
 #### 标签和选择算符
 
@@ -1627,45 +1530,13 @@ namespace "dev" deleted
 
 > When you create a [Service](https://kubernetes.io/docs/concepts/services-networking/service/), it creates a corresponding [DNS entry](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/). This entry is of the form `<service-name>.<namespace-name>.svc.cluster.local`, which means that if a container only uses `<service-name>`, it will resolve to the service which is local to a namespace. 
 
-当启动了一个service之后，就会创建一个与这个service相关的DNS入口，格式就是`<service-name>.<namespace-name>.svc.cluster.local`，这个很像一个真正的网站，其他容器可以通过`http://<service-name>.<namespace-name>.svc.cluster.local`来访问这个service，同一个namespace里的容器可以只使用`<service-name>`访问这个服务；
+当启动了一个service之后，就会创建一个与这个service相关的DNS入口，对应的域名就是`<service-name>.<namespace-name>.svc.cluster.local`，这个很像一个真正的网站，其他容器可以通过`<service-name>.<namespace-name>.svc.cluster.local`来访问这个service，同一个namespace里的容器可以只使用`<service-name>`访问这个服务；
 
 
 
 Q：svc.cluster.local是啥？
 
-A：参考[Service 与 Pod 的 DNS](https://kubernetes.io/zh-cn/docs/concepts/services-networking/dns-pod-service/)，就是字符意义上的`svc.cluster.local`，纯字符串。没啥别的含义。
-
-> By creating namespaces with the same name as [public top-level domains](https://data.iana.org/TLD/tlds-alpha-by-domain.txt), Services in these namespaces can have short DNS names that overlap with public DNS records. Workloads from any namespace performing a DNS lookup without a [trailing dot](https://datatracker.ietf.org/doc/html/rfc1034#page-8) will be redirected to those services, taking precedence over public DNS.
-
-这块看的不太懂，“[public top-level domains](https://data.iana.org/TLD/tlds-alpha-by-domain.txt)”值得是顶级域名，例如最后那个com，这些域名等级会在dns中起到作用，具体问豆包“DNS和域名是如何工作的”，如果你创建了一个叫做“com”的namespace，如果其他容器执行一个“a DNS lookup without a [trailing dot](https://datatracker.ietf.org/doc/html/rfc1034#page-8) ”，例如访问一个“example.com”，那么这个dns解析就会解析到“com”的namespace的example服务里，而不会访问公共的dns服务器。
-
-另，这个trailing dot其实是说，我们真实的网站最后还应该有一个点的，例如`www.google.com.`才是完整的，最后那个点就是trailing dot
-
-> 当用户在浏览器中输入 `www.example.com` 时，DNS 解析过程如下（以**递归解析模式**为例）：
->
-> #### **1. 客户端发起查询（浏览器 / 操作系统）**
->
-> - 用户输入域名后，浏览器先检查**本地缓存**（浏览器缓存或操作系统的 `hosts` 文件），若存在记录则直接使用 IP 地址，否则向**本地 DNS 服务器**（递归解析器，通常由 ISP 提供）发送查询请求。
->
-> #### **2. 本地 DNS 服务器递归查询**
->
-> 本地 DNS 服务器通过**迭代查询**逐步获取域名的 IP 地址，过程如下：
->
-> ##### **步骤 1：查询根域名服务器（Root Nameservers）**
->
-> - 本地 DNS 服务器首先向**根域名服务器**（全球共 13 组，用 `A-M` 标识，如 `a.root-servers.net`）发送查询，询问 `.com` 顶级域名服务器的地址。
-> - **根域名服务器响应**：返回 `.com` 顶级域名服务器的 IP 地址（如 `gTLD` 服务器 `com1.verisign-grs.com`）。
->
-> ##### **步骤 2：查询顶级域名服务器（TLD Nameservers）**
->
-> - 本地 DNS 服务器向 `.com` 顶级域名服务器发送查询，询问 `example.com` 域名的**权威域名服务器**地址。
-> - **TLD 服务器响应**：返回 `example.com` 的权威服务器地址（如 `ns1.example.com` 和 `ns2.example.com` 的 IP）。
->
-> ##### **步骤 3：查询权威域名服务器（Authoritative Nameservers）**
->
-> - 本地 DNS 服务器向 `example.com` 的权威服务器发送查询，询问 `www.example.com` 的 IP 地址。
-> - **权威服务器响应**：返回具体的 IP 地址（如 `192.0.2.1`），并附带 TTL（生存时间，用于缓存）。
-
+A：当创建一个`<service>`的时候，k8s会加这个后缀之后丢进dns服务中，目的是为了和其他的真实的域名做区分吧
 
 
 Q：如果服务会被解析成`<service-name>.<namespace-name>.svc.cluster.local`，那即使我有一个叫做com的namespace，某个pod如果希望访问`someservice.com`的时候，应该也不会收到这个叫做com的namespace影响，而是应该直接访问外部的dns服务器才对把？
@@ -1674,16 +1545,11 @@ A：参考[Service 与 Pod 的 DNS](https://kubernetes.io/zh-cn/docs/concepts/se
 
 > DNS 查询可以使用 Pod 中的 `/etc/resolv.conf` 展开。 Kubelet 为每个 Pod 配置此文件。 例如，对 `data` 的查询可能被扩展为 `data.test.svc.cluster.local`
 
-todo：
-
-Q：那我如果真的要访问一个外部的网站，会不会也被展开导致访问出错呢？
-
-A：我估计CoreDNS会发现这个是个顶级域名，回去问外部的DNS服务器，我估计是这样的。。。
 
 
 
 #### 注解
-注解和label类似，只不过label可以用来区分、查询不同的对象，但同时对label的字符限制更多，而注解不能用来区分、查询不同的对象，但对注解的字符限制更少，简单说，注解更像是一些贴在对象上的备注。
+注解和label类似，只不过label可以用来区分、查询不同的对象，但同时对label的字符限制更多，而注解不能用来区分、查询不同的对象，但对注解的字符限制更少，简单说，注解更像是一些贴在对象上的备注。另外，注解为各类控制器、插件、中间件传递配置参数
 
 ```shell
 
@@ -1734,12 +1600,6 @@ kubernetes-bootcamp-9bc58d867-x9x9v   1/1     Running   1 (26m ago)   39h
 
 
 
-> 一个常见的 Finalizer 的例子是 `kubernetes.io/pv-protection`， 它用来防止意外删除 `PersistentVolume` 对象。 当一个 `PersistentVolume` 对象被 Pod 使用时， Kubernetes 会添加 `pv-protection` Finalizer。 如果你试图删除 `PersistentVolume`，它将进入 `Terminating` 状态， 但是控制器因为该 Finalizer 存在而无法删除该资源。 当 Pod 停止使用 `PersistentVolume` 时， Kubernetes 清除 `pv-protection` Finalizer，控制器就会删除该卷。
-
-当一个pv被所有的pod释放后，finalizer才会被清除，这个pv才会被清除。
-
-
-
 #### 属主与附属
 
 在Finalizers章节里提到了
@@ -1747,6 +1607,7 @@ kubernetes-bootcamp-9bc58d867-x9x9v   1/1     Running   1 (26m ago)   39h
 > Job 控制器还为这些 Pod 添加了“属主引用”，指向创建 Pod 的 Job。 如果你在这些 Pod 运行的时候删除了 Job， Kubernetes 会使用属主引用（而不是标签）来确定集群中哪些 Pod 需要清理。
 
 以最常见的deployment为例，他会创建replicaSet，然后由replicaSet管理每个pod（详细参考自概念-工作负载-replicaSet），那么每个pod就有指向管理自己的replicaSet对象的引用。具体怎样控制删除对象的，请看垃圾回收章节
+
 
 ```shell
 (base) dominiczhu@ubuntu:~$ kubectl get pod kubernetes-bootcamp-9bc58d867-x9x9v -o yaml
@@ -1759,33 +1620,54 @@ kubernetes-bootcamp-9bc58d867-x9x9v   1/1     Running   1 (26m ago)   39h
     uid: 6053a328-013e-434f-9fc6-c7ef3f3134c5
 
 ```
+#### 推荐使用的标签
+
+> 共享标签和注解都使用同一个前缀：app.kubernetes.io。没有前缀的标签是用户私有的。 共享前缀可以确保共享标签不会干扰用户自定义的标签。
+
+> 通过“命名空间前缀”来区分“系统/工具用的标准标签”和“用户自己随便起的标签”，防止两者冲突。
+
+https://www.qianwen.com/share/chat/c1583d7095d24e88958ee50dcc1e2530
+
+#### Storage Version
+
+在k8s中，你定义的各种yaml都会持久化到一个etcd中，StorageVersion指定了按照什么来将数据存储在yaml里
+
+```shell
+kubectl apply -f example-crd-v1beta1-storage.yaml
+kubectl get crd examples.demo.example.com -o yaml
+
+```
+
+可以看到
+```shell
+v1beta1:
+  storage: true
+
+v1:
+  storage: false
+```
+
+```shell
+kubectl apply -f example-v1.yaml
+kubectl get example test -o yaml
+
+# 会发现count:100消失了，但是在kubectl.kubernetes.io/last-applied-configuration却能看到count
+```
+这是因为，在`example-crd-v1beta1-storage.yaml`中定义了存储版本，`v1beta`的存储版本里没有定义`count`，并不会将`count`持久化到etcd中。
+
+```shell
+
+# 切换storage version
+kubectl apply -f example-crd-v1-storage.yaml
+
+kubectl apply -f example-v1.yaml
+
+kubectl get example test -o yaml
 
 
+```
 
-
-
-
-
-#### 注解
-注解和label类似，只不过label可以用来区分、查询不同的对象，但同时对label的字符限制更多，而注解不能用来区分、查询不同的对象，但对注解的字符限制更少，简单说，注解更像是一些贴在对象上的备注。
-
-
-#### 字段选择算符
-就是过滤一些对象的方法和指令，比如过滤metadata.name=xxx的对象。
-
-
-#### Finalizers
-和java的finalize方法真的很像，流程大概是：
-1. 用户告知K8s要删除一个对象；
-2. k8s将这个对象标记为删除中，并查看这个对象的finalizer；
-3. 执行这个对象的finalizer进行一些垃圾请理工作，主要是清楚这个对象拥有的资源，我理解例如持有的依赖、内存等等
-4. 执行完毕后删除finalizer对象
-5. 当全部finalizer对象都被清空后，k8s认为删除操作已经完成，然后真正的删除这个对象自己。
-
-
-
-
-
+CRD的作用是：Kubernetes 提供的"你可以自己定义一种资源，我帮你接入 API 系统"，但是 CRD 本身不会做事情真正做事情的是：Controller，因此CRD + Controller = Operator
 
 
 ## Kubernetes 架构
@@ -1795,24 +1677,13 @@ kubernetes-bootcamp-9bc58d867-x9x9v   1/1     Running   1 (26m ago)   39h
 - 控制平面：负责管理节点，一般单独搞台机器部署。
 - 节点：负责运行Pod
 
+这一章节有一个大体的模糊认识即可，看不懂的可以略过。
+
 #### 控制平面组件
 
 ##### Kube-apiserver
 
-问豆包：Kube-apiserver有什么用？
-
 回答如下，本质上就是向外提供api接口，用于对外提供集群管理和使用功能。
-
-> kube - apiserver是Kubernetes集群中的核心组件，具有以下重要作用：
->
-> - 提供集群管理接口：作为Kubernetes控制平面的前端，它为用户、管理员以及其他组件提供了唯一的入口点，用于与集群进行交互。通过RESTful API，接收并处理来自客户端的各种请求，如创建、读取、更新和删除资源对象（如Pod、Service、Deployment等）的操作。
->
-> - 认证与授权：负责对请求进行认证和授权，确保只有经过授权的用户或组件能够访问集群资源。它支持多种认证方式，如TLS证书认证、Token认证等，并依据RBAC（基于角色的访问控制）等策略来确定用户或组件对不同资源的访问权限。
->
-> - 资源管理与协调：充当资源的中枢，负责接收、验证并持久化资源对象的定义和状态。当用户通过API创建或更新资源时，kube - apiserver会对请求进行合法性检查，然后将资源信息存储到etcd数据库中。同时，它还协调其他组件对资源的操作，确保集群状态与用户定义的期望状态一致。
->
-> - 提供集群状态信息：维护并提供集群的整体状态信息，包括各个节点的状态、资源的使用情况、Pod的运行状态等。这些信息对于管理员监控集群、进行故障排查以及做出决策非常重要。其他组件如kube - scheduler、kube - controller - manager等也依赖kube - apiserver提供的信息来执行各自的任务。
-
 
 ##### etct
 
@@ -1826,52 +1697,9 @@ kubernetes-bootcamp-9bc58d867-x9x9v   1/1     Running   1 (26m ago)   39h
 
 ##### kube-controller-manager
 
-k8s里有很多控制器，每个控制器有不同的职责，例如故障监控等，而kube-controller-manager就是负责 运行这些控制器的
-
-> Kubernetes（K8s）中的Controller（控制器）是实现集群中资源对象自动化管理和运维的关键组件，具有以下重要作用：
->
-> 确保资源状态符合预期
->
-> - 控制器通过不断监测集群中资源的实际状态，并与用户定义的期望状态进行对比，当发现不一致时，会自动采取措施来使实际状态向期望状态收敛。例如，Deployment控制器会确保Pod的数量、版本等与定义的Deployment规格一致。
->   资源对象的生命周期管理
-> - 负责资源对象的创建、更新、删除等操作。以Pod为例，当用户提交创建Pod的请求后，相关控制器会负责Pod的调度、启动等一系列流程；在Pod运行过程中，若有更新需求，控制器会协调进行滚动更新等操作；当Pod不再需要时，控制器会负责将其优雅地删除。
->   集群事件处理与响应
-> - 能够监听集群中的各种事件，如节点故障、资源不足等，并根据预设的规则做出相应的反应。比如，当节点故障时，节点控制器会将该节点上的Pod重新调度到其他健康节点上，以保证服务的连续性
->   多资源对象的协调管理
-> - 可以协调多个相关资源对象之间的关系。例如，Service控制器会确保Service与后端Pod之间的连接正确建立，当Pod发生变化时，会自动更新Service的端点信息，以保证服务的稳定访问。
->   不同类型的控制器，如Deployment控制器、ReplicaSet控制器、Service控制器等，各自负责特定类型资源的管理，共同协作以维持K8s集群的稳定运行和资源的高效利用。
-
+kube-controller-manager 是控制器集合，内部跑各种 Controller，作为客户端主动调用 apiserver 完成集群调谐（Reconcile），循环对比期望状态 vs 实际状态，不断调平集群。例如，保证副本数量严格匹配 spec.replicas，Pod 少了新建、多了删除。
 
 ##### cloud-controller-manager
-
-文档中的描述为：
-
-> 一个 Kubernetes 控制平面组件， 嵌入了特定于云平台的控制逻辑。 云控制器管理器（Cloud Controller Manager）允许将你的集群连接到云提供商的 API 之上， 并将与该云平台交互的组件同与你的集群交互的组件分离开来。
-
-豆包的描述为：
-
-> cloud - controller - manager是Kubernetes中负责与云服务提供商（CSP）进行交互的组件，具有以下作用：
->
-> 云资源管理
->
-> - 它能与云平台的API进行通信，实现对云资源的管理，如自动创建、删除云服务器实例，根据集群负载动态调整实例数量，以满足业务需求。
-> - 还能管理云存储资源，为Kubernetes集群中的容器提供存储支持，如创建和挂载云硬盘。
->
-> 节点管理
->
-> - 负责在云环境中创建和删除节点，并将其注册到Kubernetes集群中。
-> - 监测节点的健康状况，当节点出现故障时，可自动启动新节点来替换故障节点，确保集群的稳定性和可靠性。
->
-> 服务负载均衡
->
-> - 与云服务提供商的负载均衡器集成，为Kubernetes中的服务提供外部访问入口。
-> - 能根据服务的流量和负载情况，自动调整负载均衡器的配置，实现流量的合理分配。
->
-> 身份认证与授权
->
-> - 与云平台的身份认证和授权系统集成，使用云平台的认证机制对Kubernetes集群的用户和服务进行身份验证和授权，确保只有授权的用户和服务能够访问云资源。
->
-> cloud - controller - manager使Kubernetes集群能够更好地与云环境集成，充分利用云平台的资源和功能，实现集群的自动化管理和弹性伸缩。
 
 结合起来我的理解，这些功能的作用是通过这个服务与云平台进行交互，例如：
 
@@ -1890,102 +1718,31 @@ k8s里有很多控制器，每个控制器有不同的职责，例如故障监�
 
 一句话，负责在节点中执行容器的创建、管理
 
->  kubelet是Kubernetes集群中每个工作节点上的核心组件，其作用主要体现在以下几个方面：
->
->  一、Pod生命周期管理
->
->  • 创建与启动：kubelet负责根据从API服务器接收到的PodSpecs（Pod定义文件）创建、启动容器。它会调用容器运行时接口（CRI）与容器运行时（如Docker、containerd等）进行通信，执行实际的容器操作，包括拉取镜像、创建容器实例等。
->
->  • 监控与重启：kubelet会定期检查容器的状态，并根据需要重启容器。它支持多种类型的健康检查探针，如存活探针（LivenessProbe）和就绪探针（ReadinessProbe），以确保容器健康运行并准备好接受流量。
->
->  • 停止与删除：当Pod被删除或需要更新时，kubelet会负责停止容器并清理相关资源。
->
->  二、节点状态监控与报告
->
->  • 节点状态监控：kubelet会定期监控节点和容器的状态，包括容器的资源使用情况、健康状况等。
->
->  • 状态报告：kubelet会向API Server报告节点的状态信息，包括节点的资源使用情况（CPU、内存、磁盘、网络等）、节点条件（如Ready、OutOfDisk、MemoryPressure等）、Pod列表及其状态等。这些信息对于调度决策、资源监控和故障检测至关重要。
->
->  三、资源管理
->
->  • 资源分配：kubelet负责管理分配给每个Pod的资源，包括CPU、内存和磁盘存储资源。它会根据Pod的资源需求和节点的资源容量进行资源分配和调度，以实现资源的合理利用和负载均衡。
->
->  • 资源限制：kubelet会管理和限制容器对CPU、内存、磁盘和网络资源的使用情况，防止容器过度消耗资源导致节点不稳定。
->
->  四、存储卷管理
->
->  • 挂载与卸载：kubelet会根据Pod的需求，挂载和卸载存储卷，并将存储卷的路径提供给容器。它还负责处理存储卷的生命周期，包括创建、删除和扩容等操作，以满足容器对持久化存储的需求。
->
->  五、网络配置
->
->  • 网络配置：kubelet负责为容器配置网络，使得容器可以与其他容器和外部网络进行通信。它会与容器网络接口（CNI）插件协作，为Pod分配网络命名空间、IP地址等网络资源，并确保Pod之间的网络隔离。
->
->  • 端口映射与网络策略：kubelet还负责处理容器的端口映射和网络策略，以满足容器的网络需求和安全要求。
->
->  六、与Master节点的通信
->
->  • 指令接收与状态报告：kubelet与Master节点的kube-apiserver进行通信，以接收来自Master节点的指令并报告节点的状态。它会定期向kube-apiserver发送节点的心跳信息，确保Master节点能够实时了解节点的健康状况和资源使用情况。
->
->  • 协作与管理：通过与Master节点的通信，kubelet可以与集群的其他组件进行协作，实现对容器和节点的管理和控制。
-
-
-
 ##### kube-proxy
 
 这东西有点类似于实际网络的路由器和网关的作用，关键在于提供网络功能，负责对外提供服务时的网络数据转发、分发。
 
-> kube-proxy是Kubernetes集群中的关键网络代理组件，其核心作用和工作模式如下：
->
-> 核心作用
->
-> 1. 服务发现与负载均衡
->        • 将集群内部服务的访问请求（通过ClusterIP和端口）分发到正确的后端Pod，支持轮询、随机、最少连接数等负载均衡算法。
->
-> ​      • 维护节点上的网络规则，确保服务流量能正确路由到当前有效的后端Pod，即使Pod或节点发生故障，也能自动将流量转移到其他健康的Pod。
->
-> 2. 支持多种服务类型
->        • ClusterIP：为每个服务创建集群内的虚拟IP，所有集群内部请求通过该IP访问服务。
->
-> ​      • NodePort：在每个节点上打开特定端口，允许从集群外部访问服务。
->
-> ​      • LoadBalancer：支持基于云提供商的负载均衡器（如AWS ELB、GCP LB）暴露服务。
->
-> 3. 动态更新网络规则
->
->
-> ​      • 监听Kubernetes API Server中服务（Service）和端点（Endpoints）的变化，动态生成并维护节点上的网络转发规则（如iptables/IPVS规则），确保流量按需路由。
-
-
-
 ##### 容器运行时
 
-我理解这个功能的核心就是提供容器的真实运行底层功能，因为k8s只是一个容器的管理框架，真实的容器还是要依赖真正的容器这种服务。那么container-runtime指的真正提供容器运行服务的组件。
+Container Runtime 就是“负责真正运行容器的东西”。以前很多人会直接把它理解成 Docker，但在现代 Kubernetes 里，Docker 只是 Container Runtime 生态中的一个具体实现，而且现在 Kubernetes 默认不直接使用 Docker，因为Docker Engine 不实现 CRI，Docker Engine使用的也只是containerd
 
-k8s原本默认的运行时是docker，现在为containerd。containerd 最初是 Docker 引擎的核心组件，负责容器运行。自 2017 年起独立为 CNCF 项目，与 Docker 解耦。Docker 从 1.11 版本开始使用 containerd 作为底层运行时。相比 Docker 引擎，减少了不必要的组件（如 API 服务器、编排功能）。
+containerd和CRI-O是不同的运行时，目前，kubelet直接通过CRI(Container Runtime Interface)与Container Runtime交互。
+```
+kubelet
+   |
+   | CRI
+   |
+   +----------------+
+   |                |
+containerd        CRI-O
+   |                |
+   |                |
+ runc             runc
 
-> 容器运行时是用于运行容器的软件，在容器化应用的部署和运行中起着关键作用，主要包括以下几个方面：
->
-> 容器管理
->
-> - 创建与启动：根据容器镜像创建容器实例，并负责启动容器内的应用程序，为其配置所需的资源，如CPU、内存等。
-> - 生命周期管理：对容器的整个生命周期进行管理，包括暂停、恢复、停止和删除容器等操作，方便用户根据业务需求灵活控制容器的运行状态。
->
-> 镜像管理
->
-> - 镜像拉取：从镜像仓库中拉取容器镜像到本地，确保在创建容器时有可用的镜像。
-> - 镜像存储：负责管理本地的镜像存储，包括镜像的存储、检索和删除等操作，有效利用本地存储资源。
->
-> 资源隔离与限制
->
-> - 隔离：利用Linux的命名空间（namespace）等技术为容器提供隔离的运行环境，确保不同容器之间的进程、网络、文件系统等相互隔离，避免相互干扰。
-> - 资源限制：通过控制组（cgroup）技术对容器使用的资源进行限制和分配，保证容器不会过度占用系统资源，使多个容器能在同一主机上稳定、高效地运行。
->
-> 健康检查与监控
->
-> - 健康检查：定期检查容器内应用程序的健康状态，如通过发送HTTP请求或执行特定的命令来判断应用是否正常运行，及时发现故障容器。
-> - 监控：收集容器的资源使用情况，如CPU使用率、内存使用量、网络流量等指标，为管理员进行性能优化和故障排查提供依据。
->
-> 常见的容器运行时包括Docker、runc、containerd等。不同的容器运行时在性能、功能和适用场景等方面可能会有所不同。
+```
+
+runc 是真正创建 Linux Container 的低层工具。runc 很通用，但不是所有场景的最佳选择。
+
 
 #### 插件
 
@@ -2073,46 +1830,67 @@ k8s通过节点控制器来管理节点的状态；
 
 ### 垃圾收集
 
-豆包：
-
-> 在 Kubernetes（K8s）中，** 属主引用（OwnerReference）** 是一种资源之间的关系机制，用于定义一个资源（**属主资源**）对另一个资源（**从属资源**）的所有权。当属主资源被删除时，K8s 可以根据属主引用自动级联删除从属资源，从而避免资源泄漏。
-
-也就是说，A持有B的引用，那么A是owner属主对象，B是dependent，即A依赖B，而属主引用，就是dependent持有的owner引用，在这个例子里，就是说B持有了A的引用。所以说，如果一个对象没有属主引用，说明没有任何对象依赖自己，自己可以被回收。当然也可以手动删除某些对象，并级联地删除这些对象的依赖对象。
-
-属主引用的作用在前台/后台级联删除的例子里可以了解到，也就是说，在前台级联删除中，如果我需要删除一个owner，我会先尝试删除dependent，
-
-> 当属主对象进入**删除进行中**状态后，控制器会删除其已知的依赖对象。 在删除所有已知的依赖对象后，控制器会删除属主对象。 这时，通过 Kubernetes API 就无法再看到该对象。
-
-而在后台级联删除中，集群会有另一个线程找没有属主引用的对象，说明这些对象已经没有owner了，自然是没用的额对象，删掉；
+[快速复习：我在学习k8s文档，阅读这篇文章的时候看得不太明白，请你向我讲解，https://kubernetes.io/zh-cn/docs/concepts/architecture/garbage-collection/](https://chatgpt.com/s/t_6a51c7ede5ac8191871189ab592fa356)
 
 
-
-Q：这里有个小疑问，从属对象有属主引用可以找到属主，那属主对象咋找到从属对象呢？
-
-A：利用标签：有一个创建 `EndpointSlice` 对象的 Service， 该 Service 使用[标签](https://kubernetes.io/zh-cn/docs/concepts/overview/working-with-objects/labels/)来让控制平面确定哪些 `EndpointSlice` 对象属于该 Service。
-
-这里提到了Finalizers，这个东西和Java的Finalizers方法是一样的，在GC之前会被触发，用于gc前的一些操作，在k8s中，可以理解为真正释放、删除对象之前要执行的操作，例如在删除目标资源前清理相关资源或基础设施。
-
-针对容器和镜像的垃圾收集，有一点点像java的gc，释放镜像的时候，是基于最近最少使用；容器垃圾收集有点像java的gc，基于年龄等。
 
 
 
 ### 混合版本代理
+[我在学习k8s文档，阅读这篇文章的时候看得不太明白，请你向我讲解，https://kubernetes.io/zh-cn/docs/concepts/architecture/mixed-version-proxy/](https://chatgpt.com/s/t_6a51c8b403c881918e5cfb752bec95f6)
 
 
 
-升级过程中可能会存在多个版本的api-server，这个混合版本代理就是使得升级过程中，如果需要使用高版本api-server才能提供的功能的时候，如果这样的使用请求发到了低版本的api-server，那么这个请求能够被转发到高版本的api-server.
 
 
+### 关于minikube
+当你执行`minikube start`的时候，实际上做的是：帮你创建一个运行 Kubernetes 的"节点（Node）"，而这个 Node 可以是虚拟机或者Docker容器，这个节点具备kubectl+容器运行时。不仅如此，这个节点还自带Control Plane Node
 
-#### 内部工作原理
+也就是说，通常生产环境下是
+```
+                Kubernetes Cluster
 
-每个API server通过storageVersion来知道哪些api server提供哪些功能。以下为猜想，个人理解的内容。
+        +-----------------------------+
+        |      Control Plane          |
+        |                             |
+        | kube-apiserver              |
+        | etcd                        |
+        | scheduler                   |
+        | controller-manager          |
+        +-----------------------------+
 
-1. 如果收到请求的API知道如何处理，那么他就会本地处理
-2. 如果收到请求的API server从storageVersion里找到能处理这个请求的对象，那么就说明集群里没有这功能，就走扩展API服务器看看能不能处理；
-3. 如果找到了对应的StorageVersion并且本地确实处理不了某个请求，那么就会转发
-   1. 
+                    │
+
+        +-----------+-----------+
+        |                       |
++---------------+       +---------------+
+| Worker Node 1 |       | Worker Node 2 |
+| kubelet       |       | kubelet       |
+| containerd    |       | containerd    |
++---------------+       +---------------+
+```
+
+Minikube 默认是
+
+
+```
+                Minikube
+
+           +-------------------+
+           |   一个 Node        |
+           |                   |
+           | kube-apiserver    |
+           | etcd              |
+           | scheduler         |
+           | controller-manager|
+           | kubelet           |
+           | containerd        |
+           +-------------------+
+```
+
+更进一步的，执行的是`minikube start --driver=xxx`，这个`xxx`默认情况下是`auto-detect`，比如我的电脑里有docker，所以这个操作的完整含义是，使用docker创建一个k8s节点。你可以通过`docker ps`看到有一个minikube的容器在运行。
+
+回到开头minikube失效的问题，在真实的生产环境里，worker称为k8s集群中的一个节点的过程中，其中一步是“下载证书”，这个证书如果失效了，节点就无法运行。
 
 ## 容器
 
@@ -2124,48 +1902,80 @@ A：利用标签：有一个创建 `EndpointSlice` 对象的 Service， 该 Serv
 根据镜像名称来判断是从哪个仓库来拉镜像。
 
 #### 带镜像索引的多架构镜像
-豆包回答：镜像清单
-> 一、基本概念
-镜像清单（Manifest） 是容器镜像的元数据描述文件，定义了镜像的组成结构、依赖关系和配置信息。它是容器生态系统中的核心概念，用于指导镜像的构建、存储和运行。
-二、主要类型
-单架构镜像清单
-描述单个平台（如 linux/amd64）的镜像结构。
-包含：
-镜像配置（Config）：JSON 文件，定义容器运行时的配置（如环境变量、入口命令）。
-镜像层（Layers）：按顺序排列的文件系统变更集，每个层对应 Dockerfile 中的一条指令。
-多架构镜像清单（清单列表，Manifest List）
-也称为 OCI 镜像索引（Image Index），是清单的集合，用于支持跨平台镜像。
-包含多个单架构镜像清单的引用，并标注每个清单对应的平台（如架构、操作系统）。
 
-todo: Q：如何构建多架构镜像以及使用镜像清单？
+相当于nginx:latest背后实际上是不同架构的不同镜像，第一次拉取的时候会获取一个manifests，然后根据当前系统拉取对应的镜像。
+```json
+{
+  "manifests":[
+    {
+      "platform":{
+        "os":"linux",
+        "architecture":"amd64"
+      },
+      "digest":"sha256:aaa"
+    },
+    {
+      "platform":{
+        "os":"linux",
+        "architecture":"arm64"
+      },
+      "digest":"sha256:bbb"
+    }
+  ]
+}
+
+```
+https://chatgpt.com/s/t_6a4f36ed64ac8191b4674ef026c18f1b
 
 #### 使用私有仓库 
 大体看了个概念，就是说可以通过各种方式使用私有仓库，具体还是要看任务章节里的实操。
 
 ### 容器环境
-指的是k8s给容器提供的信息、资源，例如文件系统、告诉每个容器你的hostnaame是啥、告诉每个容器都有啥其他的对象（例如service）
+指的是k8s给容器提供的信息、资源，例如文件系统、告诉每个容器你的hostnaame是啥、告诉每个容器都有啥其他的对象（例如service）。比如某个pod启动的时候，这个pod里的容器会获得当前名字空间的其他service信息作为环境变量。
 
 ### 容器运行时类（Runtime Class）
 
-这个是高级特性了，我觉得一般我们用不上。。。首先“容器运行时”这个东西指的是提供容器功能的服务，例如docker engine。而k8s本身是没有容器功能的，他要使用容器功能，就得依赖“容器运行时”。k8s调用docker之类的“容器运行时”的时候，就需要使用CRI，容器运行时接口。
+用来确认使用什么容器运行时。
 
-而容器运行时类，
-> 用于指定 Pod 使用的容器运行时配置。它允许集群支持多种容器运行时（如 containerd、CRI-O、gVisor），并根据工作负载需求灵活选择，无需修改应用代码。
+默认：
 
-他也是k8s的资源的一种，他的定义方式和pod等其他资源类似
-```shell
-# RuntimeClass 定义于 node.k8s.io API 组
-apiVersion: node.k8s.io/v1
-kind: RuntimeClass
-metadata:
-  # 用来引用 RuntimeClass 的名字
-  # RuntimeClass 是一个集群层面的资源
-  name: myclass
-# 对应的 CRI 配置的名称
-handler: myconfiguration
-```
+Pod
+ |
+containerd
+ |
+runc
 
-按理来说，应该不需要我们自己写容器运行时，有现成的，例如gVisor
+如果：
+
+runtimeClassName: kata
+
+可能变成：
+
+Pod
+ |
+containerd
+ |
+kata-runtime
+ |
+轻量虚拟机
+ |
+Linux kernel
+
+如果：
+
+runtimeClassName: gvisor
+
+变成：
+
+Pod
+ |
+containerd
+ |
+runsc
+ |
+gVisor sandbox
+
+
 
 ## 工作负载
 
@@ -2185,6 +1995,8 @@ Pod是一种特定于应用的“逻辑主机”；在一个节点上运行多�
 
 todo：Q：什么情况下需要**运行多个协同工作的容器的 Pod**？如何配置？
 
+A：后面提到的sidecar和init容器，和主应用容器就是在一起的，视为一个pod
+
 
 
 ```shell
@@ -2196,16 +2008,10 @@ pod/nginx created
 ```
 
 
-
-> 通常你不需要直接创建 Pod，甚至单实例 Pod。相反，你会使用诸如 [Deployment](https://kubernetes.io/zh-cn/docs/concepts/workloads/controllers/deployment/) 或 [Job](https://kubernetes.io/zh-cn/docs/concepts/workloads/controllers/job/) 这类工作负载资源来创建 Pod。 如果 Pod 需要跟踪状态，可以考虑 [StatefulSet](https://kubernetes.io/zh-cn/docs/concepts/workloads/controllers/statefulset/) 资源。
-
 **Pod 操作系统**
 
-为了理解 `.spec.os.name` ，要先理解nodeSelector的运行规则，详细可以[nodeselector](https://www.doubao.com/thread/w5533e837cf32bf70)，k8s为每个pod选择运行节点的时候，仍然依赖的是nodeSelector，而为每个node打上`.spec.os.name`标签使得nodeSelector可以正常基于这个标签选择对应的节点。
 
-> 你应该将 `.spec.os.name` 字段设置为 `windows` 或 `linux` 以表示你希望 Pod 运行在哪个操作系统之上。 这两个是 Kubernetes 目前支持的操作系统。将来，这个列表可能会被扩充。
->
-> 在 Kubernetes v1.33 中，`.spec.os.name` 的值对 [kube-scheduler](https://kubernetes.io/zh-cn/docs/reference/command-line-tools-reference/kube-scheduler/) 如何选择要运行 Pod 的节点没有影响。在任何有多种操作系统运行节点的集群中，你应该在每个节点上正确设置 [kubernetes.io/os](https://kubernetes.io/zh-cn/docs/reference/labels-annotations-taints/#kubernetes-io-os) 标签，并根据操作系统标签为 Pod 设置 `nodeSelector` 字段。
+如果要控制某个pod去哪里，你需要自己写nodeSelector。目前Scheduler 目前根本不看.spec.os.name这个字段。
 
 **Pod模板**
 
@@ -2222,11 +2028,22 @@ hello-p6hpt   1/1     Running   0          48s
 Hello, Kubernetes!
 ```
 
+**Pod生成**
+当kubectl apply的时候，会把最新的spec送往api server，但是可能pod还没有真的完成更新。
+
+因此，可以把这两个字段理解为：
+metadata.generation：API Server 中 最新期望状态（Desired State） 的版本号。代表Spec（期望状态）的版本号，无法指定，由API server管理。
+status.observedGeneration：kubelet 已经观察并据此生成当前状态（Observed State） 的版本号。
+
 **pod联网**
 
 > 在同一个 Pod 内，所有容器共享一个 IP 地址和端口空间，并且可以通过 `localhost` 发现对方。
 
 参考https://www.doubao.com/thread/w311f3926edc93aee，看起来即使同一个pod里有多个容器，容器可以通过localhost访问到彼此，也就是说，对于每个容器来说，他们并不知道他们访问的其实是不同的容器
+
+**静态pod**
+
+[静态 Pod 的存在主要是为了启动 Kubernetes 自己。作为一个bootstrap](https://chatgpt.com/s/t_6a51cec172fc8191bac05dfa16713e6a)
 
 **Pod 管理多个容器**
 
@@ -2236,17 +2053,21 @@ Hello, Kubernetes!
 
 在 Kubernetes（K8s）中，**特性门控（Feature Gates）\**是一种\**动态开关机制**，用于控制实验性或不稳定功能的启用与禁用。通过特性门控，K8s 团队可以在不影响主版本稳定性的前提下，向用户提前开放新功能进行测试，同时保留在生产环境中禁用风险功能的能力。其实就是一些灰度出来的功能罢了，门控就是控制功能是否应用的开关。
 
+上文中“允许你为 Init 容器指定 `restartPolicy: Always`”，就是允许你使用边车容器
+
 **看不懂的部分**
 
-pod安全设置、静态pod
+pod安全设置、
 
-#### Pod的声明周期
+#### Pod的生命周期
 
 
 
 **Pod 阶段**
 
-pod的phase和kubectl get pod返回的status字段不是同一个东西。
+Pod 的 status 字段是一个 PodStatus 对象，其中包含一个 phase 字段。而PodCondition是更细粒度的细粒度多维检查标记，是一组布尔型状态数组，用来描述 Pod各个环节是否正常，排查故障全靠它。 
+
+[PodCondition是什么](https://chatgpt.com/s/t_6a4fb4bbe9048191b08aa6d6a1e10778)
 
 
 
@@ -2254,11 +2075,32 @@ pod的phase和kubectl get pod返回的status字段不是同一个东西。
 
 在刚开始拉取镜像失败的时候，会发现pod在反复重试，每两次重试之间的事件间隔都以指数增长，这个就是回退延迟机制。而CrashLoopBackOff说明当前这个pod在反复的失败中，即只要重试过一次失败了，这个pod就是这个状态了。可以通过`kubectl describe`看到
 
-**Pod就绪态**
+**Pod就绪探针-ReadinessProb**
 
-这是一个用于精细化控制容器什么时候就绪的功能，参考豆包的[readinessGates](https://www.doubao.com/thread/wd82c0dcffe619b59)和[kubectl patch](https://www.doubao.com/thread/w414f4be72b1a77bc)
+https://chatgpt.com/s/t_6a4fb9d248c4819184f3dca9bdfdd2fb
+readinessProbe（就绪探针）用于告诉 Kubernetes：这个容器现在是否已经可以对外提供服务。这个就绪探针是由kubelet提供的，并且不支持扩展。
+```shell
+kubectl apply -f readiness-prob.yaml
+kubectl describe pod nginx-readiness
 
 
+kubectl describe pod nginx-readiness
+
+kubectl delete pod nginx-readiness
+
+```
+
+
+**就绪门控**
+
+ReadinessProb是由kubelet自己管理和控制的，用来管理这个pod自身是否满足了什么条件，但是如果这个pod不光自身要满足条件，也要满足外界的某个条件后（比如负载均衡器（Load Balancer）还得把它注册进去。），才能提供服务，readinessProb就不够用了，readinessGate相当于给外面提供了一个功能，可以由外界控控制一个容器是否满足自定义的就绪条件
+
+readinessProbe 是"我（Pod）自己说我准备好了"。
+ReadinessGate 是"别人（Controller）说你还不能接流量"。
+
+https://chatgpt.com/s/t_6a4fba0c2ce081918ec6956bebcf791f
+
+> 你在日常开发 Spring Boot、Nginx、Go 服务时，99% 的情况下只会配置 readinessProbe。ReadinessGate 更多是 Kubernetes 平台开发者、Operator 开发者、云厂商控制器开发者使用的高级扩展能力。
 
 ```shell
 (base) dominiczhu@ubuntu:pod-lifecycle$ pwd
@@ -2293,7 +2135,7 @@ kubernetes   ClusterIP   10.96.0.1      <none>        443/TCP        7d2h
 web-server   NodePort    10.98.237.69   <none>        80:30964/TCP   5s
 # 无法访问
 (base) dominiczhu@ubuntu:pod-lifecycle$ curl http://"$(minikube ip):30964"
-curl: (7) Failed to connect to 192.168.49.2 port 30964 after 0 ms: Couldn't connect to server
+# curl: (7) Failed to connect to 192.168.49.2 port 30964 after 0 ms: Couldn't connect to server
 
 # 查看pod的状态
 (base) dominiczhu@ubuntu:pod-lifecycle$ kubectl get pod/web-server -o json
@@ -2364,26 +2206,6 @@ web-server   NodePort    10.102.101.36   <none>        80:32650/TCP   7s
 
 
 
-**Pod 网络就绪**
-
-[运行时沙箱](https://www.doubao.com/thread/wf6ad818f8ff65bea)
-
-**容器探针**
-
-检测容器状态的方法，并根据探测结果执行不同的操作
-
-
-
-**看不懂的部分**
-
-减少容器重启延迟
-
-可配置的容器重启延迟
-
-容器关闭
-
-
-
 #### Init容器
 
 **使用 Init 容器、示例**
@@ -2451,7 +2273,7 @@ Kubernetes 将边车容器作为 [Init 容器](https://kubernetes.io/zh-cn/docs/
 
 > 这些可重新启动的**边车（Sidecar）** 容器独立于其他 Init 容器以及同一 Pod 内的主应用容器， 这些容器可以启动、停止和重新启动，而不会影响主应用容器和其他 Init 容器。
 
-但他本质上还是一个init-container，只不过在结束之后会重新启动罢了
+sidecar容器挂了并不会影响主应用容器
 
 ```shell
 minikube image load goose-good/alpine:3
@@ -2496,17 +2318,51 @@ tail: /opt/logs.txt has appeared; following end of new file
 logging
 ```
 
-**看不懂**
+**容器内的资源共享**
 
-容器内的资源共享
+pod申请的cpu或者内存的资源如下公式所示
+Pod Effective Request=max(    普通 Init Container 最大 request,
+    应用容器 request 总和    +    Sidecar request 总和)
+
+
+```shell
+kubectl get pods -l app=myapp
+kubectl describe pod myapp-db56966bc-6f8xz
+# 可以看到这个节点上的所有pod分配的资源，可以看到myapp-db56966bc-6f8xz请求了128mi，limit是256
+kubectl describe pod minikube 
+```
 
 #### 临时容器
 
-略
+```shell
+ kubectl apply -f ephemeral-demo.yaml
+
+# 因为这个容器镜像中没有 shell。
+kubectl exec -it ephemeral-demo -- sh
+# 有时有必要检查现有 Pod 的状态。例如，对于难以复现的故障进行排查。 在这些场景中，可以在现有 Pod 中运行临时容器来检查其状态并运行任意命令。
+kubectl debug -it ephemeral-demo --image=goose-good/busybox:1.37.0 --target=ephemeral-demo 
+```
+
+
+#### 探针
+[我是一名java开发工程师，目前在学习k8s文档，请向我进行讲解这篇文章：https://kubernetes.io/docs/concepts/workloads/pods/probes/](https://chatgpt.com/s/t_6a51cb601dc8819198938f39131c8414)
+
+1. Startup:看有没有启动
+2. Readiness:看能不能接请求
+3. Liveness:看要不要重启
+
+在前面Pod的生命周期中其实见过readinessProb，用来控制这个pod能不承接流量
+
+我有3个问题：
+1. 我看你给的例子里，只有关于就绪探针和存活探针的配置，没有启动探针的配置，我猜是不是启动探针是kubelet内置的，并不会提供扩展自定义配置？
+2. 是不是先就绪探针成功之后，才会开始存活探针的探测？
+3. 容器运行过程中，就绪探针和存活探针可以相互独立探测？
+
+A：https://chatgpt.com/s/t_6a51cca8a2bc8191ba04ae6966c735f5
 
 #### 处理干扰
 
-干扰指的是应用受到了一些影响从而导致不能正常运行，这种影响被称为干扰。干扰预算指的是“能够容忍多少的干扰”，例如一个deployment的replica为3，而PodDisruptionBudget为1，那么代表着这个deployment希望有3个pod副本，但是可以容忍有一个副本挂掉，即容忍有一段事件只有两个pod。
+干扰指的是应用受到了一些影响从而导致不能正常运行，这种影响被称为干扰。干扰预算指的是“能够容忍多少的干扰”，比如可以创建一个需要3个pod额deployment，同时创建maxUnavailable: 1的PodDisruptionBudget对象，并且通过`.spec.selector.matchLabels`匹配到对应pod上，那么代表着虽然这个deployment希望有3个pod副本，但是可以容忍有一个副本挂掉，即最多容忍有一段时间只有1pod不能被删掉。
 
 **PodDisruptionBudget 例子**
 
@@ -2514,7 +2370,8 @@ logging
 
 #### Pod QoS 类
 
-有些pod为了能够稳定的运行下去，在启动的时候就告知集群，我需要多少内存、多少的cpu，集群分配节点的资源的时候，必须保证这些内存、cpu；而有些pod不指定这些；根据申请资源的不同，将pod分为不停的QoS类别，QoS类的不同会影响[kubelet的驱逐行为](https://www.doubao.com/thread/w6c30b16f06c9da11)；
+有些pod为了能够稳定的运行下去，在启动的时候就告知集群，我需要多少内存、多少的cpu，集群分配节点的资源的时候，必须保证这些内存、cpu；而有些pod不指定这些；根据申请资源的不同，将pod分为不停的QoS类别，QoS类的不同会影响kubelet的节点压力驱逐行为
+> 节点压力驱逐：kubelet 监控集群节点的内存、磁盘空间和文件系统的 inode 等资源。 当这些资源中的一个或者多个达到特定的消耗水平， kubelet 可以主动地使节点上一个或者多个 Pod 失效，以回收资源防止饥饿。
 
 ```shell
 
@@ -2526,7 +2383,9 @@ logging
 ```
 
 
+#### pod主机名
 
+主机名只会用在系统内部，而完全限定域名（FQDN）将会被用在集群的dns之中。
 
 
 #### 用户命名空间
@@ -2549,15 +2408,11 @@ uid=0(root) gid=0(root) groups=0(root)
 
 #### Downward API
 
-容器需要知道其上层一些配置信息，例如pod里的一些配置信息传递给pod里的容器，例如容器怎么也得知道自己叫啥名、要多少个cpu信息吧，这些信息是通过这个Downward API将这些信息暴露个容器的，具体包括环境变量、[`downwardAPI` 卷中的文件](https://kubernetes.io/zh-cn/docs/tasks/inject-data-application/downward-api-volume-expose-pod-information/)。具体的信息包括：
-
-1. pod级字段：包括这个容器所属的pod叫啥名之类的；
-2. COntainer字段：多少个cpu限制之类的。
+容器需要知道其上层一些配置信息，例如pod里的一些配置信息传递给pod里的容器，例如容器怎么也得知道自己叫啥名、要多少个cpu信息吧，这些信息是通过这个Downward API将这些信息暴露个容器的，具体包括环境变量、[`downwardAPI` 卷中的文件](https://kubernetes.io/zh-cn/docs/tasks/inject-data-application/downward-api-volume-expose-pod-information/)。
 
 ### 工作负载管理（重要）
 
 终于到了介绍deployment之类的工作负载了，指的是k8s中运行的应用程序，我们通常是通过他们来构建应用，而不是直接创建pod。
-
 
 
 
@@ -2595,6 +2450,19 @@ nginx-deployment-ff948bdf8-hrnbl   1/1     Running   0          2m51s   app=my-n
 nginx-deployment-ff948bdf8-hx9n6   1/1     Running   0          2m51s   app=my-nginx,pod-template-hash=ff948bdf8
 ```
 
+`kubectl rollout status`的作用是持续观察（Watch）某个资源的滚动发布（Rollout）是否完成。实际上：就是一直观察：Deployment 的 Status。
+```
+status:
+  observedGeneration: 3
+
+  replicas: 3
+
+  updatedReplicas: 3
+
+  readyReplicas: 3
+
+  availableReplicas: 3
+```
 
 
 **更新Deployment**
@@ -2663,6 +2531,46 @@ OldReplicaSets:  nginx-deployment-ff948bdf8 (0/0 replicas created), nginx-deploy
 NewReplicaSet:   nginx-deployment-586f7b497 (1/1 replicas created)
 ```
 
+**更改标签选择算符**
+[直接贴过去问chatgpt](https://chatgpt.com/s/t_6a51fb66027081918042c13fc2c9f4ec)
+
+```shell
+kubectl apply -f label-selector-updates.yaml
+kubectl get deployment label-selector-updates
+kubectl get rs -o yaml  -l app=pod-my-nginx
+    # ownerReferences:
+    # - apiVersion: apps/v1
+    #   blockOwnerDeletion: true
+    #   controller: true
+    #   kind: Deployment
+    #   name: label-selector-updates
+    #   uid: ebd277a6-4e93-4505-b535-49778f1bd950
+
+
+kubectl get pod -l app=pod-my-nginx
+
+
+kubectl delete deployment/label-selector-updates  --cascade=orphan
+# 发现这个rs还在，但是他的ownerReferences已经没有了
+kubectl get rs -o yaml  -l app=pod-my-nginx
+
+```
+对于增加或者变更`selector`中的条件，当重新apply的时候，会从头创建新的rs、pod。但如果是删除了`selector`的其中一个条件，比如将`version: v1`给删掉（不删除定义中的pod的label），然后重新apply
+
+```shell
+# 会发现ownerReferences又回来了，这个不是重新创建的，因为hash和创建时间戳都没有变更。
+kubectl get rs -o yaml  -l app=pod-my-nginx
+
+    # ownerReferences:
+    # - apiVersion: apps/v1
+    #   blockOwnerDeletion: true
+    #   controller: true
+    #   kind: Deployment
+    #   name: label-selector-updates
+    #   uid: 70b74d5d-e9e7-44e1-9d95-9e12e8946306
+```
+
+并且建议，后面将pod spec中的label也同步进行删除，然后进行kubectl apply进行上线。
 
 
 **检查 Deployment 上线历史**
@@ -2671,6 +2579,9 @@ NewReplicaSet:   nginx-deployment-586f7b497 (1/1 replicas created)
 
 ```shell
 # 从头来了一次
+kubectl delete -f nginx-deployment.yaml
+kubectl apply -f nginx-deployment.yaml
+
 (base) dominiczhu@ubuntu:deployment$ kubectl set image deployment/nginx-deployment nginx=goose-good/nginx:1.28.0
 deployment.apps/nginx-deployment image updated
 
@@ -2682,13 +2593,11 @@ deployment.apps/nginx-deployment annotated
 (base) dominiczhu@ubuntu:deployment$ kubectl rollout history deployment/nginx-deployment
 deployment.apps/nginx-deployment 
 REVISION  CHANGE-CAUSE
-3         <none>
-5         <none>
-7         kubectl set image deployment/nginx-deployment nginx=nginx:1.27.3 --record=true
-8         image updated to 1.28.0
+1         <none>
+2         image updated to 1.28.0
 
 # 查看修订的详细信息
-(base) dominiczhu@ubuntu:deployment$ kubectl rollout history deployment/nginx-deployment --revision=8
+(base) dominiczhu@ubuntu:deployment$ kubectl rollout history deployment/nginx-deployment --revision=2
 deployment.apps/nginx-deployment with revision #8
 Pod Template:
   Labels:       app=my-nginx
@@ -2704,7 +2613,10 @@ Pod Template:
   Volumes:      <none>
   Node-Selectors:       <none>
   Tolerations:  <none>
-  
+
+
+kubectl set image deployment/nginx-deployment nginx=goose-good/nginx:1.28212.0
+
 # 回滚到上一版本  
 kubectl rollout undo deployment/nginx-deployment
 # 回归到指定版本
@@ -2717,7 +2629,13 @@ kubectl rollout undo deployment/nginx-deployment  --to-revision=2
 
 **暂停、恢复 Deployment 的上线过程**
 
-暂停deployment，然后修改内容，但是不会触发新的上线。相当于在同一个revision里操作修改deployment
+kubectl rollout pause 不会停止服务，也不会停止 Pod，更不会影响 Service 转发流量。
+
+它只是告诉 Deployment Controller：
+
+"我接下来可能还要继续修改 Deployment，请先不要开始滚动更新，等我执行 kubectl rollout resume 后，再把这些修改一次性应用到 ReplicaSet 和 Pod 上。"
+
+因此，在生产环境中，rollout pause 常用于批量修改 Deployment 配置，而不是用于停机维护。
 
 **一些思考**
 
@@ -2743,17 +2661,18 @@ NAME       DESIRED   CURRENT   READY   AGE
 frontend   3         3         3       6s
 
 (base) dominiczhu@ubuntu:replicaset$ kubectl describe rs/frontend
-。。。
+
 (base) dominiczhu@ubuntu:replicaset$ kubectl get pods
 NAME             READY   STATUS    RESTARTS   AGE
 frontend-89gkl   1/1     Running   0          46s
 frontend-clltj   1/1     Running   0          46s
 frontend-v8wr7   1/1     Running   0          46s
 
+# 创建pod-rs，这里面的pod和rs的定义完全匹配，所以相当于让这个几个pod强行加入frontend的管理
 (base) dominiczhu@ubuntu:replicaset$ kubectl apply -f pod-rs.yaml 
 pod/pod1 created
 pod/pod2 created
-# 会发现pod1和pod2并没有被维持下来
+# 但是会发现pod1和pod2并没有被维持下来，因为副本数已经超了
 (base) dominiczhu@ubuntu:replicaset$ kubectl get pods
 NAME             READY   STATUS    RESTARTS   AGE
 frontend-89gkl   1/1     Running   0          12m
@@ -2780,13 +2699,17 @@ pod2             1/1     Running   0          8s
 
 #### StatefulSet
 
-stateful.yaml案例运行不起来，因为缺少了`storageClassName: "my-storage-class"`，这一节并没有提供什么案例，只是提供了一些概念性的说明，但还是可以通过kubectl来pod的名称之类的
+StatefulSet 不是因为"有状态"才存在，而是因为它能够为每个 Pod 提供稳定且唯一的身份（名称、DNS、存储），从而满足数据库、中间件等分布式系统对节点身份的要求。他创建的pod名称会是稳定的pod-1/pod-2 当应用只需要"任意一个健康实例"时，用 Deployment；当应用需要"固定的那个实例"时，就应该考虑 StatefulSet。
 
-提到了[minReadySeconds的作用](https://www.doubao.com/thread/w4d80cd0584b00846)
+**稳定的网络 ID**
+
+在“限制”中提到
+
+> - StatefulSet 当前需要[无头服务](https://kubernetes.io/zh-cn/docs/concepts/services-networking/service/#headless-services)来负责 Pod 的网络标识。你需要负责创建此服务。
+
+如果一个service配置了`clusterIP: None`，他就是一个无头service。普通 Service 提供一个固定的虚拟 IP（ClusterIP）；无头 Service 不提供这个虚拟 IP，而是直接把后端 Pod 的 IP 告诉客户端。比如nslookup会直接返回后面的pod的ip
 
 
-
-不对，能启动起来
 
 ```shell
 # 首先要删除无法创建的PersistentVolumeClaims
@@ -2808,10 +2731,11 @@ service/nginx   ClusterIP   None         <none>        80/TCP    9m9s
 NAME                   READY   AGE
 statefulset.apps/web   3/3     9m9s
 
-# 删除statefuleset以及服务后，发现pvc仍然在
+
 (base) dominiczhu@ubuntu:statefulset$ kubectl delete -f statfulset.yaml 
 service "nginx" deleted
 statefulset.apps "web" deleted
+# 删除statefuleset以及服务后，发现pvc仍然在，这样的话，再次启动创建statfulset.yaml ，这些pvc也就是数据仍然会被复用
 (base) dominiczhu@ubuntu:statefulset$ kubectl get pvc
 NAME        STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
 www-web-0   Bound    pvc-c48936ff-91ef-43c3-92f5-dddaa32d4b5b   1Gi        RWO            standard       <unset>                 7m2s
@@ -2823,19 +2747,9 @@ www-web-2   Bound    pvc-e927831a-13e9-4f27-beac-8ecffd96d47a   1Gi        RWO  
 
 
 
-**稳定的网络 ID**
-
-在“限制”中提到
-
-> - StatefulSet 当前需要[无头服务](https://kubernetes.io/zh-cn/docs/concepts/services-networking/service/#headless-services)来负责 Pod 的网络标识。你需要负责创建此服务。
-
-[无头 Service](https://www.doubao.com/thread/wbfde33dfc2c2dbb8)
-
-前面的namespace章节提到过，当创建了一个service之后，不仅外部可以通过这个service对外暴露的端口访问内部的pod，pod之间可以通过`<service-name>.<namespace-name>.svc.cluster.local`相互访问（这是通过集群的dns实现的）。而无头service的区别在于，没有对外暴露端口，那么无头service存在的意义就只是容器之间的相互发现
 
 
-
-**PersistentVolumeClaim retention**
+**PersistentVolumeClaim retention PersistentVolumeClaim 保留**
 
 
 
@@ -2867,13 +2781,15 @@ www-web-2   Bound    pvc-e927831a-13e9-4f27-beac-8ecffd96d47a   1Gi        RWO  
 
 2. 如果whenScale=Delete，那么在缩容的过程中，会往要被删除的pod对应的pvc加一个ownerReference，指向要被删除的POD，从而实现缩容时被删除。
 
-3. "The StatefulSet [controller](https://kubernetes.io/docs/concepts/architecture/controller/) adds [owner references](https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/#owner-references-in-object-specifications) to its PVCs, which are then deleted by the [garbage collector](https://kubernetes.io/docs/concepts/architecture/garbage-collection/) after the Pod is terminated." 看不懂要说啥。。。我理解这句话应该是说pvc联动删除是怎样实现的吧，因为pod terminated之后，pvc并不是一定会被删除的呀。。。
+3. "The StatefulSet [controller](https://kubernetes.io/docs/concepts/architecture/controller/) adds [owner references](https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/#owner-references-in-object-specifications) to its PVCs, which are then deleted by the [garbage collector](https://kubernetes.io/docs/concepts/architecture/garbage-collection/) after the Pod is terminated."
 
  
 
 #### DaemonSet
 
-https://www.doubao.com/thread/w4d717c07ad5220e9
+
+DaemonSet 可用于确保所有符合条件的节点都运行该 Pod 的一个副本。这样就可以通过这种pod来监控每个节点的健康情况、收集日志等。
+
 
 ```shell
 (base) dominiczhu@ubuntu:daemonset$ kubectl apply -f daemonset.yaml 
@@ -2910,18 +2826,10 @@ kube-proxy              1         1         1       1            1           kub
 ```
 
 
-
-
-
-**看不懂的地方**
-
-
-
-Daemon Pods 是如何被调度的
-
-Daemon Pods有啥用
-
 #### Job
+
+deployment会维持pod一直存在，即使比如说pod对应的容器是个busybox，并且仅仅做一个echo xxx的动作执行完成就退出，deployment会不断restart这几个pod。但是job就不会，运行结束了就是结束了。
+
 
 这一章节翻译的及其难受
 
@@ -2950,14 +2858,6 @@ spec.parallelism：并行度，一次运行多少个pod
 
 Parallel Jobs with a *work queue*：这段直接看英文好一些，中文对于“terminated”翻译的不好，一个job里只要有一个pod成功的状态下terminated，那么这个job就是成功的，并且不会再有新的pod被创建出来。
 
-todo：
-
-Q:下句话没看懂，在测试例子中，如果让每个pod随机sleep，不同的pod也不会因为一个已经完成pod而停下来。多个任务因为如果这样，其不是相当于一个job的多个parallel的pod实际上是在争抢同一个任务么。。违背了并行执行的初衷了。后文也提到了：“对于**工作队列** Job，有任何 Job 成功结束之后，不会有新的 Pod 启动。 不过，剩下的 Pod 允许执行完毕。”
-
-> - once any Pod has exited with success, no other Pod should still be doing any work for this task or writing any output. They should all be in the process of exiting.
-
-为了验证上面内容，我创建了一个job，发现上面的话是扯蛋
-
 ```shell
 (base) dominiczhu@ubuntu24LTS:job$ kubectl apply -f job-with-task-queue.yaml 
 job.batch/pi created
@@ -2974,34 +2874,7 @@ pi-xmzbx   0/1     Completed   0          4s
 NAME   STATUS     COMPLETIONS   DURATION   AGE
 pi     Complete   4/1 of 6      3s         8s
 
-# 下面的例子是只有两个pod成功了，最终的job也是完成状态
-(base) dominiczhu@ubuntu24LTS:job$ kubectl delete -f job-with-task-queue.yaml 
-job.batch "pi" deleted
-(base) dominiczhu@ubuntu24LTS:job$ kubectl apply -f job-with-task-queue.yaml 
-job.batch/pi created
-(base) dominiczhu@ubuntu24LTS:job$ kubectl get job
-NAME   STATUS   COMPLETIONS   DURATION   AGE
-pi     Failed   0/1 of 6      4s         4s
-(base) dominiczhu@ubuntu24LTS:job$ kubectl delete -f job-with-task-queue.yaml 
-job.batch "pi" deleted
-(base) dominiczhu@ubuntu24LTS:job$ kubectl apply -f job-with-task-queue.yaml 
-job.batch/pi created
-(base) dominiczhu@ubuntu24LTS:job$ kubectl get job
-NAME   STATUS    COMPLETIONS   DURATION   AGE
-pi     Running   0/1 of 6      2s         2s
-(base) dominiczhu@ubuntu24LTS:job$ kubectl get job
-NAME   STATUS     COMPLETIONS   DURATION   AGE
-pi     Complete   2/1 of 6      3s         3s
-(base) dominiczhu@ubuntu24LTS:job$ kubectl get pod
-NAME       READY   STATUS      RESTARTS   AGE
-pi-7lm7m   0/1     Error       0          15s
-pi-bhd8l   0/1     Error       0          15s
-pi-cggvp   0/1     Completed   0          15s
-pi-jkvts   0/1     Error       0          15s
-pi-ljl9w   0/1     Completed   0          15s
-pi-q4r7v   0/1     Error       0          15s
-
-# 将backoffLimit改为1。发现这个job失败了，但这实际上是通过backoffLimit控制的。并不是说一个pod成功了，job就成功的
+# 将backoffLimit改为1。发现这个job失败了，这是因为job控制器发现这个job即使有一个pod成功了，但是失败次数已经超过backofflimit了
 (base) dominiczhu@ubuntu24LTS:job$ kubectl apply -f job-with-task-queue.yaml 
 job.batch/pi created
 (base) dominiczhu@ubuntu24LTS:job$ kubectl get pod
@@ -3154,9 +3027,6 @@ goose-good/nginx:1.28.0
 
 ## 服务、负载均衡和联网
 
-**看不懂**
-
-> 这个模型只有少部分是由 Kubernetes 自身实现的。 对于其他部分，Kubernetes 定义 API，但相应的功能由外部组件提供
 
 ### 服务（service）
 
@@ -3176,22 +3046,48 @@ kubernetes   ClusterIP   10.96.0.1      <none>        443/TCP    30h
 my-service   ClusterIP   10.96.96.249   <none>        8080/TCP   11s
 ```
 
+**没有选择算符的 Service**
+
+启动一个nginx的集群内的pod用于测试
+```shell
+kubectl run -it --rm --image=goose-good/nginx:1.28.0 ng
+
+# 获取ip
+kubectl get pod -o wide
+
+kubectl apply -f service-without-selector-ink8s.yaml
+# 获取service的ip
+kubectl get service -o wide
+
+# 搞个带curl的busybox
+kubectl run -it --rm --image=goose-good/busybox-curl:v1 dns-test -- sh
+curl 10.244.0.133
+curl 10.97.206.70:8080
+```
 
 
-**Kubernetes 中的 Service**
+启动一个集群外的服务用来测试
 
-todo:
+```shell
+docker run -it --rm -p 8000:80 goose-good/nginx:1.28.0 sh
 
-q:service/ingress/gateway之间的区别
+# curl本地，192.168.58.128是本机ip，注意环境变量里的NO_PROXY要加上本机ip，不要走代理了。
+curl 192.168.58.128:8000
 
-A:
+kubectl apply -f service-without-selector-outk8s.yaml
 
+# 获取service的ip
+kubectl get service -o wide
+kubectl run -it --rm --image=goose-good/busybox-curl:v1 dns-test -- sh
 
+curl 10.100.221.12:8080
+curl 192.168.58.128:8000
+# 发现可以成功curl到宿主机器的哪个nginx
+```
 
-**云原生服务发现**
+这引申出一个问题，`kubectl get service -o wide`中的ip都是集群内的ip，k8s的集群里，除了nodeIP就是这个节点的真实ip之外，启动一个pod也好、service也好，都会分配一个ip，这个ip外部是不认识的，只有集群内部的pod里认识，比如上面的10.100.221.12.
 
-我理解，如果集群里某个应用想知道集群里其他的服务，可以通过api service；如果应用与服务不在同一个集群，那么可以在应用和服务之间架设负载均衡器实现服务发现。
-
+那`curl 192.168.58.128:8000`为啥能访问到集群外的宿主机啊？首先，集群内的网关判断这个ip是集群内的还是集群外的。如果是集群外的，就会放行。而因为我的minikube本身就是一个docker容器，docker容器可以直接通过宿主机的ip访问到宿主机。因此，minikube里的一个pod的容器能够访问到我宿主机中的一个端口。相当于这个pod能够访问到外部的服务。
 
 
 **`type: ClusterIP`**
@@ -3218,7 +3114,7 @@ service-target-port-name.yaml
 
 **nodeport**
 
-这个类型的名字就很说明问题，service暴露在了节点的port上
+这个类型的名字就很说明问题，service暴露在了节点的port上，相当于这个外部可以直接访问这个节点的对应端口来访问这个service
 
 
 
@@ -3226,7 +3122,6 @@ service-target-port-name.yaml
 
 [查看service-cluster-ip-range的方法](https://www.doubao.com/thread/wd5ca0c2952c957cb)
 
-[K8s 修改NodePort的范围](https://blog.csdn.net/qq_15604349/article/details/124749441)
 
 service-node-port-range默认是没有取值的
 
@@ -3268,28 +3163,20 @@ kubectl delete -f service-custom-port.yaml
 
 
 **`type: LoadBalancer`**
+在minikube里没法测试这个，type: LoadBalancer 会请求云平台创建一个外部负载均衡器。Kubernetes 通常先创建 NodePort，然后 cloud-controller-manager 调用云厂商 API 创建 LB，把 LB 的流量转发到 NodePort，再由 Kubernetes 转发到 Pod。创建结果（例如公网 IP）会写入 Service 的 status.loadBalancer 字段。
+1. 创建一个service，这个service背后是自己集群中的几个pod，并且暴露在nodePort上。
+2. 然后向公有云平台例如aws等等注册一个LB，返回一个ip
 
-```shell
-(base) dominiczhu@ubuntu:service$ kubectl apply -f loadbalancer-service.yaml 
-service/my-service created
-pod/nginx created
-(base) dominiczhu@ubuntu:service$ kubectl get service
-NAME         TYPE           CLUSTER-IP    EXTERNAL-IP   PORT(S)          AGE
-kubernetes   ClusterIP      10.96.0.1     <none>        443/TCP          11d
-my-service   LoadBalancer   10.96.0.239   <pending>     8080:31830/TCP   7s
+当外部访问到云平台，并且云平台判断这个流量是我的这个集群的时候，他会发送到这个external-ip上，然后云平台会将流量转发到我提供给云平台的节点以及nodePort上，从而让流量转发到自己创建的这个service，当然也因此云平台的LB就是转发，具体哪个pod提供服务还是自己云平台的service控制的。
 
-(base) dominiczhu@ubuntu:service$ curl http://"$(minikube ip)":31830
-<!DOCTYPE html>
-<html>
-<head>
-<title>Welcome to nginx!</title>
-```
+https://chatgpt.com/s/t_6a524a0e87f48191a1f68f33dd1629ec
 
-[status.loadBalancer.ingress的作用](https://www.doubao.com/thread/w63d8dbe8fe55ba26)
+https://chatgpt.com/s/t_6a524be5dd6c81919928ddc86ff8fc18
+
 
 **ExternalName 类型**
 
-相当于一个通过dns指向其他外部地址（需要集群有一个支持外部的dns服务）或者其他service的中间层，比如有一些pod需要访问集群之外的数据库服务，可以将数据库的地址通过externalName的service构建一层映射，然后其他pod只要访问这个servcie，就能访问这个数据库了，参考：[Kubernetes Service中ExternalName的使用](https://blog.csdn.net/polywg/article/details/109814803)、[k8s - Service ExternalName](https://www.cnblogs.com/microestc/p/13255086.html)
+相当于一个通过dns指向其他外部地址（需要集群有一个支持外部的dns服务）或者其他service的中间层，比如有一些pod需要访问集群之外的数据库服务，可以将数据库的地址通过externalName的service构建一层映射，然后其他pod只要访问这个servcie，就能访问这个数据库了
 
 
 
@@ -3582,29 +3469,45 @@ todo：这端看的不懂，我个人理解，“外部 IP”值得应该是公�
 
 ### Ingress
 
-ingress提供了一种类似于路由的功能，外部可以通过这个路由规则访问到集群内的某些服务。当外部来流量的时候，会根据请求的host头部、path路径匹配到对应的service，但是这一节主要将的都是概念，没有真实的案例可以演示
+理解概念，然后去看gateway，gateway是ingress的下一代
+
+```shell
+minikube addons enable ingress
+
+kubectl get ns
+# 发现多了个ns ingress-nginx
+
+# 查看有什么资源，发现有1个deployment和两个job，
+kubectl get -n ingress-nginx all
+
+# 分别修改他们的spec，将指定的镜像的sha给删了 额好像不删也是可以的。。。
+# kubectl -n ingress-nginx edit deployment/ingress-nginx-controller
+
+# kubectl -n ingress-nginx edit job/ingress-nginx-admission-create
+
+# kubectl -n ingress-nginx edit job/ingress-nginx-admission-patch
+
+minikube image load registry.k8s.io/ingress-nginx/controller:v1.11.3
+
+minikube image load registry.k8s.io/ingress-nginx/kube-webhook-certgen:v1.4.4
+```
+
+```shell
+kubectl apply -f 
+
+kubectl apply -f nginx-app.yaml
+
+minikube ip
+
+# 懒得配host了，通过-H指定一下
+curl -H "Host: nginx.local" http://192.168.49.2/nginx
 
 
+kubectl delete -f nginx-ingress.yaml 
 
-**IngressClass 的作用域**
-
-todo:parameter参数指的是什么？有啥用？
-
-**简单扇出**
-
-todo：q:这里对图有个疑问，fanout应该对应的服务，至于每个服务会不会fanout，这个按理说不会才对。
-
-**负载均衡**
-
-我理解ingress有一点简单的负载均衡，复杂的负载均衡可以通过service的负载均衡来实现。
-
-
-
-**看不懂**
-
-1. IngressClass ：这东西是tmd干啥的？
-2. IngressClass 的作用域
-3. 负载均衡
+kubectl delete -f nginx-app.yaml 
+```
+通过这个例子可以知道ingress就是nginx类似物，并且只能转发http请求。
 
 ### Ingress控制器
 
@@ -3612,13 +3515,82 @@ todo：q:这里对图有个疑问，fanout应该对应的服务，至于每个�
 
 ### Gateway API
 
-**资源模型**
 
-- GatewayClass：个人理解用于管理GateWay的控制器，前面看到过一个deployment controller会通过创建ReplicaSet从而实现维护Pod副本数量的功能，也就是说controller是负责调度、使用其他功能从而达到目的的组件，GatewayClass也类似，他是k8s中的一种资源，这个资源本质上是一个gatewaycontroller，负责控制、调用、管理gateway，还是不太懂todo。
-- Gateway：具体执行流量处理的资源。示例中，我理解这个example-gateway应该是对外在某个公网ip下暴露了80端口，也就是说gateway是负责外界流量与集群内部流量的入口。
+gateway的核心作用仍然是路由，但与ingress不同，他能支持L7和L4的路由，并且将职责拆分的更细
+
+- GatewayClass：类比于storageClass，相当于创建了一种GateWayClass，当它被使用的时候，需要交给哪个controller处理，例如，
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+
+metadata:
+  name: nginx-class
+
+spec:
+  controllerName: nginx.org/gateway-controller
+```
+如果有人选择 nginx-class，那么交给 nginx gateway controller 处理。
+
+- Gateway：真正创建一个网关实例，仅仅声明了如何对外提供服务，并没有指明对集群内的哪些service、如何路由
 - HTTPRoute：路由规则，负责作为gateway和service的桥梁，将gateway出来的请求根据规则转发到对应service里
 
+https://chatgpt.com/s/t_6a525f28d1b08191b34ef9cf7710f469
 
+结合：请求数据流的图，更容易理解
+
+
+
+安装：Envoy Gateway
+```shell
+# 先关闭ingress，避免冲突
+minikube addons disable ingress
+
+# 没有执行这个
+# kubectl apply -f standard-install.yaml
+
+minikube image load envoyproxy/gateway:v1.8.2
+minikube image load  envoyproxy/ratelimit:1e50889b
+
+
+#  一定要create 安装envoyproxy
+kubectl create -f install.yaml
+# kubectl delete -f install.yaml
+
+kubectl apply -f gatewayclass.yaml
+
+kubectl apply -f nginx.yaml
+# kubectl delete -f nginx.yaml
+kubectl get pod,svc
+kubectl apply -f gateway.yaml
+# kubectl delete -f gateway.yaml
+
+# 异常
+(base) dominiczhu@ubuntu:gateway$ kubectl get gateway 
+# NAME CLASS ADDRESS PROGRAMMED AGE 
+# nginx-gateway eg 10.111.168.191 False 18s
+
+# chatgpt指导的，发现异常 缺镜像
+kubectl get pods -A
+# envoy-gateway-system   envoy-default-nginx-gateway-42c88ea3-5d875f7887-zkt7d   1/2     ImagePullBackOff   0                3m59s
+
+kubectl get gateway
+# NAME            CLASS   ADDRESS          PROGRAMMED   AGE
+# nginx-gateway   eg      10.111.168.191   True         9m8s
+
+kubectl apply -f httproute.yaml
+# kubectl delete -f httproute.yaml
+
+kubectl get httproute
+
+# Envoy Gateway 会创建一个 Service：
+kubectl get svc -A | grep envoy
+
+# 没必要折腾loadbalancer，minikube给loadbalencer的external ip仍然是内部ip 用不了，算了
+# envoy-gateway-system   envoy-default-nginx-gateway-42c88ea3   LoadBalancer   10.111.168.191   10.111.168.191   8080:31189/TCP 
+# 直接ip访问，发现可以访问到哪个nginx服务，说明这个路由成功了
+curl http://$(minikube ip):31189
+
+```
 
 ### EndpointSlice
 

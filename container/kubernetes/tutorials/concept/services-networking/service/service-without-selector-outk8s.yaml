@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-service-outk8s
+spec:
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8000
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: my-service-outk8s-1 # 按惯例将 Service 的名称用作 EndpointSlice 名称的前缀
+  labels:
+    # 你应设置 "kubernetes.io/service-name" 标签。
+    # 设置其值以匹配 Service 的名称
+    kubernetes.io/service-name: my-service-outk8s
+addressType: IPv4
+ports:
+  - name: '' 
+    appProtocol: http
+    protocol: TCP
+    port: 8000
+endpoints:  # 此列表中的 IP 地址可以按任何顺序显示
+  - addresses:
+      - "192.168.58.128"

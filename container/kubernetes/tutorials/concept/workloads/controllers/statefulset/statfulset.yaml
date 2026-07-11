@@ -8,6 +8,7 @@ spec:
   ports:
   - port: 80
     name: web
+  # 代表这个服务是一个无头服务
   clusterIP: None
   selector:
     app: nginx
@@ -45,7 +46,8 @@ spec:
   - metadata:
       name: www
     spec:
-      accessModes: [ "ReadWriteOnce" ]
+      accessModes: 
+        - ReadWriteOnce
       # storageClassName: "my-storage-class"
       resources:
         requests:

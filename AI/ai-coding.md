@@ -22,6 +22,7 @@ vim ~/.bashrc
 export HTTP_PROXY=http://192.168.58.1:10809
 export HTTPS_PROXY=http://192.168.58.1:10809
 export ALL_PROXY=socks5://192.168.58.1:10809
+export NO_PROXY=localhost,127.0.0.1,192.168.49.0/24
 
 # 刷新环境变量
 source ~/.bashrc
@@ -29,7 +30,7 @@ source ~/.bashrc
 
 ## 配置ide插件
 
-- vscode：安装codex插件即可，然后跳转登录
+- vscode：安装codex插件即可，然后跳转登录（注意，一定关闭自动升级，tmd有一次自动升级给我codex干黑屏了，我用的26.623.70xxx），自动升级之后，vscode-help-toggledevelopertool里面一堆报错
 - idea：安装最新版idea，开启右侧的aichat，然后跳转登录即可。
 
 排查指南：v2ray的日志会实时展示请求的日志，正常情况下，不应该报错，如果日志中出现报错，可能还是部分流量没有走v2ray，例如我一开始没有配置环境变量里的代理，而只是配置了vscode中的应用代理，但是部分请求还是被漏掉了，导致v2ray中一堆报错

@@ -12,6 +12,7 @@ spec:
   initContainers:
   - name: init-myservice
     image: goose-good/busybox:1.37.0
+    # /var/run/secrets/kubernetes.io/serviceaccount/namespace存储了当前Pod所在的命名空间名称
     command: ['sh', '-c', "until nslookup myservice.$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace).svc.cluster.local; do echo waiting for myservice; sleep 2; done"]
   - name: init-mydb
     image: goose-good/busybox:1.37.0
