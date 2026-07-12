@@ -3114,7 +3114,7 @@ service-target-port-name.yaml
 
 **nodeport**
 
-这个类型的名字就很说明问题，service暴露在了节点的port上，相当于这个外部可以直接访问这个节点的对应端口来访问这个service
+这个类型的名字就很说明问题，service暴露在了**每个**节点的port上，相当于这个外部可以直接访问**每个**节点的对应端口来访问这个service
 
 
 
@@ -3156,7 +3156,7 @@ kubectl delete -f service-custom-port.yaml
 
 [kube-proxy  --nodeport-addresses](https://www.doubao.com/thread/wdddd670154dc7f77)
 
-我理解了一下，默认情况下，如果创建了一个nodeport的service，当有内外部流量访问这个service的时候，service会将这个流量转发到目标pod所在的节点node，默认情况下，所有节点都支持作为提供service功能的节点。
+我理解了一下，默认情况下，如果创建了一个nodeport的service，当有内外部流量访问这个service的时候，service会将这个流量转发到目标pod所在的节点node，默认情况下，所有节点都支持作为提供service功能的节点。默认情况下，Kubernetes 会在集群中每一个节点（包括 Master/Control Plane 节点，如果其可被调度的话）上都开放同一个端口。
 
 但有些情况下，有些节点不希望为某些service提供服务，那么就可以通过这个指令来通过ip限制nodeport的service可以使用哪些node
 
@@ -3965,6 +3965,11 @@ INFO
 m�Z���j]��]�
 ```
 
+**emptyDir**
+因为容器崩溃并不会导致pod从节点移除，所以当一个容器崩溃后重启，他仍然能看到之前emptyDir的volume中的内容。同时，emptyDir是pod级别的，因此如果同一个pod下不同容器可以同时看到相同的内容。
+
+
+
 **hostPath**
 
 
@@ -3992,17 +3997,63 @@ todo:后续的测试没有通过，报错了Error: Error response from daemon: i
 
 **local**
 
-相当于拿本地的一块存储交给k8s作为卷来挂载，并且只能用于作为持久卷。在示例中，相当于将本地的/mnt/disks/ssd1的100g作为卷挂载上去。
+相当于拿本地的一块存储交给k8s作为卷来挂载，并且只能用于作为持久卷。在示例中，相当于将本地的/mnt/disks/ssd1的100g作为卷挂载上去。顺带演示subpath
+```shell
+minikube ssh
+sudo mkdir -p /mnt/local-data/html
+sudo chmod 777 /mnt/local-data/html
+exit
+
+# 创建一个localstorageclass
+kubectl apply -f local-storage.yaml
+kubectl get storageclass
+
+
+kubectl apply -f local-pv.yaml -f local-pvc.yaml -f local-test.yaml
+kubectl delete -f local-pv.yaml -f local-pvc.yaml -f local-test.yaml
+
+kubectl get pvc
+kubectl get pv 
+kubectl events pod
+
+kubectl exec -it local-test -- bash
+echo "hello local pv" > /data/test.txt
+exit
+
+minikube ssh
+cat /mnt/local-data/html/test.txt
+exit
+
+```
 
 
 
 **persistentVolumeClaim**
 
+pv和pvc是紧密联系的。
+```shell
+管理员                  应用开发者
+
+PV                      PVC
+↓                       ↓
+我提供一个存储            我需要一个存储
+
+        Kubernetes负责匹配
+
+             ↓
+
+          PVC绑定PV
+
+             ↓
+
+            Pod使用PVC
+```
+
 结合下方的`使用 subPath`的例子，这个相当于在pod里声明，我这个pod需要使用一个已经存在的persistentVolume
 
 **使用 subPath**
 
-一个卷分着大家用。每个pod使用一个subpath
+一个卷分着大家用。每个pod使用一个subpath，local的例子里用到了
 
 **树外（Out-of-Tree）卷插件**
 
@@ -4488,13 +4539,81 @@ The ConfigMap "immutable-configmap" is invalid: data: Forbidden: field is immuta
 
 通过kubectl创建Opaque Secret，直接`kubectl create secret generic -h`
 
+**在 Secret 卷中带句点的文件**
 
+```shell
+kubectl apply -f dotfile-secret.yaml
+kubectl logs pod/secret-dotfiles-pod
+```
+
+**Opaque** 
+
+```shell
+
+kubectl apply -f secret.yaml
+kubectl delete -f secret.yaml
+kubectl exec -it secret-demo -- bash
+
+# 会发现挂载之后是base64解码后的结果了，所以，即使你希望传递的东西本身就是base64的内容，你还要再base64的方式编码后写给secret
+# 当然你可以不使用data，直接使用stringData，k8s会代替你完成上述base64编码存储，然后再解码挂载到目标pod，从而保证pod看到的就是stringData
+# 但是文档说，Secret 的 stringData 字段不能很好地与Server-Side Apply配合使用。官方不推荐在需要 Server-Side Apply 的场景使用 stringData
+echo $DB_USERNAME
+cat /etc/db-secret/username
+```
 
 **ServiceAccount 令牌 Secret**
 
-实例暂略，留到task章节再做。
+ServiceAccount 令牌 Secret 是 Kubernetes 中用于让 Pod 以某个身份访问 Kubernetes API Server 的凭证。比如，某个Prometheus Pod希望查询 Kubernetes API
+- 获取 Pod 信息
+- 获取 Service 信息
+- 获取 Endpoint 信息
+
+在新版k8s集群中，serviceaccount关联的token是临时生成的，当某个pod使用了这个serviceaccount之后，kubelet会临时生成一个token在pod中的容器中，当这个pod被删除，响应的token也会失效，如下所示。
+
+```shell
+
+kubectl apply -f serviceaccount.yaml
+kubectl get sa
+# secret是空的
+kubectl get secret
+kubectl get role
 
 
+kubectl exec -it api-test -- bash
+ls /var/run/secrets/kubernetes.io/serviceaccount
+cat /var/run/secrets/kubernetes.io/serviceaccount/token
+TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+
+# 可以直接访问k8s集群的接口
+curl \
+  -k \
+  -H "Authorization: Bearer $TOKEN" \
+  https://kubernetes.default.svc/api/v1/namespaces/default/pods
+
+kubectl delete -f serviceaccount.yaml
+```
+
+而`serviceaccount-token-secret.yaml`是传统模式，这会生成一个长期有效的token。
+```shell
+kubectl apply -f serviceaccount-token-secret.yaml
+
+# 这时能够看到里面的token
+kubectl get secret api-reader-token -o yaml
+
+
+kubectl exec -it api-client -- bash
+ls /var/run/secrets/my-token
+TOKEN=$(cat /var/run/secrets/my-token/token)
+
+curl \
+  --cacert /var/run/secrets/my-token/ca.crt \
+  -H "Authorization: Bearer $TOKEN" \
+  https://kubernetes.default.svc/api/v1/namespaces/default/pods
+
+exit
+kubectl delete -f serviceaccount-token-secret.yaml
+
+```
 
 **Docker 配置 Secret**
 

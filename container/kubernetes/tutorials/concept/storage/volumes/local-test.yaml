@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: local-test
+
+spec:
+
+  containers:
+  - name: nginx
+    image: nginx:1.27.3
+
+    volumeMounts:
+    - name: data
+      mountPath: /data
+      subPath: html  # subPath的作用是指定挂载卷中的某个子目录，而不是整个卷。这样可以让容器只访问卷中的特定目录，而不是整个卷，从而提高安全性和灵活性。相当于将local-pvc/html目录挂载到容器的/data目录下，而不是将整个local-pvc卷挂载到/data目录下。
+
+
+  volumes:
+  - name: data
+  # 通过pvc引用已经创建好的PersistentVolumeClaim（PVC），PVC会去寻找合适的PersistentVolume（PV）进行绑定，从而为Pod提供存储资源。
+    persistentVolumeClaim:
+      claimName: local-pvc
