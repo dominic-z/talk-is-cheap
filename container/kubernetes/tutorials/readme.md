@@ -3546,14 +3546,14 @@ https://chatgpt.com/s/t_6a525f28d1b08191b34ef9cf7710f469
 minikube addons disable ingress
 
 # 没有执行这个
-# kubectl apply -f standard-install.yaml
+# kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/latest/download/standard-install.yaml
 
 minikube image load envoyproxy/gateway:v1.8.2
 minikube image load  envoyproxy/ratelimit:1e50889b
 
 
 #  一定要create 安装envoyproxy
-kubectl create -f install.yaml
+kubectl apply -f https://github.com/envoyproxy/gateway/releases/latest/download/install.yaml
 # kubectl delete -f install.yaml
 
 kubectl apply -f gatewayclass.yaml
