@@ -2,7 +2,9 @@
 
 
 ```shell
-git filter-branch --force --index-filter "git rm --cached --ignore-unmatch 你要删除的文件（相对项目的路径）" --prune-empty --tag-name-filter cat -- --all
+
+# You need to run this command from the toplevel of the working tree.在git的根目录来执行
+git filter-branch --force --index-filter "git rm --cached --ignore-unmatch container/kubernetes/tutorials/concept/services-networking/gateway/install.yaml" --prune-empty --tag-name-filter cat -- --all
 
 git push origin --force --all
 
