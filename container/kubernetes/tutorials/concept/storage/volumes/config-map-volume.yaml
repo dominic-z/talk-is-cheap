@@ -17,6 +17,7 @@ spec:
   containers:
     - name: test
       image: goose-good/busybox:1.37.0
+      # tail -f /dev/null的作用是让容器一直运行，不退出
       command: 
         - sh
         - -c
@@ -24,7 +25,8 @@ spec:
           echo "The app is running!" && 
           ls -l /etc/config &&
           cat /etc/config/log_level.conf && echo ""
-          cat /etc/config/binary.conf && echo ""
+          cat /etc/config/binary.conf && echo "" &&
+          tail -f /dev/null"" 
       volumeMounts:
         - name: config-vol
           mountPath: /etc/config

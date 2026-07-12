@@ -1,0 +1,17 @@
+apiVersion: v1
+# PVC的作用是声明需要的存储资源，Kubernetes会根据PVC的声明去寻找合适的PV进行绑定。PVC和PV是Kubernetes中存储资源管理的核心概念，PVC是用户对存储资源的需求，而PV是管理员提供的实际存储资源。
+kind: PersistentVolumeClaim
+metadata:
+  name: local-pvc
+
+# spec字段用于定义PVC的具体需求，包括访问模式、存储类和资源请求等。k8s会根据这些需求去寻找合适的PV进行绑定。
+spec:
+  # 在pv的定义里会有accessModes字段，在pvc的定义里也会有accessModes字段，前者用于标识某个PV提供的访问模式有哪些，后者用于标识某个PVC需要的访问模式有哪些。k8s会根据PVC的accessModes去寻找满足条件的PV进行绑定。
+  accessModes:
+  - ReadWriteOnce
+
+  storageClassName: local-storage
+
+  resources:
+    requests:
+      storage: 20Mi

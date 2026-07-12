@@ -1,0 +1,11 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-storage
+
+# 这个 StorageClass 不支持动态创建 PersistentVolume（PV），需要管理员提前手动创建 PV。
+# 一些 StorageClass 支持动态创建 PV，比如使用 NFS、CephFS、GlusterFS 等存储类型的 StorageClass 就支持动态创建 PV。
+provisioner: kubernetes.io/no-provisioner
+
+# WaitForFirstConsumer代表在创建 PersistentVolumeClaim（PVC）时，Kubernetes 不会立即绑定到一个 PersistentVolume（PV）。相反，它会等待直到有一个 Pod 需要使用这个 PVC 时，才会去寻找合适的 PV 并进行绑定。这种策略有助于确保 PV 的选择与 Pod 的调度位置相匹配，从而提高资源利用率和调度效率。
+volumeBindingMode: WaitForFirstConsumer

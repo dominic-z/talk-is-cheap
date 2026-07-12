@@ -1,0 +1,32 @@
+apiVersion: v1
+# 声明一种PV的类型，kind字段用于指定资源的类型，这里是PersistentVolume，表示这是一个持久卷。相当于告诉Kubernetes，你现在要创建一个持久卷资源。
+kind: PersistentVolume
+metadata:
+  name: local-pv
+spec:
+  capacity:
+    storage: 100Mi
+
+  accessModes:
+  # ReadWriteOnce的意思是该卷可以被单个节点以读写模式挂载，对于local类型的PV来说，一定是ReadWriteOnce，因为local类型的PV只能被一个节点挂载。ReadWriteMany的意思是该卷可以被多个节点以读写模式挂载，比如NFS类型的PV就可以是ReadWriteMany，因为nfs是网络文件系统，可以被多个节点挂载。ReadOnlyMany的意思是该卷可以被多个节点以只读模式挂载，比如CephFS类型的PV就可以是ReadOnlyMany，因为cephfs是分布式文件系统，可以被多个节点挂载。
+  # 这个声明的意思是该卷可以被单个节点以读写模式挂载，能够提供这种能力。
+  - ReadWriteOnce
+
+  # 这个字段用于指定当PV被释放后，应该如何处理该PV的存储资源。Retain表示当PV被释放后，存储资源不会被删除，而是保留在集群中，需要管理员手动清理。Delete表示当PV被释放后，存储资源会被自动删除。Recycle表示当PV被释放后，存储资源会被清空并重新初始化，可以再次使用。
+  persistentVolumeReclaimPolicy: Retain
+
+  # 声明这个 PV 属于哪个 StorageClass，主要用于 PV 和 PVC 匹配。
+  storageClassName: local-storage
+
+  local:
+    path: /mnt/local-data
+
+# nodeAffinity 用于指定该 PV 只能被特定的节点使用，这里指定了该 PV 只能被 hostname 为 minikube 的节点使用。因为 local 类型的 PV 是绑定到节点上的，所以需要指定 nodeAffinity。
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - minikube
