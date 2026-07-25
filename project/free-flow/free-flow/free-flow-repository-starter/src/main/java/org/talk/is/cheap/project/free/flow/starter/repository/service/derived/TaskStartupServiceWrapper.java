@@ -31,6 +31,16 @@ public class TaskStartupServiceWrapper {
         return list.get(0);
     }
 
+    public int updateByIdsSelective(List<Long> ids, TaskStartup taskStartup) {
+        if (ids.isEmpty()) {
+            return 0;
+        }
+        TaskStartupExample example = new TaskStartupExample();
+        TaskStartupExample.Criteria criteria = example.createCriteria();
+        criteria.andIdIn(ids);
+        return taskStartupService.updateByExampleSelective(taskStartup, example);
+    }
+
 
     public int updateByIdSelective(long id, TaskStartup taskStartup, Long revision) {
         TaskStartupExample example = new TaskStartupExample();

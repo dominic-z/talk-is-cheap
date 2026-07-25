@@ -6,6 +6,30 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class ReentrantLockExample {
 
+
+    @Test
+    public void testLock() throws InterruptedException {
+
+        ReentrantLock lock = new ReentrantLock();
+
+        Thread t1 = new Thread(() -> {
+            lock.lock();
+            while(true){
+
+            }
+        },"可重入锁1");
+        t1.start();
+
+        Thread.sleep(20);
+        Thread t2 = new Thread(() -> {
+            lock.lock();
+        },"可重入锁2");
+        // 注意，t2线程的状态是java.lang.Thread.State: WAITING (parking)
+
+        t2.start();
+        t2.join();
+    }
+
     @Test
     public void testLockInterruptibly() throws InterruptedException {
 
