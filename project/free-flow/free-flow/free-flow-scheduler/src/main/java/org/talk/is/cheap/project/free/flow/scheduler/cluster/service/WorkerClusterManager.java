@@ -24,6 +24,7 @@ import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.client.WorkerNodeClient;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.SchedulerLifecycleEvent;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.WatchWorkerTaskDefinitionEvent;
+import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.WorkerTerminatedEvent;
 import org.talk.is.cheap.project.free.flow.scheduler.config.property.ZKPathProperty;
 import org.talk.is.cheap.project.free.flow.scheduler.utils.VNConsistentHash;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.ClusterNodeExample;
@@ -180,7 +181,7 @@ public class WorkerClusterManager {
         this.assignWorkerToScheduler(workerNodeAddress);
     }
 
-    // 如果online下线，那么说明这个节点真的已经下线而来
+    // 如果online下线，那么说明这个节点真的已经下线了
     private void onRemoveOnlineWorker(PathChildrenCacheEvent event) {
         ChildData eventData = event.getData();
         if (eventData == null) {
@@ -208,6 +209,10 @@ public class WorkerClusterManager {
                     new ClusterNode()
                             .withNodeAddress(workerNodeAddress)
                             .withStatus(NodeStatus.TERMINATED.getStatus()), example);
+
+            // 修改该节点的任务直接为失败
+            publisher.publishEvent(new WorkerTerminatedEvent(workerNodeAddress));
+
         }
 
         this.removeOnlineWorkerFromScheduler(workerNodeAddress);
@@ -522,7 +527,8 @@ public class WorkerClusterManager {
             vnConsistentHashInit.await();
             synchronized (this) {
                 this.vnConsistentHash.addNode(event.getAddress());
-                this.schedulerDispatchedWorkers.computeIfAbsent(event.getAddress(),(k)->new ConcurrentHashSet<>()); // 分配个hash位置，因为可能新节点没分配到任何节点，导致根本不再这个map里
+                this.schedulerDispatchedWorkers.computeIfAbsent(event.getAddress(), (k) -> new ConcurrentHashSet<>()); // 分配个hash
+                // 位置，因为可能新节点没分配到任何节点，导致根本不再这个map里
                 // 重新分配节点
                 HashMap<String, String> workerOldAssignedScheduler = new HashMap<>();
                 this.schedulerDispatchedWorkers.forEach((k, v) -> {

@@ -32,16 +32,29 @@ public class TaskExecutionServiceWrapper {
         return list.get(0);
     }
 
-    public List<TaskExecution> selectByStartupIds(List<Long> startupIds,Integer taskExecutionStatus) {
+    public List<TaskExecution> selectByStartupIds(List<Long> startupIds, Integer taskExecutionStatus) {
         TaskExecutionExample example = new TaskExecutionExample();
         TaskExecutionExample.Criteria criteria = example.createCriteria();
 
-        if(taskExecutionStatus!=null){
+        if (taskExecutionStatus != null) {
             criteria.andStatusEqualTo(taskExecutionStatus);
         }
         criteria.andTaskStartupIdIn(startupIds);
         List<TaskExecution> list = taskExecutionService.selectByExample(example);
         return list;
+    }
+
+    public List<TaskExecution> selectByWorkerAddr(String workerAddr, int page, int pageSize, int... taskStatus) {
+        TaskExecutionExample example = new TaskExecutionExample();
+        TaskExecutionExample.Criteria criteria = example.createCriteria();
+        criteria.andAssignedWorkerAddrEqualTo(workerAddr);
+        if (taskStatus != null && taskStatus.length != 0) {
+            criteria.andStatusIn(Arrays.stream(taskStatus).boxed().toList());
+        }
+        example.setLimit(pageSize);
+        example.setOffset((page - 1) * pageSize);
+        example.setOrderByClause(TaskExecution.ASSIGNED_WORKER_ADDR);
+        return taskExecutionService.selectByExampleDeepPaging(example);
     }
 
 

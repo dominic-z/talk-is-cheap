@@ -10,6 +10,7 @@ import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.talk.is.cheap.project.free.flow.common.enums.StartupSourceType;
@@ -25,6 +26,7 @@ import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerRetr
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerStartTaskReq;
 import org.talk.is.cheap.project.free.flow.common.message.impl.worker.WorkerStartTaskResp;
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
+import org.talk.is.cheap.project.free.flow.scheduler.cluster.event.WorkerTerminatedEvent;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.service.WorkerClusterManager;
 import org.talk.is.cheap.project.free.flow.scheduler.task.client.WorkerTaskDriverClient;
 import org.talk.is.cheap.project.free.flow.starter.repository.config.RedisAutoConfig;
@@ -72,6 +74,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 
@@ -292,7 +295,8 @@ public class WorkerTaskDriverService {
                     stageStartupParamService.create(
                             StageStartupParam.builder().stageStartupId(stageStartup.getId())
                                     .encodedInput(encodedInput)
-                                    .encodedSharedContextSnapshotAtStartup(stageDefinition.getIsStartingStage()?initialEncodedSharedContext:null)
+                                    .encodedSharedContextSnapshotAtStartup(stageDefinition.getIsStartingStage() ?
+                                            initialEncodedSharedContext : null)
                                     .updateTime(new Date())
                                     .build()
                     );
@@ -830,14 +834,15 @@ public class WorkerTaskDriverService {
                     // 从历史执行记录的es中读取上一次任务启动时的入参，包括各个stage的启动参数，以及sharedContext，并es中重建新的taskExecution的stageStartup对象的es对象
                     StageStartupParam failedTaskStageStartupParam = failedTaskStageNameParamMap.get(stageName);
                     String encodedInput = null;
-                    if(failedTaskStageStartupParam!=null){
+                    if (failedTaskStageStartupParam != null) {
                         retryTaskStageEncodedInputs.put(stageName, failedTaskStageStartupParam.getEncodedInput());
                         encodedInput = failedTaskStageStartupParam.getEncodedInput();
                     }
                     stageStartupParamService.create(
                             StageStartupParam.builder().stageStartupId(retryTaskStageStartup.getId())
                                     .encodedInput(encodedInput)
-                                    .encodedSharedContextSnapshotAtStartup(stageDefinition.getIsStartingStage()?taskSharedContext.getEncodedTaskSharedContext():null)
+                                    .encodedSharedContextSnapshotAtStartup(stageDefinition.getIsStartingStage() ?
+                                            taskSharedContext.getEncodedTaskSharedContext() : null)
                                     .updateTime(new Date())
                                     .build()
                     );
@@ -1091,6 +1096,30 @@ public class WorkerTaskDriverService {
 
 
         taskExecutionServiceWrapper.updateSelectiveById(taskExecutionId, taskExecution, taskExecution.getRevision());
+    }
+
+
+    /**
+     * 节点下线断连，该节点的所有运行中的任务设置为失败
+     * @param WorkerTerminatedEvent event
+     */
+    @EventListener(WorkerTerminatedEvent.class)
+    public void nodeLostAndFailTask(WorkerTerminatedEvent event) {
+        // 防止死循环
+        int pageSize = 50;
+        for (int page = 0; page < 20; page++) {
+            List<TaskExecution> taskExecutions = taskExecutionServiceWrapper.selectByWorkerAddr(event.getNodeAddress(), page, pageSize,
+                    TaskStageStatus.RUNNING.getStatus());
+
+            // 简单处理，只更新了startup对象，没有动execution对象，要是动了上面的翻页还得改。。。
+            taskStartupServiceWrapper.updateByIdsSelective(taskExecutions.stream().map(TaskExecution::getTaskStartupId).unordered().distinct().toList(),
+                    new TaskStartup().withStatus(TaskStageStatus.FAILED.getStatus()));
+
+            if (taskExecutions.size() < pageSize) {
+                break;
+            }
+        }
+
     }
 
 }
