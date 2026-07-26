@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.talk.is.cheap.project.free.flow.common.enums.NodeStatus;
 import org.talk.is.cheap.project.free.flow.common.enums.NodeType;
+import org.talk.is.cheap.project.free.flow.common.enums.TaskStageStatus;
 import org.talk.is.cheap.project.free.flow.common.message.HttpBody;
 import org.talk.is.cheap.project.free.flow.common.utils.VerifyUtil;
 import org.talk.is.cheap.project.free.flow.scheduler.cluster.client.WorkerNodeClient;
@@ -29,8 +30,10 @@ import org.talk.is.cheap.project.free.flow.scheduler.config.property.ZKPathPrope
 import org.talk.is.cheap.project.free.flow.scheduler.utils.VNConsistentHash;
 import org.talk.is.cheap.project.free.flow.starter.repository.dao.mbg.query.example.ClusterNodeExample;
 import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.ClusterNode;
+import org.talk.is.cheap.project.free.flow.starter.repository.domain.pojo.TaskExecution;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.ClusterNodeService;
 import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.ClusterNodeServiceWrapper;
+import org.talk.is.cheap.project.free.flow.starter.repository.service.derived.TaskExecutionServiceWrapper;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -88,6 +91,8 @@ public class WorkerClusterManager {
     @Autowired
     private WorkerNodeClient workerNodeClient;
 
+    @Autowired
+    private TaskExecutionServiceWrapper taskExecutionServiceWrapper;
 
     private CuratorCache onlineWorkerCuratorCache;
     private CuratorCache runnableWorkerCuratorCache;
@@ -98,6 +103,9 @@ public class WorkerClusterManager {
     private final Map<String, String> runnableWorkerAddressPath = new ConcurrentHashMap<>();
     private final Map<String, Integer> pingFailedAddrCounter = new ConcurrentHashMap<>();
     private final Map<String, Integer> pingSucceedAddrCounter = new ConcurrentHashMap<>();
+
+    // 已经触发过重新调度的下线worker地址，避免孤儿任务检测重复触发
+    private final Set<String> rescheduledOfflineWorkerAddrs = new ConcurrentHashSet<>();
 
     // 当监听的worker的路径发生变化时，这个线程池负责实际执行监听回调，线程池设置为4，因为每个任务其实都不大，实际要参考集群的情况来控制
     private final ThreadPoolExecutor handleWorkerEventThreadPool = new ThreadPoolExecutor(4, 4, 1000, TimeUnit.MILLISECONDS,
@@ -367,6 +375,56 @@ public class WorkerClusterManager {
 
         runnableWorkerCuratorCache.listenable().addListener(listener);
         runnableWorkerCuratorCache.start();
+
+        // 启动孤儿任务检测：当worker和其管理scheduler同时下线时，由存活的scheduler检测并重新调度孤儿任务
+        scheduleOrphanTaskDetection();
+    }
+
+    /**
+     * 定时检测孤儿任务：查询DB中RUNNING状态的任务，检查其分配的worker是否仍在runnable集合中，
+     * 若worker已下线则发布WorkerTerminatedEvent触发重新调度。
+     * 用于处理worker和其管理scheduler同时下线的场景。
+     */
+    private void scheduleOrphanTaskDetection() {
+        Runnable orphanTaskDetection = new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    int pageSize = 50;
+                    for (int page = 1; page <= 20; page++) {
+                        List<TaskExecution> runningTasks = taskExecutionServiceWrapper.selectByStatus(
+                                page, pageSize, TaskStageStatus.RUNNING.getStatus());
+                        if (runningTasks == null || runningTasks.isEmpty()) {
+                            break;
+                        }
+
+                        // 收集已下线且未处理过的worker地址
+                        Set<String> offlineWorkerAddrs = new HashSet<>();
+                        for (TaskExecution task : runningTasks) {
+                            String workerAddr = task.getAssignedWorkerAddr();
+                            if (!isValidRunnableWorker(workerAddr) && !rescheduledOfflineWorkerAddrs.contains(workerAddr)) {
+                                offlineWorkerAddrs.add(workerAddr);
+                            }
+                        }
+
+                        // 发布事件触发重新调度
+                        for (String offlineAddr : offlineWorkerAddrs) {
+                            log.info("孤儿任务检测：发现worker {} 已下线但仍有RUNNING任务，触发重新调度", offlineAddr);
+                            rescheduledOfflineWorkerAddrs.add(offlineAddr);
+                            publisher.publishEvent(new WorkerTerminatedEvent(offlineAddr));
+                        }
+
+                        if (runningTasks.size() < pageSize) {
+                            break;
+                        }
+                    }
+                } catch (Exception e) {
+                    log.error("孤儿任务检测异常", e);
+                }
+                scheduledThreadPoolExecutor.schedule(this, 30, TimeUnit.SECONDS);
+            }
+        };
+        scheduledThreadPoolExecutor.schedule(orphanTaskDetection, 30, TimeUnit.SECONDS);
     }
 
     /**

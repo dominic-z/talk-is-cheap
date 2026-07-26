@@ -1100,26 +1100,45 @@ public class WorkerTaskDriverService {
 
 
     /**
-     * 节点下线断连，该节点的所有运行中的任务设置为失败
-     * @param WorkerTerminatedEvent event
+     * 节点下线断连，将该节点上所有运行中的任务重新调度到其他可用Worker，尽可能不重复运行已完成的Stage
+     * @param event WorkerTerminatedEvent
      */
     @EventListener(WorkerTerminatedEvent.class)
-    public void nodeLostAndFailTask(WorkerTerminatedEvent event) {
-        // 防止死循环
+    public void nodeLostAndRescheduleTask(WorkerTerminatedEvent event) {
+        log.info("Worker节点下线，开始重新调度该节点上的任务, workerAddr: {}", event.getNodeAddress());
         int pageSize = 50;
-        for (int page = 0; page < 20; page++) {
-            List<TaskExecution> taskExecutions = taskExecutionServiceWrapper.selectByWorkerAddr(event.getNodeAddress(), page, pageSize,
+        int maxIterations = 20;
+        for (int i = 0; i < maxIterations; i++) {
+            // 始终查询第一页，因为成功重新调度的任务会离开RUNNING状态
+            List<TaskExecution> taskExecutions = taskExecutionServiceWrapper.selectByWorkerAddr(event.getNodeAddress(), 1, pageSize,
                     TaskStageStatus.RUNNING.getStatus());
 
-            // 简单处理，只更新了startup对象，没有动execution对象，要是动了上面的翻页还得改。。。
-            taskStartupServiceWrapper.updateByIdsSelective(taskExecutions.stream().map(TaskExecution::getTaskStartupId).unordered().distinct().toList(),
-                    new TaskStartup().withStatus(TaskStageStatus.FAILED.getStatus()));
+            if (taskExecutions.isEmpty()) {
+                break;
+            }
+
+            for (TaskExecution taskExecution : taskExecutions) {
+                RLock rLock = redissonClient.getLock(RedissonService.getTaskExecutionLockKey(taskExecution.getId()));
+                try {
+                    rLock.lock(5, TimeUnit.SECONDS);
+                    rescheduleTask(taskExecution.getId());
+                } catch (Exception e) {
+                    log.error("重新调度任务失败, taskExecutionId: {}", taskExecution.getId(), e);
+                } finally {
+                    try {
+                        if (rLock.isLocked()) {
+                            rLock.unlock();
+                        }
+                    } catch (Exception e) {
+                        log.error("解锁异常", e);
+                    }
+                }
+            }
 
             if (taskExecutions.size() < pageSize) {
                 break;
             }
         }
-
     }
 
 }
