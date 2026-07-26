@@ -57,6 +57,21 @@ public class TaskExecutionServiceWrapper {
         return taskExecutionService.selectByExampleDeepPaging(example);
     }
 
+    /**
+     * 按状态分页查询TaskExecution，不限制worker地址
+     */
+    public List<TaskExecution> selectByStatus(int page, int pageSize, int... taskStatus) {
+        TaskExecutionExample example = new TaskExecutionExample();
+        TaskExecutionExample.Criteria criteria = example.createCriteria();
+        if (taskStatus != null && taskStatus.length != 0) {
+            criteria.andStatusIn(Arrays.stream(taskStatus).boxed().toList());
+        }
+        example.setLimit(pageSize);
+        example.setOffset((page - 1) * pageSize);
+        example.setOrderByClause(TaskExecution.ASSIGNED_WORKER_ADDR);
+        return taskExecutionService.selectByExampleDeepPaging(example);
+    }
+
 
     public int updateSelectiveById(long id, TaskExecution taskExecution, Long revision) {
         TaskExecutionExample example = new TaskExecutionExample();
