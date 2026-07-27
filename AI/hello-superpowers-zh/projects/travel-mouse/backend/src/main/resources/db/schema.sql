@@ -27,7 +27,7 @@ CREATE TABLE daily_plans (
     plan_date DATE NOT NULL,
     sort_order INT NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'draft',
-    FOREIGN KEY (travel_plan_id) REFERENCES travel_plans(id) ON DELETE CASCADE
+    INDEX idx_travel_plan_id (travel_plan_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE destinations (
@@ -45,7 +45,7 @@ CREATE TABLE destinations (
     sort_order INT NOT NULL DEFAULT 0,
     in_route BOOLEAN NOT NULL DEFAULT FALSE,
     route_order INT,
-    FOREIGN KEY (daily_plan_id) REFERENCES daily_plans(id) ON DELETE CASCADE
+    INDEX idx_daily_plan_id (daily_plan_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE destination_images (
@@ -53,7 +53,7 @@ CREATE TABLE destination_images (
     destination_id BIGINT NOT NULL,
     file_path VARCHAR(500) NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (destination_id) REFERENCES destinations(id) ON DELETE CASCADE
+    INDEX idx_destination_id (destination_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE route_segments (
@@ -65,7 +65,7 @@ CREATE TABLE route_segments (
     duration_minutes INT NOT NULL,
     distance_meters INT NOT NULL,
     route_order INT NOT NULL,
-    FOREIGN KEY (daily_plan_id) REFERENCES daily_plans(id) ON DELETE CASCADE,
-    FOREIGN KEY (from_dest_id) REFERENCES destinations(id) ON DELETE CASCADE,
-    FOREIGN KEY (to_dest_id) REFERENCES destinations(id) ON DELETE CASCADE
+    INDEX idx_daily_plan_id (daily_plan_id),
+    INDEX idx_from_dest_id (from_dest_id),
+    INDEX idx_to_dest_id (to_dest_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
