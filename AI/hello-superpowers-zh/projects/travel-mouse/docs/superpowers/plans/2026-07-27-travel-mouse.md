@@ -2315,7 +2315,7 @@ export function useAmap() {
     const AMap = await AMapLoader.load({
       key: import.meta.env.VITE_AMAP_KEY,
       version: '2.0',
-      plugins: ['AMap.PlaceSearch', 'AMap.Driving', 'AMap.Walking', 'AMap.Transfer']
+      plugins: ['AMap.PlaceSearch', 'AMap.Driving', 'AMap.Walking', 'AMap.Transfer', 'AMap.Geocoder']
     })
     map.value = new AMap.Map(containerId, {
       zoom: 12,
@@ -2523,6 +2523,20 @@ const onMapReady = ({ map, AMap }) => {
   mapInstance = map
   AMapInstance = AMap
   routePlanner = useRoutePlanning(AMap)
+
+  // 地图点选添加目的地
+  map.on('click', async (e) => {
+    const { lng, lat } = e.lnglat
+    // 逆地理编码获取地址信息
+    const geocoder = new AMap.Geocoder()
+    geocoder.getAddress([lng, lat], async (status, result) => {
+      const address = status === 'complete' ? result.regeocode.formattedAddress : `自定义位置 (${lng.toFixed(4)}, ${lat.toFixed(4)})`
+      const name = status === 'complete' && result.regeocode.pois?.length
+        ? result.regeocode.pois[0].name
+        : '自定义目的地'
+      await addDest({ name, address, longitude: lng, latitude: lat, category: '自定义' })
+    })
+  })
 }
 
 onMounted(async () => {
