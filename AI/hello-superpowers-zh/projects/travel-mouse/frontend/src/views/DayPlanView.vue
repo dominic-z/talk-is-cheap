@@ -21,6 +21,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import MapContainer from '../components/MapContainer.vue'
 import LeftPanel from '../components/LeftPanel.vue'
 import RightPanel from '../components/RightPanel.vue'
@@ -137,7 +138,7 @@ const saveDay = async () => {
     await updateRoute(dayId, { segments })
   }
   await apiSaveDay(planId, dayId)
-  alert('当天计划已保存！')
+  ElMessage.success('当天计划已保存！')
 }
 </script>
 
