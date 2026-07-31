@@ -460,20 +460,19 @@ public class WorkerTaskDriverService {
 
 
     /**
-     * 某个stage已经完成，记录shareContext快照，正常情况下不需要考虑并发，因为一般情况下一个stage只会有一个scheduler在操作
+     * 某个stage已经完成，记录shareContext快照，需要考虑重试快速成功的情况的并发，一个stage失败后立刻重试并且成功
      * 仅仅updatestage信息
      * <p>
      * update:
      */
     public void completeStage(WorkerCompleteStageResultReq.StageResult stageResult) throws IOException {
         Long stageExecutionId = stageResult.getStageExecutionId();
-        StageExecution stageExecution = stageExecutionServiceWrapper.selectById(stageExecutionId, TaskStageStatus.RUNNING.getStatus());
+        StageExecution stageExecution = stageExecutionServiceWrapper.selectById(stageExecutionId);
         VerifyUtil.requireTrue(stageExecution != null,
-                "The running execution record for the stage with ID %d does not exist.".formatted(stageExecutionId));
+                "The execution record for the stage with ID %d does not exist.".formatted(stageExecutionId));
 
         // 更新stage startup 和stage execution
-        StageStartup stageStartup = stageStartupServiceWrapper.selectById(stageExecution.getStageStartupId(),
-                TaskStageStatus.RUNNING.getStatus());
+        StageStartup stageStartup = stageStartupServiceWrapper.selectById(stageExecution.getStageStartupId());
         VerifyUtil.requireTrue(stageStartup != null,
                 "The startup record for the stage with ID %d does not exist.".formatted(stageExecution.getStageStartupId()));
         Integer stageStatus = stageResult.getSucceeded() ? TaskStageStatus.SUCCEEDED.getStatus() :
@@ -585,7 +584,7 @@ public class WorkerTaskDriverService {
                                                       boolean workerPausing) throws IOException {
         StageExecution stageExecution = stageExecutionServiceWrapper.selectById(stageExecutionId, TaskStageStatus.RUNNING.getStatus());
         if (stageExecution == null) {
-            log.info("未发现运行中的id={}的StageExecution对象，可能任务并未启动", stageExecutionId);
+            log.info("未发现运行中的id={}的StageExecution对象，可能任务并未启动或者已经重试了", stageExecutionId);
             return null;
         }
 
