@@ -7,6 +7,9 @@
 可以用来查看java堆的情况、gc的情况，很适合用来监控内存使用情况和gc的整体概览。`jstat -gc -h3 31736 1000 10`表示分析进程 id 为 31736 的 gc 情况，每隔 1000ms 打印一次记录，打印 10 次停止，每 3 行后打印指标头部。
 输出内容格式直接问豆包：“解释一下jstat的输出”
 
+> OC / OU = Old Region + Humongous Region
+> 但是在G1里，Humongous Region并不被视为old对象，可以被ygc清理
+
 ## jstack
 这绝对是最有用的工具，他可以看到当前jvm正在执行什么方法，当出现java卡顿的时候，使用jstack可以直接看到java卡在哪里了。
 
