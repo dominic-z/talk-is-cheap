@@ -3,6 +3,7 @@ from openai import OpenAI
 
 # 环境变量写在~/.profile里面
 # https://www.doubao.com/thread/xMV3ZBXbughXphfPu
+# API见：https://platform.qianwenai.com/docs/api-reference
 print(os.getenv("QWEN_API_KEY"))
 
 client = OpenAI(
