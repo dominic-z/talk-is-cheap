@@ -87,3 +87,11 @@ Temperature vs Top-p 的区别：https://chatgpt.com/s/t_6a77ef551248819198756e2
 
 
 presence_penalty和frequency_penalty的区别
+
+## 第二部分 核心能力篇
+### 第5章 规划与推理
+#### 5.1 Agent 如何"思考"？
+
+心理模型：为什么直接询问通常无效？就像人类做题一样，答案是一步步推导出来的，而不是一下子就能从题目算出来的，所以，让LLM生成中间步骤，然后通过ReAct工作循环将这些中间步骤作为新的上下问题提交给LLM，能让LLM更加准确地输出正确结果。
+
+关于：OODA 循环，图里的A和D应该反了。
