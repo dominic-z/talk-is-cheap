@@ -43,6 +43,19 @@ class PlanAndExecuteAgent:
         Returns:
             {"goal": "...", "steps": [{"step": 1, "task": "...", ...}]}
         """
+        # 从 tool_schemas 提取「名称 + 描述」，让规划阶段能准确选择工具
+        tool_info = "\n".join(
+            f"- {t['function']['name']}: {t['function']['description']}"
+            for t in self.tool_schemas
+        )
+
+        """
+        为什么 plan() 不适合用 tools 参数
+语义不匹配。tools 参数的含义是"你可以现在就调用这些工具"，模型会以 tool_calls 的形式发起真实调用。但规划阶段根本不会执行任何工具——你只是想知道"计划里每一步该用哪个工具"，而不是现在就调。此时传 tools 是语义错位的。
+与 response_format={"type": "json_object"} 冲突。plan() 要求模型输出一个 JSON 格式的计划文本。如果同时传了 tools，模型可能选择返回 tool_calls 而不是文本内容，导致 response.choices[0].message.content 为空，json.loads 直接报错。两者同时用是不稳定的。
+计划里还需要"不使用工具"的选项。tool_choice 无法优雅表达"这一步不需要工具"，而 prompt 方式天然支持（当前代码里 "tool" 字段就是可选的）。
+        """
+
         response = client.chat.completions.create(
             model=MODEL,
             messages=[
@@ -50,7 +63,8 @@ class PlanAndExecuteAgent:
                     "role": "system",
                     "content": f"""你是一个任务规划专家。将用户目标分解为可执行的子任务。
 
-可用工具：{list(self.tools.keys())}
+可用工具：
+{tool_info}
 
 返回 JSON 格式的执行计划：
 {{

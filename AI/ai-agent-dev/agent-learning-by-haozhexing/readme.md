@@ -96,3 +96,19 @@ presence_penalty和frequency_penalty的区别
 心理模型：为什么直接询问通常无效？就像人类做题一样，答案是一步步推导出来的，而不是一下子就能从题目算出来的，所以，让LLM生成中间步骤，然后通过ReAct工作循环将这些中间步骤作为新的上下问题提交给LLM，能让LLM更加准确地输出正确结果。
 
 关于：OODA 循环，图里的A和D应该反了。
+
+> 在AiAgent开发领域，我知道了CoT、ReAct，但是我问题是，thought和reasoning两个概念看起来都是思考的过程，他们的区别是什么？有必要区分开么？
+> 
+> https://chatgpt.com/share/6a8c61a3-19e0-83ea-81f3-0765be7c3ce9
+> 
+> 比如deepseek模型刚出现的时候，每问一个问题，deepseek会先自己絮絮叨叨说很多自己的思考过程，这个过程可以称为reasoning，而产出的这些思考过程结果可以被称为thought，我这样理解对么？
+> 
+> 对，基本可以这样理解，而且你这个理解已经比较接近 Agent/LLM 领域里这两个词的实际关系了。
+> 不过我建议你加一个小修正：
+> > Reasoning 更准确地说是“推理过程”，Thought 是这个推理过程中产生的某个“中间思考步骤/状态”。
+> 
+> > Reasoning 是上位概念；Thought、Plan、Decision 是 reasoning 过程中不同类型的中间产物；Action 则是 reasoning/decision 之后对外部世界的实际操作。
+
+#### 5.5 
+[Plan-then-Execute和ReAct是如何结合的？](https://qianwen.my.cn/share/chat/e12a9597f1c1441db8cdaea175ae2d4d)
+
