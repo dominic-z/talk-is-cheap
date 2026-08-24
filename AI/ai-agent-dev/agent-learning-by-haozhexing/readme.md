@@ -78,6 +78,7 @@ def agent(prompt):
 
 换成了qwen的API，也能兼容openai的接口，舒服：https://platform.qianwenai.com/docs/developer-guides/getting-started/first-api-call
 
+OpenAI的接口里，message是个很重要的字段，里面有很多范式，参考：https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create
 
 #### 2.5 Token Temperature与模型参数
 

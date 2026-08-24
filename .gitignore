@@ -13,6 +13,7 @@ HELP.md
 /**/.settings
 /**/.springBeans
 /**/.sts4-cache
+/**/__pycache__
 
 ### IntelliJ IDEA ###
 /**/.idea
