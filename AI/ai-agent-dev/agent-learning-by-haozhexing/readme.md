@@ -109,6 +109,36 @@ presence_penalty和frequency_penalty的区别
 > 
 > > Reasoning 是上位概念；Thought、Plan、Decision 是 reasoning 过程中不同类型的中间产物；Action 则是 reasoning/decision 之后对外部世界的实际操作。
 
-#### 5.5 
-[Plan-then-Execute和ReAct是如何结合的？](https://qianwen.my.cn/share/chat/e12a9597f1c1441db8cdaea175ae2d4d)
+#### 5.5  自动化研究助手 Agent
 
+[自动化研究助手 Agent 相关论文](https://chatgpt.com/s/t_6a8cfbde5168819180a4740da22e3a36)
+
+| 工作                      | 你应该把它理解成                                           |
+| ----------------------- |------------------------------------------------------------|
+| **WebGPT**              | **让 LLM 学会浏览网页**                                    |
+| **STORM**               | **让 LLM 学会从多个角度思考“应该研究什么”**                |
+| **MindSearch**          | **让研究计划能够随着搜索结果动态扩展**                     |
+| **WebSailor**           | **让 Agent 学会处理极难、极不确定的 Web 搜索（交叉验证）** |
+| **The AI Scientist**    | **让 Research Agent 从“查资料”进一步走向“做实验”**         |
+| **Deep Research**       | **把这些能力组合成真正可用的长程研究 Agent**               |
+| **BrowseComp**          | **给 Web Agent 出一套高难度考试题**                        |
+| **Open Deep Research**  | **把 Deep Research 的工程架构开源出来**                    |
+| **Tongyi DeepResearch** | **开始专门训练擅长 Deep Research 的模型**                  |
+
+
+#### 5.6 Plan-and-Execute 与 Test-time Compute Scaling
+
+[在ai agent领域，plan-then-execute和ReAct，我觉得非常相似，我感觉plan本身是Reasoning的一种体现，而execute和action本身也是相似的。对么？](https://chatgpt.com/s/t_6a8cfeb7f2888191a728aec5d2317759)
+> Reasoning 和 Action 是“能力维度”，而 Plan-Then-Execute / ReAct 是“组织这些能力的工作流方式”。
+
+
+引申阅读：
+1. 推理模型是什么，与传统的LLM模型有啥区别？
+2. CoT和Test-time Compute Scaling到底指的是什么？——同一个问题，推理模型可以比传统模型多生成一大段文本，而这段文本承担了推理过程的作用。就像DeepSeek刚出的时候，会絮絮叨叨一大段思考过程。这个就是cot和Test-time Compute Scaling的一种具体体现。另外：传统的 CoT 往往依赖用户在 Prompt 中写“请一步步思考”来激发。而 DeepSeek-R1 的思考过程是通过大规模强化学习（RL） 训练出来的内化能力。
+3. 推理模型之所以有推理能力，推理模型确实会使用大量“包含推理过程”的训练数据，但它之所以形成强推理能力，并不只是因为训练数据里多了 CoT 文本，更关键的是后续的强化学习让模型学会“自己产生有效的推理过程”。
+### 第6章 检索增强生成（RAG）
+
+
+#### 6.2 文档加载与文本分割
+
+[在rag场景中，为啥要对检索出来的文本分chunk？](https://chatgpt.com/s/t_6a8d538bbe0c8191b080b2c3f997e6af)
