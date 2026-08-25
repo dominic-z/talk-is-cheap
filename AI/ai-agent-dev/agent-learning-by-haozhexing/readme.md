@@ -142,3 +142,10 @@ presence_penalty和frequency_penalty的区别
 #### 6.2 文档加载与文本分割
 
 [在rag场景中，为啥要对检索出来的文本分chunk？](https://chatgpt.com/s/t_6a8d538bbe0c8191b080b2c3f997e6af)
+
+
+#### 6.7 进阶 RAG：GraphRAG 与 Agentic RAG 工程实战
+
+chai老师还是专业。
+[GraphRag出现的背景是什么，他解决naive rag的什么问题？]([https://chatgpt.com/s/t_6a8dae3c8d7881919ea5749e8c9ec207](https://chatgpt.com/share/6a8db1e0-a23c-83e9-8f51-b4bd93538795))
+
