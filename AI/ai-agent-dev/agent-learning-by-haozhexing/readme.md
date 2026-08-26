@@ -149,3 +149,11 @@ presence_penalty和frequency_penalty的区别
 chai老师还是专业。
 [GraphRag出现的背景是什么，他解决naive rag的什么问题？]([https://chatgpt.com/s/t_6a8dae3c8d7881919ea5749e8c9ec207](https://chatgpt.com/share/6a8db1e0-a23c-83e9-8f51-b4bd93538795))
 
+
+
+### 第7章  上下文工程
+
+
+#### 7.3 长时程任务的上下文策略
+
+[在ai agent里，压缩整合在什么情况下可能造成关键信息丢失？如何设计一个"安全网"来缓解这个问题？](https://qianwen.my.cn/share/chat/e66a5a515f334c309a166cd8bbe024c5)
