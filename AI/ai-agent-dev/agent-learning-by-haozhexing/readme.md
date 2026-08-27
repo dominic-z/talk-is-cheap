@@ -160,8 +160,13 @@ chai老师还是专业。
 
 ### 第8章  harness engineering
 
+[什么是harness](https://chatgpt.com/share/6a8faf3a-3208-83ea-b113-802394c75011)
 
 
 #### 8.1 什么是harness engineering？
 
 关于文中提到的上下文利用率，我的理解是，一个模型的上下文窗口比如说是128k，如果128k用满了，这个就是上下文利用率过高。
+
+#### 8.5 实战：构建你的第一个 Harness 系统
+
+好例子，但重点在思路，在demo代码的基础上做了一些调整。
