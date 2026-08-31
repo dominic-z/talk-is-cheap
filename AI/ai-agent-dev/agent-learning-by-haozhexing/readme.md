@@ -170,3 +170,83 @@ chai老师还是专业。
 #### 8.5 实战：构建你的第一个 Harness 系统
 
 好例子，但重点在思路，在demo代码的基础上做了一些调整。
+
+### 第10章
+
+#### 10.1 什么是Agentic-RL
+
+https://chatgpt.com/share/6a91a23c-fed0-83ea-ab77-d064f037846a
+
+SFT可以让模型知道专家是怎样做的，RL能够让模型自己尝试，试出更优的路径。就好比大侠向某个掌门学会了一套武功，但还是要日后自己和其他大侠切磋才能有自己的体会、才能进入更高的境界一样。
+
+
+
+#### 11.1 Prompt自动调优
+
+##### 11.1.5 自动生成Prompt
+
+"prompt" 这个词在日常语境里是**泛称**（泛指"喂给模型的文本"），但在工程/接口层面，它其实可以拆成几个**不同角色、不同来源**的部分。OpenAI 的 `messages` 数组正是用 `role` 来显式区分这些部分的：
+
+| 你的问题 | OpenAI 里的 role | 一般叫法 | 来源 |
+|---|---|---|---|
+| 用户的输入 | `user` | **user message / 用户消息** | 终端用户 |
+| system 部分 | `system` | **system prompt / 系统提示** | 开发者/系统设定 |
+| agent 循环里 LLM 自己生成、喂回下一轮的输入 | `assistant` / `tool` | **assistant message / tool message**（统称**模型自生成消息**） | LLM / 工具 |
+
+关键认知：**`user`、`system`、`assistant`、`tool` 都属于"送给 LLM 的上下文"的一部分，但把它们笼统全叫 prompt 会丢失信息。** 更严谨的说法是：整个 `messages` 数组合起来叫 **prompt（泛称）/ context（上下文）**，而里面的每一段按 role 各有专名。
+
+假设做一个"翻译 Agent"：
+
+```json
+[
+  {"role": "system",    "content": "你是一个严谨的翻译助手，只输出译文，不解释。"},   // ← system prompt（开发者设定）
+  {"role": "user",      "content": "请把'今天天气真好'翻译成英文。"},                // ← user message（用户输入）
+  {"role": "assistant", "content": "The weather is really nice today."},           // ← assistant message（LLM 生成，可能直接是答案，也可能触发工具）
+  {"role": "tool",      "content": "{\"glossary\": {\"天气\": \"weather\"}}"},       // ← tool message（工具返回，喂回下一轮）
+  {"role": "assistant", "content": "The weather is really nice today."}             // ← 下一轮 LLM 基于上面所有内容再生成
+]
+```
+
+
+
+**APE（ICLR 2023）：让 LLM 自动写 Prompt**
+
+一个完整的任务描述，应当是：
+```json
+{role: system, content: "你是客服助手，请根据知识库回答退款相关问题。注意区分无理由退款和质量问题售后。"},
+{role: user, content: "签收 7 天能退款吗？"}
+```
+
+但是实际情况下，用户只会抛出`签收 7 天能退款吗？`一个问题。
+
+所以我们要根据用户的问题，自动生成一个system prompt（即上文的`system`）部分。
+
+APE的方式是，他对模型提供了`签收 7 天能退款吗？`这种用户问题，并给这一条问题匹配了一个最优质的回答。让模型先根据用户的用户输入生成一堆prompt，然后分别组装，总给llm，与最优质回答比较，相似的得分高，得分高的对应的prompt，就是最好的prompt，ape最后得到了，如下的这一堆东西，后续当来了一个新的用户输入时候，路由层会根据用户输入找一个最相似的prompt，然后把用户输入和这个prompt当做一个完整的上下文，送给llm。
+```
+task_id_A → prompt_A
+task_id_B → prompt_B
+task_id_C → prompt_C
+```
+
+**实际项目中如何落地 Prompt 自动调优？**
+
+它讲的是工程上怎么把 prompt 自动调优跑成一个可持续的系。
+```
+Prompt仓库 → 任务样本集 → Runner(跑出trace) → Evaluator(打分+文字反馈)
+           → Reflector(分析失败原因、定位到模块) → Rewriter(LLM改写prompt)
+           → Selector(选最优候选保留版本)
+
+```
+这段落地文档讲的不是"用 LLM 从任务描述冷启动生成 任务→prompt 映射"（那是 APE）。它讲的是：已有一个按模块拆好的 prompt 仓库后，如何用 LLM 当 Rewriter，结合 Evaluator/Reflector 的失败反馈，持续把每个模块的 prompt 改写成更好的版本，并用 Selector + 版本管理挑留最优。 本质是"模块→prompt"的迭代进化系统，而不是从零造映射。
+
+比如面的数据记录了`intent_classifier`任务的一个好的prompt是什么
+```
+PROMPTS = {
+    "intent_classifier": "...",
+    "planner": "...",
+    "tool_selector": "...",
+    "reader": "...",
+    "verifier": "...",
+    "final_answer": "...",
+}
+```
