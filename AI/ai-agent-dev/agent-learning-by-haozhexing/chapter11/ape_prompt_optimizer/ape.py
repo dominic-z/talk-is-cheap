@@ -38,7 +38,7 @@ from pathlib import Path
 from dataset import DEMO_SAMPLES, EVAL_SAMPLES, LABELS, TASK_DESC
 from llm import MODEL, get_client
 
-OUT_DIR = Path(__file__).parent / "output"
+OUT_DIR = Path(__file__).parent / "git_ignore" /"output"
 
 # 人工写的 baseline prompt：用来对比「自动生成的 prompt 到底有没有更优」
 # 注意：baseline 与候选 prompt 面对的是【同一份】用户消息（含类别清单），
@@ -170,6 +170,8 @@ def normalize_output(raw: str) -> str | None:
         return None
     # 取【最后】出现的标签：要求"先思考再作答"的 prompt 会在推理过程中
     # 提到其他标签（例如"排除物流查询"），最终结论一定在末尾
+    # max([(1,"退款"),(0,"不错")]) = (1,"退款")
+    # 功能是找到模型输出的后出现的label，这是为了规避模型可能输出“看起来是退款申请，但实际是售后咨询”这种话。
     return max(hits)[1]
 
 

@@ -3,6 +3,9 @@
 第 11 章「自我进化与持续学习」里理论偏多，这个实验用最小代码把
 **自我进化闭环的骨架**跑通一遍：让 LLM 自己写候选 prompt，再用留出集选出最好的那个。
 
+APE这个demo要做的事：用户说了一句话，确定客户的意图是什么。见dataset.py文件。这里用户说的话对迎着user_message，
+而我们给llm还需要给一个system_prompt，怎么样的system_prompt能够让llm更加正确的完成意图识别任务呢？
+
 ## 一、它对应 APE 的什么
 
 APE（Automatic Prompt Engineer, ICLR 2023）的核心思想只有一句话：
