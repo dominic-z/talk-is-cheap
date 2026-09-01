@@ -183,6 +183,38 @@ SFT可以让模型知道专家是怎样做的，RL能够让模型自己尝试，
 
 #### 11.1 Prompt自动调优
 
+
+### 第11章 自我进化与持续学习
+
+#### 11.1 Prompt自动调优
+
+一个agent的输入不仅是用户的输入，还包含着role是system的prompt，自动调优的目标就是这个。
+
+```markdown
+用户：
+“帮我分析这个 Java 项目的性能问题”
+             ↓
+        用户初始 Prompt
+             ↓
+    ┌──────────────────┐
+    │ Agent Prompt     │ ← Prompt Optimization 主要优化这里
+    │                  │
+    │ 你是一个代码分析 │
+    │ Agent...         │
+    └──────────────────┘
+             ↓
+            LLM
+             ↓
+       Tool / Action
+             ↓
+        Observation
+             ↓
+       下一轮 Context
+             ↓
+            LLM
+```
+
+
 ##### 11.1.5 自动生成Prompt
 
 "prompt" 这个词在日常语境里是**泛称**（泛指"喂给模型的文本"），但在工程/接口层面，它其实可以拆成几个**不同角色、不同来源**的部分。OpenAI 的 `messages` 数组正是用 `role` 来显式区分这些部分的：
