@@ -5,9 +5,23 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
-# ============================
+# ┌────────────────────────────────────────────────────────────┐
+# │  终端分隔符：在每个代码段之间打印一条醒目的分隔线，          │
+# │  方便在终端中快速定位每一节的运行结果。                      │
+# └────────────────────────────────────────────────────────────┘
+def print_separator(title: str = "") -> None:
+    """在终端打印一条漂亮的分隔线（可选带标题）。"""
+    width = 60
+    line = "═" * width
+    if title:
+        print(f"\n{line}\n  🚀 {title}\n{line}\n")
+    else:
+        print(f"\n{line}\n")
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 1. 基础模型调用
-# ============================
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 llm = ChatOpenAI(model="qwen3.7-flash",
                  api_key=os.getenv("QWEN_API_KEY"),
@@ -15,14 +29,16 @@ llm = ChatOpenAI(model="qwen3.7-flash",
                  temperature=0.7)
 
 # 直接调用
+print_separator("1. 基础模型调用 —— 直接 invoke")
 response = llm.invoke([HumanMessage(content="你好！")])
 print(response.content)
 
-# ============================
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 2. 提示词模板
-# ============================
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 # ChatPromptTemplate：推荐方式
+print_separator("2. 提示词模板 —— ChatPromptTemplate")
 prompt = ChatPromptTemplate.from_messages([
     ("system", "你是一个{role}，专注于{domain}领域。"),
     ("user", "{question}")
@@ -38,9 +54,9 @@ formatted = prompt.format_messages(
 response = llm.invoke(formatted)
 print(response.content)
 
-# ============================
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 3. 输出解析器
-# ============================
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 from langchain_core.output_parsers import JsonOutputParser
 from pydantic import BaseModel, Field
@@ -59,6 +75,11 @@ product_prompt = ChatPromptTemplate.from_messages([
     ("user", "{description}")
 ])
 
+print_separator("3. 输出解析器 —— JsonOutputParser")
+
+# 可以看到这个打印出来其实是一个prompt
+print("parser.get_format_instructions(): ", parser.get_format_instructions())
+
 # 注入格式说明
 formatted = product_prompt.format_messages(
     format_instructions=parser.get_format_instructions(),
@@ -67,11 +88,11 @@ formatted = product_prompt.format_messages(
 
 response = llm.invoke(formatted)
 product = parser.parse(response.content)
-print(f"产品：{product.name}, 价格：{product.price}")
+print(f"产品：{product['name']}, 价格：{product['price']}")
 
-# ============================
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 4. 对话管理
-# ============================
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 from langchain_core.chat_history import InMemoryChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
@@ -105,6 +126,7 @@ with_history = RunnableWithMessageHistory(
 # 多轮对话
 session = {"configurable": {"session_id": "user_001"}}
 
+print_separator("4. 对话管理 —— 多轮对话（带记忆）")
 reply1 = with_history.invoke({"input": "我叫张伟"}, config=session)
 reply2 = with_history.invoke({"input": "我叫什么名字？"}, config=session)
 
