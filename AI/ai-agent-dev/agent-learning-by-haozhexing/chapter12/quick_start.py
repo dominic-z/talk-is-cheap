@@ -4,19 +4,11 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-
+from print_utils import print_separator
 # ┌────────────────────────────────────────────────────────────┐
 # │  终端分隔符：在每个代码段之间打印一条醒目的分隔线，          │
 # │  方便在终端中快速定位每一节的运行结果。                      │
 # └────────────────────────────────────────────────────────────┘
-def print_separator(title: str = "") -> None:
-    """在终端打印一条漂亮的分隔线（可选带标题）。"""
-    width = 60
-    line = "═" * width
-    if title:
-        print(f"\n{line}\n  🚀 {title}\n{line}\n")
-    else:
-        print(f"\n{line}\n")
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

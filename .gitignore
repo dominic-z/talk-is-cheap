@@ -87,6 +87,7 @@ HELP.md
 
 
 # ai agents
-/**/.agents
-
-/**/.superpowers
+.agents/
+.codebuddy/
+.qoder/
+.superpowers/
