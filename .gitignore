@@ -91,3 +91,8 @@ HELP.md
 .codebuddy/
 .qoder/
 .superpowers/
+
+### secrets / local env ###
+.env
+.env.*
+!.env.example
