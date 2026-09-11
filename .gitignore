@@ -92,6 +92,9 @@ HELP.md
 .qoder/
 .superpowers/
 
+# langgraph dev 本地运行时缓存（checkpoint / queue，可随时删除）
+/**/.langgraph_api/
+
 ### secrets / local env ###
 .env
 .env.*

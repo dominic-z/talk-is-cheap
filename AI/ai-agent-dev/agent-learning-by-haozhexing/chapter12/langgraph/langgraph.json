@@ -1,0 +1,7 @@
+{
+  "dependencies": ["langgraph", "langchain-openai"],
+  "graphs": {
+    "agent": "./graph_agent.py:app"
+  },
+  "env": ".env"
+}
