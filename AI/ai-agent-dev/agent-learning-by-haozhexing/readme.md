@@ -162,6 +162,11 @@ chai老师还是专业。
 
 [什么是harness](https://chatgpt.com/share/6a8faf3a-3208-83ea-b113-802394c75011)
 
+Model 只能输出文本；harness 负责把这些「文本输出」变成「实际执行」，并把执行结果再喂回给模型。harness vs 模型：模型是「大脑」，harness 是「身体 + 神经系统」。同一个模型换个 harness，能力差异可以非常大——很多所谓「模型变强了」其实很大一部分来自 harness 改进（更好的 prompt、更好的工具描述、更合理的上下文压缩）。让模型更好地感知外部的一套能力，叫作harness。
+
+它借用了软件工程里 test harness（测试脚手架）的含义：不是被测对象本身，而是驱动对象跑起来的那套夹具。
+
+
 
 #### 8.1 什么是harness engineering？
 

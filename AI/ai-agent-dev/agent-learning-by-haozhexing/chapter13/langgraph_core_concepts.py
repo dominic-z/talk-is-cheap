@@ -69,7 +69,7 @@ graph = StateGraph(MessagesState)
 graph.add_node("agent", agent_node)
 graph.add_node("tools", tool_executor)
 graph.add_edge(START, "agent")
-graph.add_conditional_edges("agent", should_use_tools)
+graph.add_conditional_edges("agent", should_use_tools, {"tools": "tools", END: END})
 graph.add_edge("tools", "agent")  # 工具执行后回到 agent
 
 # 编译时挂上 checkpointer（这里用内存版 MemorySaver，进程内持久化；

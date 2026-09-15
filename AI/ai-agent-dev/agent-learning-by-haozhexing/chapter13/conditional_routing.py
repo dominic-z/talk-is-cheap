@@ -74,6 +74,7 @@ if __name__ == "__main__":
         "approved": False,
     }
     for event in app.stream(inputs):
+        # 每个state实际上都是一个CodeReviewState对象，之所以是CodeReviewState对象，是因为每个node返回的都是这个类型的dict
         for node, state in event.items():
             if node == "__end__":
                 continue
