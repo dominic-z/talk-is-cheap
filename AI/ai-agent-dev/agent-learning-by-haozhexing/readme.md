@@ -287,3 +287,14 @@ PROMPTS = {
     "final_answer": "...",
 }
 ```
+
+### 第16章 ClaudeCode
+
+#### 16.4 System Prompt
+
+关于Prompt Cache，比如说在使用claude的时候，每个指令发给claude的时候，claude需要读取System prompt\Claude.md\动态的用户提交的新的指令。LLM需要将这些东西转换为一个个的token序列，就是一个矩阵。转换token这一步很耗费资源，而刚好System prompt\Claude.md不太变化，因此：
+1. 对于System Prompt: 这个是给Arthropic给Claude设置的规则，基本不变，那么做缓存，后续每次提交的时候，不用对这段转换token了，可以做全局级别的缓存
+2. Claude.md：这个是用户给Claude Code创建的行动规范，需要做项目级别的缓存。
+3. 动态指令：不缓存
+
+缓存的方式很粗暴，就是字符串->Token
